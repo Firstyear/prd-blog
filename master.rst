@@ -1,0 +1,56 @@
+Sitemap
+=======
+
+.. toctree::
+   :maxdepth: 1
+
+   2016/02/23/ldctl_to_generate_test_objects
+   2016/02/17/Patches_Welcome
+   2016/02/09/Securing_IPA
+   2016/02/09/Failed_to_delete_old_semaphore_for_stats_file
+   2016/01/28/389_on_freebsd
+   2016/01/16/Renaming_ovirt_storage_targets
+   2016/01/15/Running_your_own_mailserver:_Mailbox_rollover
+   2016/01/13/FreeRADIUS:_Using_mschapv2_with_freeipa
+   2015/12/17/db2index:_entry_too_large_(X_bytes)_for_the_buffer_size_(Y_bytes)
+   2015/12/11/Load_balanced_389_instance_with_freeipa_kerberos_domain.
+   2015/12/08/Debbuging_and_patching_389-ds.
+   2015/12/04/The_hidden_log_features_of_ns-slapd
+   2015/12/04/Where_does_that_attribute_belong?_
+   2015/12/04/ns-slapd_access_log_notes_field
+   2015/11/26/Magic_script_for_post_install_interface_configuration
+   2015/11/26/python_gssapi_with_flask_and_s4u2proxy
+   2015/11/26/Ldap_post_read_control
+   2015/11/25/Managing_replication_conflicts_for_humans_in_389
+   2015/11/05/KRB5_setup_for_ldap_server_testing
+   2015/08/03/mod_selinux_on_rhel7
+   2015/08/03/Debugging_389ds_tests
+   2015/07/15/Ovirt_with_ldap_authentication_source
+   2015/11/15/Securing_RHEL_-_CentOS_-_Fedora
+   2015/07/10/Spamassasin_with_postfix
+   2015/07/10/SSH_keys_in_ldap
+   2015/07/04/Unit_testing_LDAP_acis_for_fun_and_profit
+   2015/07/06/FreeIPA:_Giving_permissions_to_service_accounts.
+   2015/07/04/OpenBSD_BGP_and_VRFs
+   2015/07/05/OpenBSD_relayd
+   2015/07/04/OpenBSD_nat64
+   2015/05/30/PPP_on_OpenBSD_with_Internode
+   2014/09/29/Fabric_starting_guide
+   2014/07/25/Render_errors_on_websites
+   2014/07/10/NSS-OpenSSL_Command_How_to:_The_complete_list.
+   2013/06/19/Linux_remote_desktop_from_GDM
+   2013/05/24/Akonadi_mariadb_on_ZFS
+   2013/05/02/MBP_b43_wireless
+   2013/04/25/Changing_SSSD_cert
+   2013/02/18/Virtual_hosted_django
+   2012/12/07/Steam_Linux_Beta_on_Fedora_18_(x86_64_or_x86)
+   2012/05/01/NSS_commands_and_how_to
+   2012/04/26/Slow_mac_sleep
+   2012/04/16/Samba_4_Internal_DNS_use
+   2012/04/15/Mod_Selinux_with_Django
+   2012/04/15/SEPGSQL_-_How_to_Fedora_16_-_17
+   2011/08/22/DHCP6_server
+   2011/07/05/SELinux_for_postfix_+_dovecot
+   2011/07/10/Mod_auth_cas
+   pages/about
+
