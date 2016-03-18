@@ -4,6 +4,8 @@ Sitemap
 .. toctree::
    :maxdepth: 1
 
+   2016/03/16/trick_to_debug_single_files_in_ds
+   2016/03/09/blog_migration
    2016/02/23/ldctl_to_generate_test_objects
    2016/02/17/Patches_Welcome
    2016/02/09/Securing_IPA
@@ -16,7 +18,7 @@ Sitemap
    2015/12/11/Load_balanced_389_instance_with_freeipa_kerberos_domain.
    2015/12/08/Debbuging_and_patching_389-ds.
    2015/12/04/The_hidden_log_features_of_ns-slapd
-   2015/12/04/Where_does_that_attribute_belong?_
+   2015/12/04/Where_does_that_attribute_belong
    2015/12/04/ns-slapd_access_log_notes_field
    2015/11/26/Magic_script_for_post_install_interface_configuration
    2015/11/26/python_gssapi_with_flask_and_s4u2proxy
