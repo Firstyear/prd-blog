@@ -17,6 +17,7 @@ You will need to install these deps:
     nspr
     nss
     net-snmp
+    gmake
     
 
 You then need to install svrcore. I'll likely add a port for this too.
@@ -26,7 +27,7 @@ You then need to install svrcore. I'll likely add a port for this too.
     fetch https://ftp.mozilla.org/pub/directory/svrcore/releases/4.0.4/src/svrcore-4.0.4.tar.bz2
     tar -xvjf svrcore-4.0.4.tar.bz2
     cd svrcore-4.0.4
-    ./configure --prefix=/opt/svrcore
+    CFLAGS="-fPIC "./configure --prefix=/opt/svrcore
     make
     sudo make install
     
@@ -39,7 +40,7 @@ Now you can clone ds and try to build it:
     git clone https://git.fedorahosted.org/git/389/ds.git
     cd ds
     ./configure --prefix=/opt/dirsrv --with-openldap=/usr/local --with-db --with-db-inc=/usr/local/include/db5/ --with-db-lib=/usr/local/lib/db5/ --with-sasl --with-sasl-inc=/usr/local/include/sasl/ --with-sasl-lib=/usr/local/lib/sasl2/ --with-svrcore-inc=/opt/svrcore/include/ --with-svrcore-lib=/opt/svrcore/lib/ --with-netsnmp=/usr/local
-    make
+    gmake
     
 
 If it's like me you get the following:
