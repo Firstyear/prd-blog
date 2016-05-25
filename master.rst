@@ -4,6 +4,7 @@ Sitemap
 .. toctree::
    :maxdepth: 1
 
+   2016/05/25/acis_for_group_creation_and_delegataion_in_ds
    2016/05/23/systemd_is_not_monolithic
    2016/04/17/389ds_on_freebsd_update
    2016/04/16/the_future_vision_of_389_ds
