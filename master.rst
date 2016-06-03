@@ -4,6 +4,7 @@ Sitemap
 .. toctree::
    :maxdepth: 1
 
+   2016/06/03/zero_outage_migration_of_directory_server_infrastructure
    2016/05/25/acis_for_group_creation_and_delegataion_in_ds
    2016/05/23/systemd_is_not_monolithic
    2016/04/17/389ds_on_freebsd_update

@@ -221,6 +221,7 @@ Create a self signed CA (In a different database from the one used by httpd.)
 Nss will ask you about the constraints on this certificate. Here is a sample output. Note the path length of 0 still allows this CA to issue certificates, but it cannot issue an intermediate CA.
 
 ::
+
     Generating key.  This may take a few moments...
 
             0 - Digital Signature
