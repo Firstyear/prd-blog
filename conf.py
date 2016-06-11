@@ -25,7 +25,7 @@ author = 'firstyear'
 copyright = '2011, ' + author
 
 # Change this to your blog root URL (required for RSS feed)
-website = 'http://firstyear.id.au/blog/html/'
+website = 'http://fy.blackhats.net.au/blog/html/'
 
 # **************************************************************
 # More tweaks you can do
