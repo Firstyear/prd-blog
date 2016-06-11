@@ -46,7 +46,7 @@ When we have that, at the "first" initialisation of the variable, we want to gra
 
 ::
 
-    (gdb) print &(*binst_ptr->root)
+    (gdb) print &((*binst_ptr)->root->id)
     $45 = (uint64_t *) 0x60c00000baa8
 
 Now with that address, we want to set a hardware watch on *any* change to that memory address:
