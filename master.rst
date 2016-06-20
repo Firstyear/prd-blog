@@ -4,6 +4,7 @@ Sitemap
 .. toctree::
    :maxdepth: 1
 
+   2016/06/20/the_ldap_guide_part_1_foundations
    2016/06/11/gdb_using_memory_watch_points
    2016/06/07/lock_free_database
    2016/06/03/zero_outage_migration_of_directory_server_infrastructure

@@ -1,0 +1,16 @@
+
+digraph tree {
+    rankdir=LR;
+
+    node [shape=record];
+    A [label="{A|{1|2}}"];
+    B [label="{B|{3|4}}"];
+    C [label="{C|{5|6}}"];
+    D [label="{D|{7|8}}"];
+    E [label="{E|{9|10}}"];
+
+    A -> B;
+    B -> C;
+    B -> D;
+    D -> E;
+}
