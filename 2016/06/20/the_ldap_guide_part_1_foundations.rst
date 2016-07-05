@@ -55,6 +55,7 @@ What does LDAP look like
 LDAP is a tree of objects. Each object has a name, or an RDN (Relative Distinguished Name). The object itself has many key: value pairs in it's data field. If we visualise this, it looks like this.
 
 .. image:: ../../../_static/graph-basic-6.svg
+    :width: 850 px
 
 We have the RDN (our tree node's key value), displayed by type=value, and then a set of attributes (the data of the node).
 

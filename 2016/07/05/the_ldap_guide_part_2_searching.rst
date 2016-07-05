@@ -25,12 +25,13 @@ Remember that we have a tree of objects, organised by their RDN, the Relative Di
 An LDAP object looks like this:
 
 ::
+
     dn: ou=Groups,dc=example,dc=com
     objectClass: top
     objectClass: organizationalunit
     ou: Groups
 
-We see the dn, which is the FQDN, built from the RDN components. We have a number of objectClasses that defined the structure and attributes of the object. Finally, we have the attribute "ou", which in this case happens to be our RDN.
+We see the DN, which is built from the RDN components. We have a number of objectClasses that defined the structure and attributes of the object. Finally, we have the attribute "ou", which in this case happens to be our RDN.
 
 A more "complete" object is this example:
 
@@ -66,6 +67,7 @@ We can now use this in our search command: Note the -b argument. This is the sea
 You should see a lot of data on your screen from that last command! We just showed every object in the tree. Here is the layout of the data in the exampleldap server to help you understand that output.
 
 .. image:: ../../../_static/search-1.svg
+    :width: 850 px
 
 Using a different basedn
 ------------------------
@@ -77,6 +79,7 @@ By default LDAP is performing what is called a *subtree* search. A subtree searc
 Lets say we wanted to see just the entries highlighted in blue.
 
 .. image:: ../../../_static/search-2.svg
+    :width: 850 px
 
 The solution is to *change* the basedn of our search.
 
@@ -98,6 +101,7 @@ This is controlled by the '-s' parameter to the ldapsearch command.
 In this case, we want only the nodes again, in blue. This time we want only the child entries of ou=Groups, but *not* ou=Groups itself.
 
 .. image:: ../../../_static/search-3.svg
+    :width: 850 px
 
 Now we need to limit not the basedn of the search, but the *scope*. The ldap search scope says which entries we should use. We have already discussed subtree. In this case we want to use the scope called *onelevel*. This means "search entries that are direct children of the basedn only".
 
@@ -110,6 +114,7 @@ From the result, you can see, we only see the entries again in blue.
 A key point of onelevel is the direct children only are searched. So were we to move the basedn back up to dc=example,dc=com, and perform a onelevel search, we will only see the following.
 
 .. image:: ../../../_static/search-4.svg
+    :width: 850 px
 
 :: 
 
@@ -118,9 +123,10 @@ A key point of onelevel is the direct children only are searched. So were we to 
 
 In addition to subtree and onelevel we have one more search scope. The final scope is named 'base'. This search scope returns *only* the basedn of the search.
 
-So if we were to want to retrieve a single entry by FQDN, this is how we would achieve that.
+So if we were to want to retrieve a single entry by DN, this is how we would achieve that.
 
 .. image:: ../../../_static/search-5.svg
+    :width: 850 px
 
 ::
 
@@ -152,7 +158,7 @@ By default, ldapsearch provides the filter
 
     (objectClass=*)
 
-* is a special value, representing "any possible value". Because all objects must have an objectClass, this filter is the equivalent to saying "all objects".
+\* is a special value, representing "any possible value". Because all objects must have an objectClass, this filter is the equivalent to saying "all objects".
 
 You can see this doesn't change the output when we run these two commands:
 
@@ -161,7 +167,7 @@ You can see this doesn't change the output when we run these two commands:
     ldapsearch -H ldap://exampleldap.blackhats.net.au -x -s sub -b 'ou=Groups,dc=example,dc=com' '(objectClass=*)'
     ldapsearch -H ldap://exampleldap.blackhats.net.au -x -s sub -b 'ou=Groups,dc=example,dc=com'
 
-If we were to want to retrieve *only* the HR Managers group, but we didn't know it's RDN / DN, we could use this in our filter.
+If we were to want to retrieve *only* the HR Managers group, but we didn't know it's RDN / DN. Because we know it has the attribute "cn=HR Managers", we can construct a filter that will retrieve "any object where cn exactly matches the value HR Managers.
 
 ::
 
@@ -173,7 +179,7 @@ Say that you did not know that the HR Managers group was in ou=Groups. The follo
 
     ldapsearch -H ldap://exampleldap.blackhats.net.au -x -s sub -b 'dc=example,dc=com' '(cn=HR Managers)'
 
-Thus, you often see most queries using the base namingContext of the directory, but applying filters to limit the objects returned.
+Thus, you often see queries using the base namingContext of the directory, but applying filters to limit the objects returned.
 
 More complex filters than this exist, and will be part 3 of this guide.
 
