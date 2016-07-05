@@ -33,29 +33,48 @@ A tree is a special case of the directed graph. The properties of a tree are tha
 * Each node has 1 and only 1 incoming edge.
 * The graph may have no cycles.
 
-An example of a. You can check and it maintains all the properties above. Note there is no limit to outbound edges, the only rule is maximum of one incoming.
+An example of a tree is below. You can check and it maintains all the properties above. Note there is no limit to outbound edges, the only rule is maximum of one incoming.
 
 .. image:: ../../../_static/graph-basic-4.svg
 
+A property that you regularly see is that nodes are unique in a tree, IE A will not appear twice. This allows for *searching* of the tree.
 
 More on nodes
 -------------
 
-So far our nodes have been a bit bland. We can do more with them though. Instead of just storing a single datum in them, we can instead store the datum as a key to lookup the node, and then have a more complex data in the value of the node. For example, we can expand our tree to look like this:
+So far our nodes have been a bit bland. We can do more with them though. Instead of just storing a single datum in them, we can instead store the datum as a key to lookup the node, and then have more complex data in the value of the node. For example, we can expand our tree to look like this:
 
 
 .. image:: ../../../_static/graph-basic-5.svg
 
+This is why having unique keys in our nodes is important. It allows us to search the tree for that node, and to retrieve the data stored within.
+
 What does LDAP look like
 ------------------------
 
-LDAP is a tree of objects. Each object has a name, or an RDN. Relative Distinguished Name. The object itself has many key: value pairs. If we visualise this, it looks like this.
+LDAP is a tree of objects. Each object has a name, or an RDN (Relative Distinguished Name). The object itself has many key: value pairs in it's data field. If we visualise this, it looks like this.
 
 .. image:: ../../../_static/graph-basic-6.svg
 
-We have the rdn, displayed by type=value, and then a set of attributes. We can traverse the tree by following the keys down the tree.
+We have the RDN (our tree node's key value), displayed by type=value, and then a set of attributes (the data of the node).
 
-We can make a Fully Qualified Distinguished Name, or just Distinguished Name, by joining the RDN components. For example, uid=user,ou=People,dc=example,dc=com.
+Naming things
+-------------
+
+With LDAP often we want to directly reference an node in the tree. To do so, we need a way to uniquely reference the nodes as they exist.
+
+Unlike our example trees, where each key is likely to be unique. IE node with key A is cannot exist twice in the tree. In ldap it *is* valid to have a key exist twice, such as ou=People. This raises a challenge. Previously, we could just "look for A", and we would have what we wanted. But now, we must not only know the RDN, aka key, that we want to retrieve, but the path through the tree from the root to our target node with the RDN.
+
+This is done by walking down the tree til we find what we want. Looking at the image above, consider:
+
+::
+
+    dc=com
+    dc=example,dc=com
+    ou=People,dc=example,dc=com
+    uid=user,ou=People,dc=example,dc=com
+
+We can make a Fully Qualified Distinguished Name (FQDN), or just Distinguished Name(DN), by joining the RDN components. For our example, uid=user,ou=People,dc=example,dc=com. This is a unique path through the tree to the node we wish to access.
 
 This should explain why LDAP is called a "tree", why objects are named the way they are, and help you to visualise the layout of data in your own tree.
 
