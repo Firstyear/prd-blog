@@ -4,6 +4,7 @@ Sitemap
 .. toctree::
    :maxdepth: 1
 
+   2016/07/13/tracking_down_insane_memory_leaks
    2016/07/05/the_ldap_guide_part_2_searching
    2016/06/20/the_ldap_guide_part_1_foundations
    2016/06/11/gdb_using_memory_watch_points
