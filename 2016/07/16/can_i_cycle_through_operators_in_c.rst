@@ -20,7 +20,11 @@ If you want to print literally:
     "1 / 1"
     "1 * 1"
 
-This is the easy version. The operators here server no purpose, they are merely characters. In C we cannot iterate over a loop without using the syntax:
+This is the easy version. The operators here server no purpose, they are merely characters.
+
+First barrier:
+
+My friend listed a python syntax for loop. We don't have these in C! In C we must iterate over a loop using the syntax:
 
 ::
 
@@ -65,7 +69,11 @@ If we build and run this:
 
 Now for the HARD version.
 
-Say that we *literally* wanted to print the RESULTS of these 4 operations. In C, because the operaters +,-,/,\* are not functions, they are key words, we cannot easily make an "array of operators". The compiler won't know what to do with them! However, C does allow us to make *fuction pointers*. These *can* be iterated over, just like our chars.
+Say that we *literally* wanted to print the RESULTS of these 4 operations. 
+
+The second barrier is that in C, we cannot easily convert a "string" into an executable unit of code. We cannot take "x + y", and then run eval on it, and have working code. So formatting the chars into a piece of code, then executing it won't work! We cannot use the printf style that was questioned here.
+
+The third barrier is that because the operaters +,-,/,\* are not functions, they are key words, we cannot easily make an "array of operators". The compiler won't know what to do with them! However, C does allow us to make *fuction pointers*. These *can* be iterated over, just like our chars.
 
 So for this version, we will make an array of function pointers, that each call one of the required operators.
 
