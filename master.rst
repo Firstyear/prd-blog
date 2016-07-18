@@ -4,6 +4,7 @@ Sitemap
 .. toctree::
    :maxdepth: 1
 
+   2016/07/18/block_chain_for_identity_management
    2016/07/16/can_i_cycle_through_operators_in_c
    2016/07/13/tracking_down_insane_memory_leaks
    2016/07/05/the_ldap_guide_part_2_searching

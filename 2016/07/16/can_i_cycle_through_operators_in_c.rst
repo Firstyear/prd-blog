@@ -1,5 +1,5 @@
-can i cycle through operators in C
-==================================
+Can I cycle through operators in C?
+===================================
 
 A friend of mine who is learning to program asked me the following:
 
@@ -20,7 +20,7 @@ If you want to print literally:
     "1 / 1"
     "1 * 1"
 
-This is the easy version. The operators here server no purpose, they are merely characters.
+This is the easy version. The operators here serve no purpose, they are merely characters.
 
 First barrier:
 
@@ -64,6 +64,8 @@ If we build and run this:
     # gcc -std=gnu99 -o test test.c
     # ./test
 
+    1 + 1
+    1 - 1
     1 / 1
     1 * 1
 
@@ -110,7 +112,7 @@ So for this version, we will make an array of function pointers, that each call 
     main(size_t argc, char **argv)
     {
         /*
-         * The syntax for array of fptrs is not obviousl at first.
+         * The syntax for array of fptrs is not obvious at first.
          * int64_t  <<-- The return type
          * (*ops_ptrs <<-- the * signals this array will container pointers
          * [4]  <<-- allocate space for 4 elements.
@@ -148,6 +150,33 @@ Our output from this is:
     1 -> 1
 
 There are probably improvements to make here in terms of making the output clearer, but that's an exercise for the reader. Happy coding!
+
+PS:
+
+Because this is C, any mistake with pointers will cause HORRIBLE things to happen.
+
+::
+
+    int64_t
+    main(size_t argc, char **argv)
+    {
+        /* Create the array of function pointers, reffering to our above wrappers */
+        int64_t (*ops_ptrs[4]) (const int64_t a, const int64_t b) = {
+            add,
+            NULL,
+            NULL,
+            NULL,
+        };
+        int64_t x = 1;
+    ...
+
+::
+
+    # ./test
+    1 -> 2
+    zsh: segmentation fault (core dumped)
+
+Pointers are powerful but it's EASY to shoot yourself in the foot!
 
 .. author:: default
 .. categories:: none
