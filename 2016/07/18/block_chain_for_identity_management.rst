@@ -1,7 +1,7 @@
 Block Chain for Identity Management
 ===================================
 
-On sunday evening I was posed with a question and view of someone interesting in Block Chain.
+On Sunday evening I was posed with a question and view of someone interesting in Block Chain.
 
 *"What do you think of block chain for authentication"*
 
@@ -27,14 +27,14 @@ First, lets start with some terms. The most apparent thing is this discussion wa
 * Identifier: This maps a name or id to an identity.
 * User: The Person or Device that needs to have it's identity asserted.
 * Credential: The credential is the token, biometric, private key or other that proves the answer to a question of "Something I am. Something I have. Something I know". A *key* part of this is that an identity may have one or many credentials.
-* Crendential Validation: This is the process that asserts the requests to consider an authentication attempt valid. Generally this involves the verification of the credentials or *many* credentials in multi factor authentication systems.
+* Credential Validation: This is the process that asserts the requests to consider an authentication attempt valid. Generally this involves the verification of the credentials or *many* credentials in multi factor authentication systems.
 * Authentication process: This takes an identifier, such as email, name, or other value, and asserts that the credentials once passing credential validation, belong with the identifier. We can then map to an identity, which by proxy, creates an authenticated user.
 * Authorisation: The determination of resources that an authenticated identity is allowed to access.
-* Security: Security is Confidentiality, Avaliability and Integrity.
-* External Authentication System / Authentication Provider: Many modern systems, IE apps on phone (pokemon go) do *not* implement their own Authentication system. They use an external authentication system, and trust the result and behaviour of that. IE you allow the external system to conduct the authentication process and we *trust* the results.
+* Security: Security is Confidentiality, Availability and Integrity.
+* External Authentication System / Authentication Provider: Many modern systems, I.E. apps on phone (pokemon go) do *not* implement their own Authentication system. They use an external authentication system, and trust the result and behaviour of that. I.E. you allow the external system to conduct the authentication process and we *trust* the results.
 * Authentication Consumer / Consumer: This is the application that consumes the result of the Authentication Provider, and trusts the result in some way.
 * Trust Domain: The scope of trust that a set of External Authentication Systems extend to.
-* Trust Root / Trusted Third Party: When we provide an identifier and credential we often do this to a system which can assert the validitiy of the authentication process, and we *trust* the result.
+* Trust Root / Trusted Third Party: When we provide an identifier and credential we often do this to a system which can assert the validity of the authentication process, and we *trust* the result.
 
 What is blockchain authentication
 =================================
@@ -49,16 +49,16 @@ Lets boil this down to its core.
 
 *"I don't want to be impersonated online by a third party"*
 
-This system can be modeled in two ways with blockchain:
+This system can be modelled in two ways with blockchain:
 
-System one is that the Blockchain is presented as the Authentication Process system. The Identity itself is stored with the crendentials in the blockchain. In this system, a consumer of the Authentication Process that blockchain would provide must still provide Authorisation systems.
+System one is that the Blockchain is presented as the Authentication Process system. The Identity itself is stored with the credentials in the blockchain. In this system, a consumer of the Authentication Process that blockchain would provide must still provide Authorisation systems.
 
 System two is that the Blockchain is presenting *only* an Credential Validation system. It is *not* an Authentication system nor an Authorisation system. Any consumers of this system still must implement proper Authentication process to map the validated credential to an identity, and they must implement authorisation systems.
 
 Preventing impersonation
 ========================
 
-In the first system, we have successfully prevented impersonation of the credential ONLY, despite being an identity storage system. This is dependendant on the authentication consumer to implement that policy! There is *no guarantee* that the service cannot have a system which bypasses the blockchain authentication process. Given that these applications will merely call the blockchain as a library, they can easily bypass and inject a *seperate* identity system that allows impersonation of the identity. Tricky, hey!
+In the first system, we have successfully prevented impersonation of the credential ONLY, despite being an identity storage system. This is dependant on the authentication consumer to implement that policy! There is *no guarantee* that the service cannot have a system which bypasses the blockchain authentication process. Given that these applications will merely call the blockchain as a library, they can easily bypass and inject a *separate* identity system that allows impersonation of the identity. Tricky, hey!
 
 In the second system, we still need an identity mapping service. This will allow the addition of extra credentials to an account to allow impersonation of the identity on the service, at the application layer again.
 
@@ -104,7 +104,7 @@ Revoking credentials
 
 The ability for an Authentication System to revoke credentials when they are compromised is a key corner stone of correct Authentication Services.
 
-If we examine system one, blockchain as an auth process. Revokation of credentials is semi-possible, and not user friendly. To revoke you need:
+If we examine system one, blockchain as an auth process. Revocation of credentials is semi-possible, and not user friendly. To revoke you need:
 
 * The original private credentials.
 * A pre-generated revocation credential.
@@ -118,21 +118,21 @@ This fails in many ways.
 * If you *loose* the private credentials, and have lost the revocation credential, you CAN NOT prevent exploitation of your account.
 * If you *loose* your account, you CAN NOT recover it. You must create a new identity!
 * Revocation lists will be huge. The block chain will be huge. This system will be extremely slow.
-* Recovation is permanent. (This may be implemenation specific)
+* Revocation is permanent. (This may be implementation specific)
 
 There is a reason why CA systems are broken: Revocation lists are broken and not used due to their size and complexity. This system reeks of complexity. When you manage an Authentication system it *must* be simple and it *must* be able to support revocation of credentials even by a trusted third party!
 
 Lets look at the second implementation Blockchain as the credential validation system. This is not *as* bad as the second solution.
 
 * Like the first, you cannot REMOVE a credential from the block chain.
-* It is the responsibility of the Authentication Process to implement revocation. IE it must maintain a list of valid credentials mapped to identity.
+* It is the responsibility of the Authentication Process to implement revocation. I.E. it must maintain a list of valid credentials mapped to identity.
 * You revoke in the Authentication Process, not in the Block Chain.
 
-Suddenly, we have a system where to revoke a credential you need to revoke it in *many systems* rather than a true centralised auth system. This is a critical fault in the case where a credential is lost or compromised. If the credential is revoked in the blockchain, now we have a system where revocations can be in 2 or more places. More complexity!
+Suddenly, we have a system where to revoke a credential you need to revoke it in *many systems* rather than a true centralised authentication system. This is a critical fault in the case where a credential is lost or compromised. If the credential is revoked in the blockchain, now we have a system where revocations can be in 2 or more places. More complexity!
 
 A proper, centralised system, is able to revoke credentials in the source of truth, and will have immediate lock out effects on the consuming services. Revocations can also be *temporary* or *permanent*.
 
-Revoking credentials in an existing DB backed solution is as simple as logging in and revoking the credential. You can delete the account with no trace remaining. You can also ask the trusted third party, IE the operator of the authentication service to revoke your account given your ability to provide identity and authenticate in an out of band manner.
+Revoking credentials in an existing DB backed solution is as simple as logging in and revoking the credential. You can delete the account with no trace remaining. You can also ask the trusted third party, I.E. the operator of the authentication service to revoke your account given your ability to provide identity and authenticate in an out of band manner.
 
 Blockchain is slow
 ==================
@@ -144,7 +144,7 @@ When I need to authenticate an identifier and credentials:
 * I need to locate the identifier
 * I then validate the credential with the identifier.
 
-Because this may be revoked I will need to assert in the blockchain is this is revoked also. For this to be performant, consumers will pre-index for fast lookup. This takes maintence. It can be made faster if needed, but it will still not compete with other systems. The issue here is now assertion that the indexes are as valid as the blockchain itself.
+Because this may be revoked I will need to assert in the blockchain is this is revoked also. For this to be performant, consumers will pre-index for fast lookup. This takes maintenance. It can be made faster if needed, but it will still not compete with other systems. The issue here is now assertion that the indexes are as valid as the blockchain itself.
 
 This causes a number of other challenges.
 
@@ -170,7 +170,7 @@ Any system implementing blockchain for authentication will use blockchain in pla
 
 This means the consumer has a method, to create tokens to *impersonate identites*. This is how cookies on the web work!
 
-No attacker will ever attack the security of the authentication process (unless you royally make a mistake). They will *always* target the application and it's unique vulnerabilites, such as mishandling cookies, xss, injection, incorrect authorisation checks.
+No attacker will ever attack the security of the authentication process (unless you royally make a mistake). They will *always* target the application and it's unique vulnerabilities, such as mishandling cookies, xss, injection, incorrect authorisation checks.
 
 *these are not bad things*. This is how the modern web works, and we are getting better at it.
 
@@ -215,7 +215,7 @@ In conclusion
 Block chain for the validation of credentials may be cryptographically sound. However, for credential validation in an Authentication Process, it is not acceptable.
 
 * There will never be a single global blockchain identity store.
-* Revokcation is complex and potentially impossible.
+* Revocation is complex and potentially impossible.
 * Identities can be lost and never recovered.
 * It will not scale as the chain grows.
 * It doesn't prevent impersonation of identity, only of credential.
@@ -231,7 +231,7 @@ Personal notes
 
 This whole discussion, I kept finding more and more issues. When I went away, I found more and more flaws. This will only add "security" in the minds of the crypto nerds who love it. We won't save people during data leaks or breaches. We don't add *real* improvements to security for users or the planet with this. It doesn't even live up to the assertions it's proponents think that hold.
 
-If you seriously are interested in improving the security of your services, investigate and implement multi factor authentication. Investigate and *actually audit* authentication code that exists rather than just hot-airing about blockchain. Most of the issues is *not* in the authentication system, it's in the compromise and data leak that happens to that system en-masse.
+If you seriously are interested in improving the security of your services, investigate and implement multi factor authentication. Investigate and *actually audit* authentication code that exists rather than just hot-airing about blockchain. Most of the issues is *not* in the authentication system, it's in the compromise and data leak that happens to that system en-mass.
 
 Authentication, Authorisation, Security. These are not sexy topics - And I don't want them to be. If you want to really improve the lives of millions, you need to get your hands dirty. You need to be a plumber, not a rock star. If you really want to improve the security and privacy of millions, we need to fix the basics we currently have, instead of adding complexity for complexities sake.
 
