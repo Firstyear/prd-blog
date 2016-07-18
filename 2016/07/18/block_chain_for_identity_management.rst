@@ -1,7 +1,7 @@
 Block Chain for Identity Management
 ===================================
 
-On Sunday evening I was posed with a question and view of someone interesting in Block Chain.
+On Sunday evening I was posed with a question and view of someone interested in Block Chain.
 
 *"What do you think of block chain for authentication"*
 
@@ -21,7 +21,7 @@ Guess what. Authentication and Authorisation are *hard*. Very hard. This is not 
 Glossary
 ========
 
-First, lets start with some terms. The most apparent thing is this discussion was a clear lack of understanding of Authentication systems and what is involved in them.
+First, lets start with some terms. The most apparent thing in this discussion was a clear lack of understanding of Authentication systems and what is involved in them.
 
 * Identity: The representation of "something or someone" in a system.
 * Identifier: This maps a name or id to an identity.
@@ -39,7 +39,7 @@ First, lets start with some terms. The most apparent thing is this discussion wa
 What is blockchain authentication
 =================================
 
-Blockchain authentication is essentially an extended form of Public / Private key cryptography. Instead of a centralised third part of trust, we have a decentralised chain of public keys. An application wishing to conduct the authentication process, will refer to the block chain when presented with the users credential and identifier. As we assert trust in the block chain, we then assert the that public key and identity mapping in the chain is valid, and we authenticate the user.
+Blockchain authentication is essentially an extended form of Public / Private key cryptography. Instead of a centralised third part of trust, we have a decentralised chain of public keys. An application wishing to conduct the credential validation or authentication process, will refer to the block chain when presented with the users credential and identifier. As we assert trust in the block chain, we then assert the that public key and identity mapping in the chain is valid, and we authenticate the user.
 
 The reason presented by this user for usage of this system.
 
@@ -89,7 +89,7 @@ Block chain as an authentication system provides only "Something I have". A sing
 
 The leading experts of Authentication systems globally are moving towards multiple factor authentication. Being able to satisfy multiple assertions of "something I ...".
 
-If we use Blockchain in the first system we are only able to have a single factor of authentication. This is unacceptable given leading researching into authentication.
+If we use Blockchain in the first system we are only able to have a single factor of authentication. This is unacceptable given leading research and evidence into secure authentication.
 
 If we use Blockchain in the second system, we allow the Authentication Process to have many credentials that *all* must be validated. This is a good thing! However, at this point we are using Blockchain as an over-complex form of public-private key crypto. We still must have the third party of trust able to assert the validity of our multiple credentials! This again leads to "someone can impersonate my account".
 
@@ -170,11 +170,9 @@ Any system implementing blockchain for authentication will use blockchain in pla
 
 This means the consumer has a method, to create tokens to *impersonate identites*. This is how cookies on the web work!
 
-No attacker will ever attack the security of the authentication process (unless you royally make a mistake). They will *always* target the application and it's unique vulnerabilities, such as mishandling cookies, xss, injection, incorrect authorisation checks.
+No attacker will ever attack the security of the authentication process (unless you royally make a mistake). They will *always* target the application and it's unique vulnerabilities, such as mishandling cookies, xss, injection, incorrect authorisation checks, and many more.
 
-*these are not bad things*. This is how the modern web works, and we are getting better at it.
-
-However, it DOES violate the assertion:
+*These are not completely bad things*. This is how the modern web works, and we are getting better at managing this. However, it DOES violate the assertion:
 
 *"I don't want to be impersonated online by a third party"*
 
