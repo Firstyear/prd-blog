@@ -229,7 +229,7 @@ Personal notes
 
 This whole discussion, I kept finding more and more issues. When I went away, I found more and more flaws. This will only add "security" in the minds of the crypto nerds who love it. We won't save people during data leaks or breaches. We don't add *real* improvements to security for users or the planet with this. It doesn't even live up to the assertions it's proponents think that hold.
 
-If you seriously are interested in improving the security of your services, investigate and implement multi factor authentication. Investigate and *actually audit* authentication code that exists rather than just hot-airing about blockchain. Most of the issues is *not* in the authentication system, it's in the compromise and data leak that happens to that system en-mass.
+If you seriously are interested in improving the security of your services, investigate and implement multi factor authentication. Investigate and *actually audit* authentication code that exists rather than just hot-airing about blockchain. Most of the issues are *not* in the authentication system, they're in the compromise and data leak that happens to that system en-mass.
 
 Authentication, Authorisation, Security. These are not sexy topics - And I don't want them to be. If you want to really improve the lives of millions, you need to get your hands dirty. You need to be a plumber, not a rock star. If you really want to improve the security and privacy of millions, we need to fix the basics we currently have, instead of adding complexity for complexities sake.
 
