@@ -1,5 +1,5 @@
 What's new in 389 Directory Server 1.3.5 (unofficial)
-=================================================
+=====================================================
 
 As a member of the 389 Directory Server (389DS) core team, I am always excited about our new
 releases. We have some really great features in 1.3.5. However, our changelogs
