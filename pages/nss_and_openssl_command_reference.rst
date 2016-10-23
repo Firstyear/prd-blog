@@ -279,6 +279,20 @@ OpenSSL is the same as a self signed cert. It's probably wise to add path length
     openssl req -x509 -newkey rsa:2048 -keyout key.pem -out cert.pem -days
     
 
+Renewing the self signed CA
+---------------------------
+
+This happens if your CA is about to or has expired. You need to reissue all your certs after this is done!
+
+::
+
+    certutil -d . -R -k "NSS Certificate DB:ca" -s "CN=ca.net.blackhats.net.au,O=Blackhats,L=Brisbane,ST=Queensland,C=AU" -a -o renew.req -1 -2 -5
+
+    certutil -C -d . -c "ca" -a -i renew.req -t "C,C,C" -o cacert.crt -v 12
+
+    certutil -A -d . -n "ca" -a -i cacert.crt -t "C,C,C"
+
+
 Signing with the CA
 -------------------
 

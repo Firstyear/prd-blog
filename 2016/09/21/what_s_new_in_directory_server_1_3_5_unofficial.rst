@@ -7,7 +7,7 @@ are always large so I want to just touch on a few of my favourites.
 
 389 Directory Server is an LDAPv3 compliant server, used around the world for
 Identity Management, Authentication, Authorisation and much more. It is the
-foundation of the FreeIPA projects server. As a result, it's not something we
+foundation of the FreeIPA project's server. As a result, it's not something we
 often think about or even get excited for: but every day many of us rely on
 389 Directory Server to be correct, secure and fast behind the scenes.
 
