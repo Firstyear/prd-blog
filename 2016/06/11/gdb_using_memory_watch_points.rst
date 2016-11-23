@@ -11,6 +11,7 @@ But in the arsenal of the programmer, is the debugger. Normally, the debugger, i
 
 All the code we are about to discuss is `in the liblfdb git <https://github.com/Firstyear/liblfdb>`_
 
+.. more::
 
 First, we need a repeatable test case that triggers the fault. For me I am developing a B+Tree, and I was noticing that in the struct of a node, that the node id was being changed from 1 -> 0 incorrectly. Additionally, is_leaf was changing from 1 -> 0 also.
 

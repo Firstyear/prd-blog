@@ -11,6 +11,8 @@ Like I'd stick them in an array and iterate over the array incrementing on each 
 
 He's certainly on the way to the correct answer already. There are three key barriers to an answer.
 
+.. more::
+
 If you want to print literally:
 
 ::

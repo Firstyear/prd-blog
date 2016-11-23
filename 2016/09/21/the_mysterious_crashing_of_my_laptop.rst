@@ -6,6 +6,8 @@ driver have caused my laptop to kernel panic just connecting and removing
 external displays: unacceptable to someone who moves their laptop around as much
 as I do.
 
+.. more::
+
 In the spirit of being a corporate schill, I have now installed and run Red Hat
 Workstation on my laptop.
 

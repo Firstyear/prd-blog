@@ -7,6 +7,8 @@ In my previous job I used to manage the Directory Servers for a University. Peop
 
 It is very possible, and achievable to have zero outage migrations of Directory Servers. All it takes is some thought, planning, dedication and testing.
 
+.. more::
+
 What will I need?
 -----------------
 

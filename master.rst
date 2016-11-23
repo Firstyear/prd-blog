@@ -4,6 +4,7 @@ Sitemap
 .. toctree::
    :maxdepth: 1
 
+   2016/11/23/the_minssf_trap
    2016/09/21/what_s_new_in_directory_server_1_3_5_unofficial
    2016/09/21/the_mysterious_crashing_of_my_laptop
    2016/07/18/block_chain_for_identity_management

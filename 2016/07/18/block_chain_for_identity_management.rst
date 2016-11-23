@@ -18,6 +18,8 @@ We've heard this. "When writing cryptography, don't. If you have to, hire a cryp
 
 Guess what. Authentication and Authorisation are *hard*. Very hard. This is not something for the kids to play with; this is a security critical, business critical, sensitive, scrutinised and highly conservative area of technology.
 
+.. more::
+
 Glossary
 ========
 

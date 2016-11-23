@@ -14,6 +14,8 @@ Viewing this graph, we can see that it has a number of properties. It has 4 node
 
 We also have a cycle: That is a loop between nodes. We can see this in B, C, D. If any edge between the set of B, D or B, C, or C, D were removed, this graph would no longer have cycles.
 
+.. more::
+
 Directed
 --------
 

@@ -5,6 +5,8 @@ In the first part, we discussed how and LDAP tree is laid out, and why it's call
 
 In this part, we will discuss the most important and fundamental component of ldap: Searching.
 
+.. more::
+
 A note is that *all* examples and commands in this document *work*. I have established an internet facing ldap server with which you can query to test out searches. This will work on any RPM based system with openldap-clients installed, or OSX.
 
 To test connectivity you should see the following:
