@@ -4,6 +4,8 @@ Sitemap
 .. toctree::
    :maxdepth: 1
 
+   2017/01/06/state_of_the_389_ds_port_2017
+   2017/01/02/openshift_cluster_administration
    2016/11/23/the_minssf_trap
    2016/09/21/what_s_new_in_directory_server_1_3_5_unofficial
    2016/09/21/the_mysterious_crashing_of_my_laptop
