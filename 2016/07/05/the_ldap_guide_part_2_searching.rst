@@ -13,7 +13,7 @@ To test connectivity you should see the following:
 
 ::
 
-    I0> ldapsearch -H ldap://exampleldap.blackhats.net.au -b '' -s base -x -LLL vendorVersion
+    I0> ldapsearch -H ldap://exampleldap.blackhats.net.au:3389 -b '' -s base -x -LLL vendorVersion
     dn:
     vendorVersion: 389-Directory/1.3.4.0 B2016.175.1716
 
@@ -56,7 +56,7 @@ Because LDAP is a tree, we must define a basedn: The "root" or "anchor" point in
 
 ::
 
-    ldapsearch -H ldap://exampleldap.blackhats.net.au -b '' -s base -x namingContexts
+    ldapsearch -H ldap://exampleldap.blackhats.net.au:3389 -b '' -s base -x namingContexts
     ...
     namingContexts: dc=example,dc=com
 
@@ -64,7 +64,7 @@ We can now use this in our search command: Note the -b argument. This is the sea
 
 ::
 
-    ldapsearch -H ldap://exampleldap.blackhats.net.au -x -b 'dc=example,dc=com'
+    ldapsearch -H ldap://exampleldap.blackhats.net.au:3389 -x -b 'dc=example,dc=com'
 
 You should see a lot of data on your screen from that last command! We just showed every object in the tree. Here is the layout of the data in the exampleldap server to help you understand that output.
 
@@ -87,7 +87,7 @@ The solution is to *change* the basedn of our search.
 
 ::
 
-    ldapsearch -H ldap://exampleldap.blackhats.net.au -x -b 'ou=Groups,dc=example,dc=com'
+    ldapsearch -H ldap://exampleldap.blackhats.net.au:3389 -x -b 'ou=Groups,dc=example,dc=com'
 
 Now you should see that we only see the results highlighted in blue.
 
@@ -109,7 +109,7 @@ Now we need to limit not the basedn of the search, but the *scope*. The ldap sea
 
 ::
 
-    ldapsearch -H ldap://exampleldap.blackhats.net.au -x -s onelevel -b 'ou=Groups,dc=example,dc=com'
+    ldapsearch -H ldap://exampleldap.blackhats.net.au:3389 -x -s onelevel -b 'ou=Groups,dc=example,dc=com'
 
 From the result, you can see, we only see the entries again in blue.
 
@@ -120,7 +120,7 @@ A key point of onelevel is the direct children only are searched. So were we to 
 
 :: 
 
-    ldapsearch -H ldap://exampleldap.blackhats.net.au -x -s onelevel -b 'dc=example,dc=com'
+    ldapsearch -H ldap://exampleldap.blackhats.net.au:3389 -x -s onelevel -b 'dc=example,dc=com'
 
 
 In addition to subtree and onelevel we have one more search scope. The final scope is named 'base'. This search scope returns *only* the basedn of the search.
@@ -132,7 +132,7 @@ So if we were to want to retrieve a single entry by DN, this is how we would ach
 
 ::
 
-    ldapsearch -H ldap://exampleldap.blackhats.net.au -x -s base -b 'ou=Groups,dc=example,dc=com'
+    ldapsearch -H ldap://exampleldap.blackhats.net.au:3389 -x -s base -b 'ou=Groups,dc=example,dc=com'
 
 
 Filtering a set of objects
@@ -166,20 +166,20 @@ You can see this doesn't change the output when we run these two commands:
 
 ::
 
-    ldapsearch -H ldap://exampleldap.blackhats.net.au -x -s sub -b 'ou=Groups,dc=example,dc=com' '(objectClass=*)'
-    ldapsearch -H ldap://exampleldap.blackhats.net.au -x -s sub -b 'ou=Groups,dc=example,dc=com'
+    ldapsearch -H ldap://exampleldap.blackhats.net.au:3389 -x -s sub -b 'ou=Groups,dc=example,dc=com' '(objectClass=*)'
+    ldapsearch -H ldap://exampleldap.blackhats.net.au:3389 -x -s sub -b 'ou=Groups,dc=example,dc=com'
 
 If we were to want to retrieve *only* the HR Managers group, but we didn't know it's RDN / DN. Because we know it has the attribute "cn=HR Managers", we can construct a filter that will retrieve "any object where cn exactly matches the value HR Managers.
 
 ::
 
-    ldapsearch -H ldap://exampleldap.blackhats.net.au -x -s sub -b 'ou=Groups,dc=example,dc=com' '(cn=HR Managers)'
+    ldapsearch -H ldap://exampleldap.blackhats.net.au:3389 -x -s sub -b 'ou=Groups,dc=example,dc=com' '(cn=HR Managers)'
 
 Say that you did not know that the HR Managers group was in ou=Groups. The following would also be valid:
 
 ::
 
-    ldapsearch -H ldap://exampleldap.blackhats.net.au -x -s sub -b 'dc=example,dc=com' '(cn=HR Managers)'
+    ldapsearch -H ldap://exampleldap.blackhats.net.au:3389 -x -s sub -b 'dc=example,dc=com' '(cn=HR Managers)'
 
 Thus, you often see queries using the base namingContext of the directory, but applying filters to limit the objects returned.
 
@@ -208,13 +208,13 @@ To do this, you put a space seperated list at the end of the ldap search command
 
 ::
 
-    ldapsearch -H ldap://exampleldap.blackhats.net.au -x -s sub -b 'dc=example,dc=com' '(cn=HR Managers)' uniqueMember
+    ldapsearch -H ldap://exampleldap.blackhats.net.au:3389 -x -s sub -b 'dc=example,dc=com' '(cn=HR Managers)' uniqueMember
 
 You can return multiple attributes if you wish:
 
 ::
 
-    ldapsearch -H ldap://exampleldap.blackhats.net.au -x -s sub -b 'dc=example,dc=com' '(cn=HR Managers)' uniqueMember cn
+    ldapsearch -H ldap://exampleldap.blackhats.net.au:3389 -x -s sub -b 'dc=example,dc=com' '(cn=HR Managers)' uniqueMember cn
 
 
 Conclusion
@@ -250,7 +250,7 @@ example-setup.inf
     RootDN = cn=Directory Manager
     RootDNPwd =
     ServerIdentifier = example
-    ServerPort = 389
+    ServerPort = 3389
     Suffix = dc=example,dc=com
     bak_dir = /var/lib/dirsrv/slapd-example/bak
     bindir = /bin
