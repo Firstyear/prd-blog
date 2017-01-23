@@ -4,6 +4,7 @@ Sitemap
 .. toctree::
    :maxdepth: 1
 
+   2017/01/23/the_next_year_of_directory_server
    2017/01/23/usability_of_software_the_challenges_facing_projects
    2017/01/23/lca2017_getting_into_the_rusty_bucket
    2017/01/06/state_of_the_389_ds_port_2017
