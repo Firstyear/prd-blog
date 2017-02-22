@@ -1,7 +1,7 @@
 LCA2017 - Getting Into the Rusty Bucket
 =======================================
 
-I spoke at `Linux Conf Australia 2017 <http://lca2017.org>`_ recently. I presenteda techniques and lessons
+I spoke at `Linux Conf Australia 2017 <http://lca2017.org>`_ recently. I presented techniques and lessons
 about integrating Rust with existing C code bases. This is related to my work on Directory Server.
 
 The recording of the talk can be found on `youtube <https://www.youtube.com/watch?v=AWnza5JX7jQ>`_ and on
