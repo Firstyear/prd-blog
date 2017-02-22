@@ -83,6 +83,16 @@ This is not so dangerous, because the buffer for tmp_config->attr_friendly is co
 
 Right, so we have our buffer of memory that's being leaked. To trigger the actual disclosure to the client, we need to cause a LDAP_CONSTRAINT_VIOLATION (by adding a duplicated attribute to an object which matches this configuration). At this point the `bytes are now sent <https://pagure.io/389-ds-base/blob/04a9c896a99be843e531f989352f39687518c4e8/f/ldap/servers/plugins/uiduniq/uid.c#_1058>`_ in the error message to the client.
 
+::
+
+    if (result == LDAP_CONSTRAINT_VIOLATION) {
+      errtext = slapi_ch_smprintf(moreInfo, attr_friendly);
+    } else {
+      errtext = slapi_ch_strdup("Error checking for attribute uniqueness.");
+    }
+    /* Send failure to the client */
+    slapi_send_ldap_result(pb, result, 0, errtext, 0, 0);
+
 So what's the catch here?
 
 The buffer overrun is only run *once*. The function affected is `uniqueness_attr_to_config <https://pagure.io/389-ds-base/blob/04a9c896a99be843e531f989352f39687518c4e8/f/ldap/servers/plugins/uiduniq/uid.c#_160>`_ which is only called *once* at `plugin start up <https://pagure.io/389-ds-base/blob/04a9c896a99be843e531f989352f39687518c4e8/f/ldap/servers/plugins/uiduniq/uid.c#_1407>`_
@@ -125,7 +135,7 @@ This CVE is not actually very dangerous at all. It relies on:
 
 So why was it raised at all? Well my original `bug report <https://pagure.io/389-ds-base/issue/48986>`_ has lots of scary words like *heap-buffer-overflow* and *trigger* and *ERROR*. As a result, someone trawling the bug tracker saw this and took a cheap shot: They never actually did the analysis of the execution path to determine that in most cases you *leak no data to a client anyway*. They classified it as a "Denial Of Service" (The server does not crash). They did not analyse the access vectors "A attacker, authenticated, but possibly also unauthenticated, could possibly force the plugin to read beyond allocated memory and trigger a segfault.". This is incorrect, you must be authenticated, and you can not force the plugin to read beyond the memory: The memory was read at startup, so you keep retrieving the same bytes!
 
-Finally, in most cases no bytes are leaked anyway due to the layout of the memory in the plugin and the allocation series.
+Additionally in most cases no bytes are leaked anyway due to the layout of the memory in the plugin and the allocation series. Actually attempting to trigger this with a fully patched RHEL7, and ASLR and all rpm compiler protections (our production builds), I was never able to produce a memory leak.
 
 There was a lot of noise for something that is not even a really dangerous issue!
 
