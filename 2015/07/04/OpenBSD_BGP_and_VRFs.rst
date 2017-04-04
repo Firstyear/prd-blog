@@ -159,7 +159,7 @@ Now, ignoring all the other configuration of interfaces with rdomains and pf, he
     deny from any prefix 100.64.0.0/10 prefixlen >= 10      # CGN Shared [RFC6598]
     deny from any prefix 127.0.0.0/8 prefixlen >= 8         # localhost [RFC1122]
     deny from any prefix 169.254.0.0/16 prefixlen >= 16     # link local [RFC3927]
-    #deny from any prefix 172.16.0.0/12 prefixlen >= 12      # private space [RFC1918]
+    deny from any prefix 172.16.0.0/12 prefixlen >= 12      # private space [RFC1918]
     deny from any prefix 192.0.2.0/24 prefixlen >= 24       # TEST-NET-1 [RFC5737]
     deny from any prefix 192.168.0.0/16 prefixlen >= 16     # private space [RFC1918]
     deny from any prefix 198.18.0.0/15 prefixlen >= 15      # benchmarking [RFC2544]
@@ -181,6 +181,7 @@ Now, ignoring all the other configuration of interfaces with rdomains and pf, he
     deny from any prefix ff00::/8 prefixlen >= 8            # multicast
     
     allow from any prefix 2001:db8:0::/56 prefixlen >= 64
+    # This allow should override the deny 172.16.0.0/12 above.
     allow from any prefix 172.24.0.0/16 prefixlen >= 24      # private space [RFC1918]
     
     
@@ -237,4 +238,7 @@ Finally, the allow / deny statements filter the valid networks that we accept fo
 Router B has a nearly identical configuration, just change the neighbour definitions over.
 
 Happy routing!
+
+
+UPDATE: Thanks to P. Caetano for advice on improving the filter allow/deny section.
 
