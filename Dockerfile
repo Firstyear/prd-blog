@@ -15,7 +15,10 @@ RUN yum upgrade -y && \
 
 # Setup the apache config. This involves changing ports, and disabling a bunch of modules.
 RUN chown -R apache: /var/log/httpd && \
-    chown -R apache: /var/run/httpd
+    chown -R apache: /var/run/httpd && \
+    chmod -R 777 /var/log/httpd && \
+    chmod -R 777 /var/run/httpd
+
 COPY 00-base.conf /etc/httpd/conf.modules.d/00-base.conf
 COPY httpd.conf /etc/httpd/conf/httpd.conf
 
