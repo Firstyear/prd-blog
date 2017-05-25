@@ -38,82 +38,90 @@ I have created a password file, which consists of random data on one line in a p
 
 Importing certificates to NSS
 -----------------------------
-    
-Import the signed certificate into the requesters database. 
+
+Import the signed certificate into the requesters database.
 
 ::
 
-        certutil -A -n "Server-cert" -t ",," -i nss.dev.example.com.crt -d .
+    certutil -A -n "Server-cert" -t ",," -i nss.dev.example.com.crt -d .
 
-Import an openSSL generated key and certificate into an NSS database. 
+Import an openSSL generated key and certificate into an NSS database.
+
 ::
-    
+
     openssl pkcs12 -export -in server.crt -inkey server.key -out server.p12 -name Test-Server-Cert
     pk12util -i server.p12 -d . -k pwdfile.txt
 
 Importing a CA certificate
 --------------------------
-    
-Import the CA public certificate into the requesters database. 
+
+Import the CA public certificate into the requesters database.
+
 ::
-    
+
     certutil -A -n "CAcert" -t "C,," -i /etc/pki/CA/nss/ca.crt -d .
 
 Exporting certificates
 ----------------------
-    
-Export a secret key and certificate from an NSS database for use with openssl. 
+
+Export a secret key and certificate from an NSS database for use with openssl.
+
 ::
-    
+
     pk12util -o server-export.p12 -d . -k pwdfile.txt -n Test-Server-Cert
     openssl pkcs12 -in server-export.p12 -out file.pem -nodes
 
-Note that file.pem contains both the CA cert, cert and private key. You can view just the private key with: 
+Note that file.pem contains both the CA cert, cert and private key. You can view just the private key with:
+
 ::
-    
+
     openssl pkcs12 -in server-export.p12 -out file.pem -nocerts -nodes
 
-Or just the cert and CAcert with 
+Or just the cert and CAcert with
+
 ::
-    
+
     openssl pkcs12 -in server-export.p12 -out file.pem -nokeys -nodes
 
-You can easily make ASCII formatted PEM from here. 
-    
+You can easily make ASCII formatted PEM from here.
+
 Both NSS and OpenSSL
 --------------------
-    
+
 Self signed certificates
 ------------------------
-    
-Create a self signed certificate. 
-    
-For nss, note the -n, which creates a "nickname" (And should be unique) and is how applications reference your certificate and key. Also note the -s line, and the CN options. Finally, note the first line has the option -g, which defines the number of bits in the created certificate. 
+
+Create a self signed certificate.
+
+For nss, note the -n, which creates a "nickname" (And should be unique) and is how applications reference your certificate and key. Also note the -s line, and the CN options. Finally, note the first line has the option -g, which defines the number of bits in the created certificate. Note also the -Z for the hash algorithm.
+
 ::
-    
-    certutil -S -f pwdfile.txt -d . -t "C,," -x -n "Server-Cert" -g 2048\
+
+    certutil -S -f pwdfile.txt -d . -t "C,," -x -n "Server-Cert" -g 4096 -Z SHA256 \
     -s "CN=nss.dev.example.com,O=Testing,L=example,ST=Queensland,C=AU"
-    
+
     openssl req -x509 -newkey rsa:2048 -keyout key.pem -out cert.pem -days
 
 ::
-    
+
     certutil -S -f pwdfile.txt -d . -t "C,," -x -n "Server-Cert2" \
     -s "CN=nss2.dev.example.com,O=Testing,L=example,ST=Queensland,C=AU" 
 
 SubjectAltNames
 ---------------
-    
-To add subject alternative names, use a comma seperated list with the option -8 IE: 
+
+To add subject alternative names, use a comma seperated list with the option -8 IE:
+
 ::
-    
-    certutil -S -f pwdfile.txt -d . -t "C,," -x -n "Server-Cert" -g 2048\
+
+    certutil -S -f pwdfile.txt -d . -t "C,," -x -n "Server-Cert" -g 4096 -Z SHA256 \
     -s "CN=nss.dev.example.com,O=Testing,L=example,ST=Queensland,C=AU" \
     -8 "nss.dev.example.com,nss-alt.dev.example.com"
 
-For OpenSSL this is harder: 
+For OpenSSL this is harder:
     
 First, you need to create an altnames.cnf 
+
 ::
     
     [req]
@@ -189,6 +197,7 @@ View the cert
 View the cert in ASCII PEM form (This can be redirected to a file for use with openssl) 
    
 :: 
+
     certutil -L -d . -n Test-Cert -a
     certutil -L -d . -n Test-Cert -a > cert.pem
 
@@ -197,11 +206,19 @@ Creating a CSR
     
 In a second, seperate database to your CA. 
 
-Create a new certificate request. Again, remember -8 for subjectAltName 
+Create a new certificate request. Again, remember -8 for subjectAltName. This request is for a TLS server.
+
 ::
     
-    certutil -d . -R -o nss.dev.example.com.csr -f pwdfile.txt \
+    certutil -d . -R -a -o nss.dev.example.com.csr -f pwdfile.txt -g 4096 -Z SHA256 -v 24 \
     -s "CN=nss.dev.example.com,O=Testing,L=example,ST=Queensland,C=AU"
+
+If you want to request for a TLS client you need to use:
+
+    certutil -d . -R -a -o user.csr -f pwdfile.txt -g 4096 -Z SHA256 -v 24 \
+    --keyUsage digitalSignature,nonRepudiation,keyEncipherment,dataEncipherment --nsCertType sslClient --extKeyUsage clientAuth \
+    -s "CN=username,O=Testing,L=example,ST=Queensland,C=AU"
+
 
 Using openSSL create a server key, and make a CSR 
 ::
@@ -215,8 +232,9 @@ Self signed CA
 Create a self signed CA (In a different database from the one used by httpd.) 
 ::
     
-    certutil -S -n CAissuer -t "C,C,C" -x -f pwdfile.txt -d . \
-    -s "CN=ca.nss.dev.example.com,O=Testing,L=example,ST=Queensland,C=AU" -1 -2 -5
+    certutil -S -n CAissuer -t "C,C,C" -x -f pwdfile.txt -d . -v 24 -g 4096 -Z SHA256 \
+    --keyUsage certSigning -2 --nsCertType sslCA \
+    -s "CN=ca.nss.dev.example.com,O=Testing,L=example,ST=Queensland,C=AU"
 
 Nss will ask you about the constraints on this certificate. Here is a sample output. Note the path length of 0 still allows this CA to issue certificates, but it cannot issue an intermediate CA.
 
@@ -297,12 +315,14 @@ Signing with the CA
 -------------------
 
 Create a certificate in the same database, and sign it with the CAissuer certificate. 
+
 ::
     
     certutil -S -n Test-Cert -t ",," -c CAissuer -f pwdfile.txt -d . \
     -s "CN=test.nss.dev.example.com,O=Testing,L=example,ST=Queensland,C=AU"
 
 If from a CSR, review the CSR you have recieved. 
+
 ::
     
     /usr/lib[64]/nss/unsupported-tools/derdump -i /etc/httpd/alias/nss.dev.example.com.csr
@@ -310,12 +330,14 @@ If from a CSR, review the CSR you have recieved.
     openssl req -inform PEM -text -in server.csr  ## if from openssl
 
 On the CA, sign the CSR. 
+
 ::
     
-    certutil -C -d . -f pwdfile.txt -i /etc/httpd/alias/nss.dev.example.com.csr \
+    certutil -C -d . -f pwdfile.txt -a -i /etc/httpd/alias/nss.dev.example.com.csr \
     -o /etc/httpd/alias/nss.dev.example.com.crt -c CAissuer
 
 For openssl CSR, note the use of -a that allows an ASCII formatted PEM input, and will create and ASCII PEM certificate output. 
+
 ::
     
     certutil -C -d . -f pwdfile.txt -i server.csr -o server.crt -a -c CAissuer
@@ -329,6 +351,7 @@ Check validity of a certificate
 -------------------------------
     
 Test the new cert for validity as an SSL server. This assumes the CA cert is in the DB. (Else you need openssl or to import it) 
+
 ::
     
     certutil -V -d . -n Test-Cert -u V

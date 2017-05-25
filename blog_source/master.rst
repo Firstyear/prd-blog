@@ -4,6 +4,8 @@ Sitemap
 .. toctree::
    :maxdepth: 1
 
+   2017/05/23/kerberos_why_the_world_moved_on
+   2017/05/22/custom_ostree_images
    2017/03/10/your_code_has_impact
    2017/02/22/cve_2017_2591_dos_via_oob_heap_read
    2017/01/23/the_next_year_of_directory_server
