@@ -350,11 +350,13 @@ For openssl CSR, note the use of -a that allows an ASCII formatted PEM input, an
 Check validity of a certificate
 -------------------------------
     
-Test the new cert for validity as an SSL server. This assumes the CA cert is in the DB. (Else you need openssl or to import it) 
+Test the new cert for validity as an SSL server. This assumes the CA cert is in the DB. (Else you need openssl or to import it). The second example is validating a user certificate.
 
 ::
     
     certutil -V -d . -n Test-Cert -u V
+
+    certutil -V -d . -n usercert -u C
 
 ::
     

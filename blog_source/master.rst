@@ -4,6 +4,10 @@ Sitemap
 .. toctree::
    :maxdepth: 1
 
+   2017/08/04/so_you_want_to_script_gdb_with_python
+   2017/07/12/time_safety_and_rust
+   2017/06/26/indexed_search_performance_for_ds_the_mystery_of_the_and_query
+   2017/05/25/tls_authentication_and_freeradius
    2017/05/23/kerberos_why_the_world_moved_on
    2017/05/22/custom_ostree_images
    2017/03/10/your_code_has_impact

@@ -76,7 +76,7 @@ In my view, I'm seeing Microsoft, one of the real pioneers of KRB, strongly push
 Conclusion
 ----------
 
-Modern software has to be well designed, according to real design principles - not a engineers ideas of what is "acceptable".
+Modern software has to be well designed, according to real human interaction design principles - not an engineers ideas of what is "acceptable" design.
 
 Kerberos has lost. No one wants to integrate with it. The client experience is poor. Lets leave it to die naturally, and move on to architectures that match modern software and usage.
 
@@ -84,7 +84,7 @@ Kerberos has lost. No one wants to integrate with it. The client experience is p
 PS
 --
 
-Before anyone who works on kerberos or related project gets up an says "Ohh but just look at ..." - no, no, stop. Stop. This is a description of the *user experience* with kerberos today. Even if *you* know how it works, or know of all the documentation that does mean that *I* know about it, or the rest of the world does. The evidence is there, and the developers of the opensource world have voted to "move on" from kerberos on GSSAPI. No amount of "ohh but you can just do ..." will change that. It's done.
+Before anyone who works on kerberos or related project gets up an says "Ohh but just look at ..." - no, no, stop. Stop. This is a description of the *user experience* with kerberos today. Even if *you* know how it works, or know of all the documentation that does *NOT* mean that *I* know about it, or the rest of the world does. The evidence is there, and the developers of the opensource world have voted to "move on" from kerberos on GSSAPI. No amount of "ohh but you can just do ..." will change that. It's done.
 
 .. author:: default
 .. categories:: none
