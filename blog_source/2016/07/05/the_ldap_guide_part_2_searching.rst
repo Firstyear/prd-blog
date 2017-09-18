@@ -1,5 +1,5 @@
-The LDAP Guide Part 2: Searching
-================================
+LDAP Guide Part 2: Searching
+============================
 
 In the first part, we discussed how and LDAP tree is laid out, and why it's called a "tree".
 
@@ -68,7 +68,7 @@ We can now use this in our search command: Note the -b argument. This is the sea
 
 You should see a lot of data on your screen from that last command! We just showed every object in the tree. Here is the layout of the data in the exampleldap server to help you understand that output.
 
-.. image:: ../../../_static/search-1.svg
+.. image:: /_static/search-1.svg
     :width: 850 px
 
 Using a different basedn
@@ -80,7 +80,7 @@ By default LDAP is performing what is called a *subtree* search. A subtree searc
 
 Lets say we wanted to see just the entries highlighted in blue.
 
-.. image:: ../../../_static/search-2.svg
+.. image:: /_static/search-2.svg
     :width: 850 px
 
 The solution is to *change* the basedn of our search.
@@ -102,7 +102,7 @@ This is controlled by the '-s' parameter to the ldapsearch command.
 
 In this case, we want only the nodes again, in blue. This time we want only the child entries of ou=Groups, but *not* ou=Groups itself.
 
-.. image:: ../../../_static/search-3.svg
+.. image:: /_static/search-3.svg
     :width: 850 px
 
 Now we need to limit not the basedn of the search, but the *scope*. The ldap search scope says which entries we should use. We have already discussed subtree. In this case we want to use the scope called *onelevel*. This means "search entries that are direct children of the basedn only".
@@ -115,7 +115,7 @@ From the result, you can see, we only see the entries again in blue.
 
 A key point of onelevel is the direct children only are searched. So were we to move the basedn back up to dc=example,dc=com, and perform a onelevel search, we will only see the following.
 
-.. image:: ../../../_static/search-4.svg
+.. image:: /_static/search-4.svg
     :width: 850 px
 
 :: 
@@ -127,7 +127,7 @@ In addition to subtree and onelevel we have one more search scope. The final sco
 
 So if we were to want to retrieve a single entry by DN, this is how we would achieve that.
 
-.. image:: ../../../_static/search-5.svg
+.. image:: /_static/search-5.svg
     :width: 850 px
 
 ::

@@ -1,5 +1,5 @@
 indexed search performance for ds - the mystery of the and query
-===============================================================
+================================================================
 
 Directory Server is heavily based on set mathematics - one of the few topics I enjoyed during university. Our filters
 really boil down to set queries:

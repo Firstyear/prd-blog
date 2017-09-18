@@ -87,5 +87,7 @@ Sitemap
    2011/07/05/SELinux_for_postfix_+_dovecot
    2011/07/10/Mod_auth_cas
    pages/about
+   pages/ldap_guide_part_1_foundations
+   pages/ldap_guide_part_2_searching
    pages/nss_and_openssl_command_reference
 

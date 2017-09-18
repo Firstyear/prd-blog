@@ -1,7 +1,7 @@
-nss and openssl command reference
+NSS and OpenSSL Command Reference
 =================================
 
-I am sick and tired of the lack of documentation for how to actually use OpenSSL and NSS to achieve things. Be it missing small important options like "subjectAltNames" in nss commands or openssls cryptic settings. Here is my complete list of everything you would ever want to do with OpenSSL and NSS. 
+I am tired of the lack of documentation for how to actually use OpenSSL and NSS to achieve things. Be it missing small important options like "subjectAltNames" in nss commands or openssls cryptic settings. Here is my complete list of everything you would ever want to do with OpenSSL and NSS.
 
 References:
 
@@ -209,11 +209,13 @@ In a second, seperate database to your CA.
 Create a new certificate request. Again, remember -8 for subjectAltName. This request is for a TLS server.
 
 ::
-    
+
     certutil -d . -R -a -o nss.dev.example.com.csr -f pwdfile.txt -g 4096 -Z SHA256 -v 24 \
     -s "CN=nss.dev.example.com,O=Testing,L=example,ST=Queensland,C=AU"
 
 If you want to request for a TLS client you need to use:
+
+::
 
     certutil -d . -R -a -o user.csr -f pwdfile.txt -g 4096 -Z SHA256 -v 24 \
     --keyUsage digitalSignature,nonRepudiation,keyEncipherment,dataEncipherment --nsCertType sslClient --extKeyUsage clientAuth \
@@ -222,7 +224,7 @@ If you want to request for a TLS client you need to use:
 
 Using openSSL create a server key, and make a CSR 
 ::
-    
+
     openssl genrsa -out client.key 2048
     openssl req -new -key client.key -out client.csr
 
@@ -380,11 +382,12 @@ How to upgrade from cert8.db to cert9.db
 You can either use environment variables or use sql: prefix in database directory parameter of certutil:
 
 ::
+
     $export NSS_DEFAULT_DB_TYPE=sql
     $certutil -K -d /tmp/nss -X
-    
+
             OR
-    
+
     $certutil -K -d sql:/tmp/nss -X
 
 When you upgrade these are the files you get
@@ -458,47 +461,4 @@ You can use this to display a CA chain if you can't get it from other locations.
     
     openssl s_client -connect ldap.example.com:636 -showcerts
     
-
-mod_nss
--------
-
-To configure mod_nss, you should have a configuration similar to below - Most of this is the standard nss.conf that comes with mod_nss, but note the changes to NSSNickname, and the modified NSSPassPhraseDialog and NSSRandomSeed values. There is documentation on the NSSCipherSuite that can be found by running "rpm -qd mod_nss". Finally, make sure that apache has read access to the database files and the pin.txt file. If you leave NSSPassPhraseDialog as "builtin", you cannot start httpd from systemctl. You must run apachectl so that you can enter the NSS database password on apache startup. 
-
-NOTE: mod_nss *DOES NOT* support SNI.
-
-::
-
-        LoadModule nss_module modules/libmodnss.so
-        Listen 8443
-        NameVirtualHost *:8443
-        AddType application/x-x509-ca-cert .crt
-        AddType application/x-pkcs7-crl    .crl
-        NSSPassPhraseDialog  file:/etc/httpd/alias/pin.txt
-        NSSPassPhraseHelper /usr/sbin/nss_pcache
-        NSSSessionCacheSize 10000
-        NSSSessionCacheTimeout 100
-        NSSSession3CacheTimeout 86400
-        NSSEnforceValidCerts off
-        NSSRandomSeed startup file:/dev/urandom 512
-        NSSRenegotiation off
-        NSSRequireSafeNegotiation off
-        <VirtualHost *:8443>
-        ServerName nss.dev.example.com:8443
-        ServerAlias nss.dev.example.com
-        ErrorLog /etc/httpd/logs/nss1_error_log
-        TransferLog /etc/httpd/logs/nss1_access_log
-        LogLevel warn
-        NSSEngine on
-        NSSProtocol TLSv1
-        NSSNickname Server-cert
-        NSSCertificateDatabase /etc/httpd/alias
-        <Files ~ "\.(cgi|shtml|phtml|php3?)$">
-            NSSOptions +StdEnvVars
-        </Files>
-        <Directory "/var/www/cgi-bin">
-            NSSOptions +StdEnvVars
-        </Directory>
-        </VirtualHost>                                  
-            
-
 
