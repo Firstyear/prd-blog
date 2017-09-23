@@ -86,8 +86,10 @@ Sitemap
    2011/08/22/DHCP6_server
    2011/07/05/SELinux_for_postfix_+_dovecot
    2011/07/10/Mod_auth_cas
-   pages/about
    pages/ldap_guide_part_1_foundations
    pages/ldap_guide_part_2_searching
+   pages/ldap_guide_part_3_filters
+   pages/ldap_guide_part_4_schema_and_objects
    pages/nss_and_openssl_command_reference
+   pages/about
 
