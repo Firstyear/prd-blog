@@ -26,7 +26,9 @@ First, SSF numbers are a bit of a mystery. You need to dig into sasl.h to find t
      */
 
 
-Remember, GSSAPI with security is only ssf 56 as I'm aware, and so TLS is going to be at least 128 or higher.
+Remember, GSSAPI with security reports ssf 56, and so TLS is going to be at least 128 or higher.
+
+NOTE: GSSAPI Reported a SSF of 56, but would install stronger layers. It now correctly reports this strength to applications!
 
 In Directory Server you can set a minimum required SSF for connections and binds, which is great!
 
