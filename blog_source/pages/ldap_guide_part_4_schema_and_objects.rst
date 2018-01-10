@@ -12,7 +12,7 @@ Sadly, schema is a bit difficult to parse due to it's representation as a single
 
 ::
 
-    ldapsearch -H ldap://exampleldap.blackhats.net.au:3389 -x -s 'cn=schema' '(objectClass=*)' +
+    ldapsearch -H ldap://exampleldap.blackhats.net.au:3389 -x -b 'cn=schema' '(objectClass=*)' +
 
 *note*: We have a tool in development that makes searching for these details easier, but we haven't released it yet.
 
