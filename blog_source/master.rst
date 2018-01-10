@@ -4,6 +4,8 @@ Sitemap
 .. toctree::
    :maxdepth: 1
 
+   2017/11/11/creating_yubikey_ssh_and_tls_certificates
+   2017/11/07/what_s_the_problem_with_numa_anyway
    2017/08/24/gsoc_2017_mentor_report_from_389_project
    2017/08/04/so_you_want_to_script_gdb_with_python
    2017/07/12/time_safety_and_rust
