@@ -73,7 +73,7 @@ Now import this to the yubikey - remember to use slot 9a this time!
 
 ::
 
-    yubico-piv-tool -s9a -i user.p12 -K PKCS12 -aimport-key -aimport-certificate -k
+    yubico-piv-tool -s9a -i user.p12 -K PKCS12 -aimport-key -aimport-certificate -k --touch-policy=always
 
 Done!
 
