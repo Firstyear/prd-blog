@@ -5,6 +5,7 @@ Sitemap
    :maxdepth: 1
 
    2018/02/27/smartcards_and_you_how_to_make_them_work_on_fedora_rhel
+   2017/12/23/using_b43_firmware_on_fedora_atomic_workstation
    2017/11/11/creating_yubikey_ssh_and_tls_certificates
    2017/11/07/what_s_the_problem_with_numa_anyway
    2017/08/24/gsoc_2017_mentor_report_from_389_project
