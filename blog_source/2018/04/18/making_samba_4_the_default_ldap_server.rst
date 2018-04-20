@@ -23,6 +23,11 @@ What it did show was that Linux clients and applications:
 
 This seems like a pretty simple list - but it's not the model Samba 4 or AD ship with.
 
+You'll also want to harden a few default settings. These include:
+
+* Disable Guest
+* Disable 10 machine join policy
+
 AD works under the assumption that all clients are authenticated via kerberos, and that kerberos is the primary
 authentication and trust provider. As a result, AD often ships with:
 
@@ -48,14 +53,15 @@ As a result, in some cases it may be better to allow anonymous lookups because t
 understanding of what is and is not accessible as readable data, and you *don't* need every machine on the network to be domain joined - you prevent
 a possible foothold of lateral movement.
 
-So anonymous binding is just fine, as the unix world has shown for a long time. That's why I have very few concerns about enabling it.
+So anonymous binding is just fine, as the unix world has shown for a long time. That's why I have very few concerns about enabling it. Your
+safety is in the access controls for searches, not in blocking anonymous reads outright.
 
 Installing your DC
 ------------------
 
 As I run fedora, you will need to build and install samba for source so you can
 access the heimdal kerberos functions. Fedora's samba 4 ships ADDC support now, but
-lacks some features like RODC that you may want.
+lacks some features like RODC that you may want. In the future I expect this will change though.
 
 These documents will help guide you:
 
@@ -65,6 +71,12 @@ These documents will help guide you:
 
 `install a domain <https://wiki.samba.org/index.php/Setting_up_Samba_as_an_Active_Directory_Domain_Controller>`_
 
+I strongly advise you use options similar to:
+
+::
+
+    /usr/local/samba/bin/samba-tool domain provision --server-role=dc --use-rfc2307 --dns-backend=SAMBA_INTERNAL --realm=SAMDOM.EXAMPLE.COM --domain=SAMDOM --adminpass=Passw0rd
+
 Allow anonymous binds and searches
 ----------------------------------
 
@@ -72,7 +84,172 @@ Now that you have a working domain controller, we should test you have working l
 
 ::
 
-    ...
+    dn: CN=Directory Service,CN=Windows NT,CN=Services,CN=Configuration,DC=samdom,DC=example,DC=com
+    changetype: modify
+    replace: dSHeuristics
+    dSHeuristics: 0000002
+    -
+
+::
+
+     ldapsearch -b DC=samdom,DC=example,DC=com -H ldaps://localhost -x
+
+You can see the domain object but nothing else. Many other blogs and sites recommend a blanket "anonymous read all" access control, but I think that's
+too broad. A better approach is to add the anonymous read to only the few containers that require it.
+
+::
+
+    /usr/local/samba/bin/samba-tool dsacl set --objectdn=DC=samdom,DC=example,DC=com --sddl='(A;;RPLCLORC;;;AN)' --simple-bind-dn="administrator@samdom.example.com" --password=Passw0rd
+    /usr/local/samba/bin/samba-tool dsacl set --objectdn=CN=Users,DC=samdom,DC=example,DC=com --sddl='(A;CI;RPLCLORC;;;AN)' --simple-bind-dn="administrator@samdom.example.com" --password=Passw0rd
+    /usr/local/samba/bin/samba-tool dsacl set --objectdn=CN=Builtin,DC=samdom,DC=example,DC=com --sddl='(A;CI;RPLCLORC;;;AN)' --simple-bind-dn="administrator@samdom.example.com" --password=Passw0rd
+
+
+In AD groups and users are found in cn=users, and some groups are in cn=builtin. So we allow read to the root domain object, then we set
+a read on cn=users and cn=builtin that inherits to it's child objects. The attribute policies are derived elsewhere, so we can assume
+that things like kerberos data and password material are safe with these simple changes.
+
+
+Configuring LDAPS
+-----------------
+
+This is a reasonable simple exercise. Given a ca cert, key and cert we can place these in the correct locations samba expects.
+By default this is the private directory. In a custom install, that's /usr/local/samba/private/tls/, but for distros I think
+it's /var/lib/samba/private. Simply replace ca.pem, cert.pem and key.pem with your files and restart.
+
+Adding schema
+-------------
+
+To allow adding schema to samba 4 you need to reconfigure the dsdb config on the
+schema master. To show the current schema master you can use:
+
+::
+
+     /usr/local/samba/bin/samba-tool fsmo show -H ldaps://localhost --simple-bind-dn='administrator@adt.blackhats.net.au' --password=Password1
+
+Look for the value:
+
+::
+
+    SchemaMasterRole owner: CN=NTDS Settings,CN=LDAPKDC,CN=Servers,CN=Default-First-Site-Name,CN=Sites,CN=Configuration,DC=adt,DC=blackhats,DC=net,DC=au
+
+And note the CN=ldapkdc = that's the hostname of the current schema master.
+
+On the schema master we need to adjust the smb.conf. The change you need to make is:
+
+::
+
+    [global]
+        dsdb:schema update allowed = yes
+
+Now restart the instance and we can update the schema. The following LDIF should work if you replace ${DOMAINDN} with your namingContext. You can
+apply it with ldapmodify
+
+dn: CN=sshPublicKey,CN=Schema,CN=Configuration,DC=adt,DC=blackhats,DC=net,DC=au
+changetype: add
+objectClass: top
+objectClass: attributeSchema
+attributeID: 1.3.6.1.4.1.24552.500.1.1.1.13
+schemaIDGUID:: fHCvUrxcsUSrYRq8nUvw5Q==
+cn: sshPublicKey
+name: sshPublicKey
+lDAPDisplayName: sshPublicKey
+description: MANDATORY: OpenSSH Public key
+attributeSyntax: 2.5.5.10
+oMSyntax: 4
+isSingleValued: FALSE
+
+dn: CN=ldapPublicKey,CN=Schema,CN=Configuration,DC=adt,DC=blackhats,DC=net,DC=au
+changetype: add
+objectClass: top
+objectClass: classSchema
+governsID: 1.3.6.1.4.1.24552.500.1.1.2.0
+schemaIDGUID:: yfKd3707f0qnSxgXE9qYeA==
+cn: ldapPublicKey
+name: ldapPublicKey
+description: MANDATORY: OpenSSH LPK objectclass
+lDAPDisplayName: ldapPublicKey
+subClassOf: top
+objectClassCategory: 3
+defaultObjectCategory: CN=ldapPublicKey,CN=Schema,CN=Configuration,DC=adt,DC=blackhats,DC=net,DC=au
+mayContain: sshPublicKey
+
+dn: CN=User,CN=Schema,CN=Configuration,DC=adt,DC=blackhats,DC=net,DC=au
+changetype: modify
+replace: auxiliaryClass
+auxiliaryClass: ldapPublicKey
+auxiliaryClass: posixAccount
+auxiliaryClass: shadowAccount
+-
+
+sudo ldapmodify -f sshpubkey.ldif -D 'administrator@adt.blackhats.net.au' -w Password1 -H ldaps://localhost 
+adding new entry "CN=sshPublicKey,CN=Schema,CN=Configuration,DC=adt,DC=blackhats,DC=net,DC=au"
+
+adding new entry "CN=ldapPublicKey,CN=Schema,CN=Configuration,DC=adt,DC=blackhats,DC=net,DC=au"
+
+modifying entry "CN=User,CN=Schema,CN=Configuration,DC=adt,DC=blackhats,DC=net,DC=au"
+
+
+
+We can also do similar for userCertificates
+
+
+dn: CN=userCertificate,CN=Schema,CN=Configuration,DC=adt,DC=blackhats,DC=net,DC=au
+changetype: add
+objectClass: top
+objectClass: attributeSchema
+attributeID: 2.5.4.36
+schemaIDGUID:: 
+cn: userCertificate
+name: userCertificate
+lDAPDisplayName: userCertificate
+description: MANDATORY: DER encoded TLS user certificate
+attributeSyntax: 2.5.5.10
+oMSyntax: 4
+isSingleValued: FALSE
+
+dn: CN=,CN=Schema,CN=Configuration,DC=adt,DC=blackhats,DC=net,DC=au
+changetype: add
+objectClass: top
+objectClass: classSchema
+governsID: 
+schemaIDGUID:: 
+cn: 
+name: 
+description: MANDATORY: 
+lDAPDisplayName: 
+subClassOf: top
+objectClassCategory: 3
+defaultObjectCategory: CN=,CN=Schema,CN=Configuration,DC=adt,DC=blackhats,DC=net,DC=au
+mayContain: userCertificate
+
+dn: CN=User,CN=Schema,CN=Configuration,DC=adt,DC=blackhats,DC=net,DC=au
+changetype: modify
+replace: auxiliaryClass
+auxiliaryClass: ldapPublicKey
+auxiliaryClass: posixAccount
+auxiliaryClass: shadowAccount
+auxiliaryClass: 
+-
+
+
+Now with this you can extend your users with the required data.
+
+::
+
+    /usr/local/samba/bin/samba-tool user edit william  -H ldaps://localhost --simple-bind-dn='administrator@adt.blackhats.net.au'
+
+Basic hardening steps
+---------------------
+
+
+
+
+Conclusion
+----------
+
+With these simple changes we can easily make samba 4 able to perform the roles of other unix focused LDAP servers. This allows stateless clients,
+secure ssh key authentication, certificate authentication and more.
+
 
 .. author:: default
 .. categories:: none

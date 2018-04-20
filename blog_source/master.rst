@@ -4,6 +4,7 @@ Sitemap
 .. toctree::
    :maxdepth: 1
 
+   2018/04/20/understanding_ad_access_control_entries
    2018/04/18/making_samba_4_the_default_ldap_server
    2018/02/27/smartcards_and_you_how_to_make_them_work_on_fedora_rhel
    2017/12/23/using_b43_firmware_on_fedora_atomic_workstation
