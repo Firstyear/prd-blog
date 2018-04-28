@@ -345,6 +345,18 @@ Conclusion
 With these simple changes we can easily make samba 4 able to perform the roles of other unix focused LDAP servers. This allows stateless clients,
 secure ssh key authentication, certificate authentication and more.
 
+Some future goals to improve this include:
+
+* CLI tools to manage sshPublicKeys and userCertificates easily
+* Ship samba 4 with schema templates that can be used
+* Schema querying (what objectclass takes this attribute?)
+* Group editing (same as samba-tool user edit)
+* Security auditing tools
+* user/group modification commands
+* Refactor and improve the cli tools python to be api driven - move the logic from netcmd into samdb so that samdb can be an API that python can consume easier. Prevent duplication of logic.
+
+The goal is so that an admin never has to see an LDIF ever again.
+
 
 .. author:: default
 .. categories:: none
