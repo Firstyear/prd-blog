@@ -50,19 +50,73 @@ This seems very confusing and complex (and someone should write a tool to explai
 you can see the structure it starts to make sense.
 
 Most of the access controls you are viewing here are DACLs or Discrestionary Access Control Lists. These make up the
-majority of the output after 'O:DAG:DAD:AI'.
+majority of the output after 'O:DAG:DAD:AI'. TODO: What does 'O:DAG:DAD:AI' mean completely?
 
 After that there are many ACEs defined in SDDL or ???. The structure is as follows:
 
 ::
 
-    (???)
+    (type;flags;rights;object_guid;inherit_object_guid;sid(;attribute))
 
-Each of these fields can take varies types. These interact to form the access control rules that allow or deny access.
+Each of these fields can take varies types. These interact to form the access control rules that allow or deny access. Thankfully,
+you don't need to adjust many fields to make useful ACE entries.
 
+MS maintains a document of these `field values here. <https://msdn.microsoft.com/en-us/library/aa374928(d=printer,v=vs.85).aspx>`_
 
+They also maintain a list of wellknown `SID values here <https://msdn.microsoft.com/en-us/library/aa379602(d=printer,v=vs.85).aspx>`_
 
+I want to cover some common values you may see though:
 
+type
+----
+
+Most of the types you'll see are "A" and "OA". These mean the ACE allows an access by the SID.
+
+flags
+-----
+
+These change the behaviour of the ACE. Common values you may want to set are CI and OI. These determine that the ACE should be inherited to child objects.
+As far as the MS docs say, these behave the same way.
+
+If you see ID in this field it means the ACE has been inherited from a parent object. In this case the inherit_object_guid field will be set to the
+guid of the parent that set the ACE. This is great, as it allows you to backtrace the origin of access controls!
+
+rights
+-------
+
+This is the important part of the ACE - it determines what access the SID has over this object. The MS docs are very comprehensive of what this does, but
+common values are:
+
+* RP: read property
+* WP: write property
+* CR: control rights
+* CC: child create (create new objects)
+* DC: delete child
+* LC: list child objects
+* LO: list objects
+* RC: read control
+* WO: write owner (change the owner of an object)
+* WD: write dac (allow writing ACE)
+* SW: self write
+* SD: standard delete
+* DT: delete tree
+
+I'm not 100% sure of all the subtle behaviours of these, because they are *not* documented that well. If someone can help explain these to me,
+it would be great.
+
+sid
+---
+
+We will skip some fields and go straight to SID. This is the SID of the object that is allowed the rights from the rights field. This field can
+take a GUID of the object, or it can take a "well known" value of the SID. For example 'AN' means "anonymous users", or 'AU' meaning
+authenticated users.
+
+conclusion
+----------
+
+I won't claim to be an AD ACE expert, but I did find the docs hard to interpret at first. Having a breakdown and explanation of the behaviour of the fields
+can help others, and I really want to hear from people who know more about this topic on me so that I can expand this resource to help others
+really understand how AD ACE's work.
 
 .. author:: default
 .. categories:: none

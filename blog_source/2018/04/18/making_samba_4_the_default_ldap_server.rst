@@ -84,11 +84,7 @@ Now that you have a working domain controller, we should test you have working l
 
 ::
 
-    dn: CN=Directory Service,CN=Windows NT,CN=Services,CN=Configuration,DC=samdom,DC=example,DC=com
-    changetype: modify
-    replace: dSHeuristics
-    dSHeuristics: 0000002
-    -
+    /usr/local/samba/bin/samba-tool forest directory_service dsheuristics 0000002 -H ldaps://localhost --simple-bind-dn='administrator@samdom.example.com'
 
 ::
 
@@ -144,104 +140,197 @@ On the schema master we need to adjust the smb.conf. The change you need to make
 Now restart the instance and we can update the schema. The following LDIF should work if you replace ${DOMAINDN} with your namingContext. You can
 apply it with ldapmodify
 
-dn: CN=sshPublicKey,CN=Schema,CN=Configuration,DC=adt,DC=blackhats,DC=net,DC=au
-changetype: add
-objectClass: top
-objectClass: attributeSchema
-attributeID: 1.3.6.1.4.1.24552.500.1.1.1.13
-schemaIDGUID:: fHCvUrxcsUSrYRq8nUvw5Q==
-cn: sshPublicKey
-name: sshPublicKey
-lDAPDisplayName: sshPublicKey
-description: MANDATORY: OpenSSH Public key
-attributeSyntax: 2.5.5.10
-oMSyntax: 4
-isSingleValued: FALSE
+::
 
-dn: CN=ldapPublicKey,CN=Schema,CN=Configuration,DC=adt,DC=blackhats,DC=net,DC=au
-changetype: add
-objectClass: top
-objectClass: classSchema
-governsID: 1.3.6.1.4.1.24552.500.1.1.2.0
-schemaIDGUID:: yfKd3707f0qnSxgXE9qYeA==
-cn: ldapPublicKey
-name: ldapPublicKey
-description: MANDATORY: OpenSSH LPK objectclass
-lDAPDisplayName: ldapPublicKey
-subClassOf: top
-objectClassCategory: 3
-defaultObjectCategory: CN=ldapPublicKey,CN=Schema,CN=Configuration,DC=adt,DC=blackhats,DC=net,DC=au
-mayContain: sshPublicKey
+    dn: CN=sshPublicKey,CN=Schema,CN=Configuration,DC=adt,DC=blackhats,DC=net,DC=au
+    changetype: add
+    objectClass: top
+    objectClass: attributeSchema
+    attributeID: 1.3.6.1.4.1.24552.500.1.1.1.13
+    cn: sshPublicKey
+    name: sshPublicKey
+    lDAPDisplayName: sshPublicKey
+    description: MANDATORY: OpenSSH Public key
+    attributeSyntax: 2.5.5.10
+    oMSyntax: 4
+    isSingleValued: FALSE
 
-dn: CN=User,CN=Schema,CN=Configuration,DC=adt,DC=blackhats,DC=net,DC=au
-changetype: modify
-replace: auxiliaryClass
-auxiliaryClass: ldapPublicKey
-auxiliaryClass: posixAccount
-auxiliaryClass: shadowAccount
--
+    dn: CN=ldapPublicKey,CN=Schema,CN=Configuration,DC=adt,DC=blackhats,DC=net,DC=au
+    changetype: add
+    objectClass: top
+    objectClass: classSchema
+    governsID: 1.3.6.1.4.1.24552.500.1.1.2.0
+    cn: ldapPublicKey
+    name: ldapPublicKey
+    description: MANDATORY: OpenSSH LPK objectclass
+    lDAPDisplayName: ldapPublicKey
+    subClassOf: top
+    objectClassCategory: 3
+    defaultObjectCategory: CN=ldapPublicKey,CN=Schema,CN=Configuration,DC=adt,DC=blackhats,DC=net,DC=au
+    mayContain: sshPublicKey
 
-sudo ldapmodify -f sshpubkey.ldif -D 'administrator@adt.blackhats.net.au' -w Password1 -H ldaps://localhost 
-adding new entry "CN=sshPublicKey,CN=Schema,CN=Configuration,DC=adt,DC=blackhats,DC=net,DC=au"
+    dn: CN=User,CN=Schema,CN=Configuration,DC=adt,DC=blackhats,DC=net,DC=au
+    changetype: modify
+    replace: auxiliaryClass
+    auxiliaryClass: ldapPublicKey
+    auxiliaryClass: posixAccount
+    auxiliaryClass: shadowAccount
+    -
 
-adding new entry "CN=ldapPublicKey,CN=Schema,CN=Configuration,DC=adt,DC=blackhats,DC=net,DC=au"
+::
 
-modifying entry "CN=User,CN=Schema,CN=Configuration,DC=adt,DC=blackhats,DC=net,DC=au"
+    sudo ldapmodify -f sshpubkey.ldif -D 'administrator@adt.blackhats.net.au' -w Password1 -H ldaps://localhost 
+    adding new entry "CN=sshPublicKey,CN=Schema,CN=Configuration,DC=adt,DC=blackhats,DC=net,DC=au"
 
+    adding new entry "CN=ldapPublicKey,CN=Schema,CN=Configuration,DC=adt,DC=blackhats,DC=net,DC=au"
 
+    modifying entry "CN=User,CN=Schema,CN=Configuration,DC=adt,DC=blackhats,DC=net,DC=au"
 
-We can also do similar for userCertificates
+To my surprise, userCertificate already exists! The reason I missed it is a subtle ad schema behaviour I missed. The *ldap attribute* name is stored in the lDAPDisplayName and may not be the same as the CN of the schema element. As a result, you can find this with:
 
+::
 
-dn: CN=userCertificate,CN=Schema,CN=Configuration,DC=adt,DC=blackhats,DC=net,DC=au
-changetype: add
-objectClass: top
-objectClass: attributeSchema
-attributeID: 2.5.4.36
-schemaIDGUID:: 
-cn: userCertificate
-name: userCertificate
-lDAPDisplayName: userCertificate
-description: MANDATORY: DER encoded TLS user certificate
-attributeSyntax: 2.5.5.10
-oMSyntax: 4
-isSingleValued: FALSE
-
-dn: CN=,CN=Schema,CN=Configuration,DC=adt,DC=blackhats,DC=net,DC=au
-changetype: add
-objectClass: top
-objectClass: classSchema
-governsID: 
-schemaIDGUID:: 
-cn: 
-name: 
-description: MANDATORY: 
-lDAPDisplayName: 
-subClassOf: top
-objectClassCategory: 3
-defaultObjectCategory: CN=,CN=Schema,CN=Configuration,DC=adt,DC=blackhats,DC=net,DC=au
-mayContain: userCertificate
-
-dn: CN=User,CN=Schema,CN=Configuration,DC=adt,DC=blackhats,DC=net,DC=au
-changetype: modify
-replace: auxiliaryClass
-auxiliaryClass: ldapPublicKey
-auxiliaryClass: posixAccount
-auxiliaryClass: shadowAccount
-auxiliaryClass: 
--
+    ldapsearch -H ldaps://localhost -b CN=Schema,CN=Configuration,DC=adt,DC=blackhats,DC=net,DC=au -x -D 'administrator@adt.blackhats.net.au' -W '(attributeId=2.5.4.36)'
 
 
-Now with this you can extend your users with the required data.
+This doesn't solve my issues: Because I am a long time user of 389-ds, that means I need some ns compat attributes. Here I add the nsUniqueId value so that I can keep some compatability.
+
+::
+
+    dn: CN=nsUniqueId,CN=Schema,CN=Configuration,DC=adt,DC=blackhats,DC=net,DC=au
+    changetype: add
+    objectClass: top
+    objectClass: attributeSchema
+    attributeID: 2.16.840.1.113730.3.1.542
+    cn: nsUniqueId
+    name: nsUniqueId
+    lDAPDisplayName: nsUniqueId
+    description: MANDATORY: nsUniqueId compatability
+    attributeSyntax: 2.5.5.10
+    oMSyntax: 4
+    isSingleValued: TRUE
+
+    dn: CN=nsOrgPerson,CN=Schema,CN=Configuration,DC=adt,DC=blackhats,DC=net,DC=au
+    changetype: add
+    objectClass: top
+    objectClass: classSchema
+    governsID: 2.16.840.1.113730.3.2.334
+    cn: nsOrgPerson
+    name: nsOrgPerson
+    description: MANDATORY: Netscape DS compat person
+    lDAPDisplayName: nsOrgPerson
+    subClassOf: top
+    objectClassCategory: 3
+    defaultObjectCategory: CN=nsOrgPerson,CN=Schema,CN=Configuration,DC=adt,DC=blackhats,DC=net,DC=au
+    mayContain: nsUniqueId
+
+    dn: CN=User,CN=Schema,CN=Configuration,DC=adt,DC=blackhats,DC=net,DC=au
+    changetype: modify
+    replace: auxiliaryClass
+    auxiliaryClass: ldapPublicKey
+    auxiliaryClass: posixAccount
+    auxiliaryClass: shadowAccount
+    auxiliaryClass: nsOrgPerson
+    -
+
+
+Now with this you can extend your users with the required data for SSH, certificates and maybe 389-ds compatability.
 
 ::
 
     /usr/local/samba/bin/samba-tool user edit william  -H ldaps://localhost --simple-bind-dn='administrator@adt.blackhats.net.au'
 
-Basic hardening steps
----------------------
+AD Hardening
+------------
+
+We want to harden a few default settings that could be considered insecure. First, let's stop "any user from being able to domain join machines".
+
+::
+
+    /usr/local/samba/bin/samba-tool domain settings account_machine_join_quota 0 -H ldaps://localhost --simple-bind-dn='administrator@adt.blackhats.net.au'
+
+Now let's disable the Guest account
+
+::
+
+    /usr/local/samba/bin/samba-tool user disable Guest -H ldaps://localhost --simple-bind-dn='administrator@adt.blackhats.net.au'
+
+I plan to write a more complete samba-tool extension for auditing these and more options, so stay tuned!
+
+SSSD configuration
+------------------
+
+Now that our directory service is configured, we need to configure our clients to utilise it correctly.
+
+Here is my SSSD configuration, that supports sshPublicKey distribution, userCertificate authentication on workstations
+and SID -> uid mapping. In the future I want to explore sudo rules in LDAP with AD, and maybe even HBAC rules rather
+than GPO.
+
+Please refer to my other blog posts on configuration of the userCertificates and sshKey distribution.
+
+::
+
+    [domain/blackhats.net.au]
+    ignore_group_members = False
+
+    debug_level=3
+    # There is a bug in SSSD where this actually means "ipv6 only".
+    # lookup_family_order=ipv6_first
+    cache_credentials = True
+    id_provider = ldap
+    auth_provider = ldap
+    access_provider = ldap
+    chpass_provider = ldap
+    ldap_search_base = dc=blackhats,dc=net,dc=au
+
+    # This prevents an infinite referral loop.
+    ldap_referrals = False
+    ldap_id_mapping = True
+    ldap_schema = ad
+
+    ldap_uri = ldaps://ad.blackhats.net.au
+    ldap_tls_reqcert = demand
+    ldap_tls_cacert = /etc/pki/tls/certs/bh_ldap.crt
+
+    # Workstation access
+    ldap_access_filter = (memberOf=CN=Workstation Operators,CN=Users,DC=blackhats,DC=net,DC=au)
+
+    ldap_user_member_of = memberof
+    ldap_user_gecos = cn
+    ldap_user_uuid = objectGUID
+    ldap_group_uuid = objectGUID
+    # This is really important as it allows SSSD to respect nsAccountLock
+    ldap_account_expire_policy = ad
+    ldap_access_order = filter, expire
+    # Setup for ssh keys
+    ldap_user_ssh_public_key = sshPublicKey
+    # This does not require ;binary tag with AD.
+    ldap_user_certificate = userCertificate
+    # This is required for the homeDirectory to be looked up in the sssd schema
+    ldap_user_home_directory = homeDirectory
 
 
+    [sssd]
+    services = nss, pam, ssh, sudo
+    config_file_version = 2
+    certificate_verification = no_verification
+
+    domains = blackhats.net.au
+    [nss]
+    homedir_substring = /home
+
+    [pam]
+    pam_cert_auth = True
+
+    [sudo]
+
+    [autofs]
+
+    [ssh]
+
+    [pac]
+
+    [ifp]
 
 
 Conclusion
