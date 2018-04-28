@@ -287,6 +287,12 @@ Please refer to my other blog posts on configuration of the userCertificates and
     ldap_referrals = False
     ldap_id_mapping = True
     ldap_schema = ad
+    # Rather that being in domain users group, create a user private group
+    # automatically on login.
+    # This is very important as a security setting on unix!!!
+    # See this bug if it doesn't work correctly.
+    # https://pagure.io/SSSD/sssd/issue/3723
+    auto_private_groups = true
 
     ldap_uri = ldaps://ad.blackhats.net.au
     ldap_tls_reqcert = demand
