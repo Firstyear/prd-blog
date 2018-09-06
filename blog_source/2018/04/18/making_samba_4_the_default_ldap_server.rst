@@ -154,6 +154,7 @@ apply it with ldapmodify
     attributeSyntax: 2.5.5.10
     oMSyntax: 4
     isSingleValued: FALSE
+    searchFlags: 8
 
     dn: CN=ldapPublicKey,CN=Schema,CN=Configuration,DC=adt,DC=blackhats,DC=net,DC=au
     changetype: add
@@ -209,6 +210,7 @@ This doesn't solve my issues: Because I am a long time user of 389-ds, that mean
     attributeSyntax: 2.5.5.10
     oMSyntax: 4
     isSingleValued: TRUE
+    searchFlags: 9
 
     dn: CN=nsOrgPerson,CN=Schema,CN=Configuration,DC=adt,DC=blackhats,DC=net,DC=au
     changetype: add
@@ -239,6 +241,36 @@ Now with this you can extend your users with the required data for SSH, certific
 ::
 
     /usr/local/samba/bin/samba-tool user edit william  -H ldaps://localhost --simple-bind-dn='administrator@adt.blackhats.net.au'
+
+Performance
+-----------
+
+Out of the box a number of the unix attributes are not indexed by Active Directory. To fix this you need to update the search flags in the schema.
+
+Again, temporarily allow changes:
+
+::
+
+    [global]
+        dsdb:schema update allowed = yes
+
+Now we need to add some indexes for common types. Note that in the nsUniqueId schema I already added the search flags. We also want to set that
+these values should be preserved if they become tombstones so we can recove them.
+
+::
+
+    /usr/local/samba/bin/samba-tool schema attribute modify uid --searchflags=9
+    /usr/local/samba/bin/samba-tool schema attribute modify nsUniqueId --searchflags=9
+    /usr/local/samba/bin/samba-tool schema attribute modify uidnumber --searchflags=9
+    /usr/local/samba/bin/samba-tool schema attribute modify gidnumber --searchflags=9
+    # Preserve on tombstone but don't index
+    /usr/local/samba/bin/samba-tool schema attribute modify x509-cert --searchflags=8
+    /usr/local/samba/bin/samba-tool schema attribute modify sshPublicKey --searchflags=8
+    /usr/local/samba/bin/samba-tool schema attribute modify gecos --searchflags=8
+    /usr/local/samba/bin/samba-tool schema attribute modify loginShell --searchflags=8
+    /usr/local/samba/bin/samba-tool schema attribute modify home-directory --searchflags=24
+
+
 
 AD Hardening
 ------------
@@ -347,7 +379,6 @@ secure ssh key authentication, certificate authentication and more.
 
 Some future goals to improve this include:
 
-* CLI tools to manage sshPublicKeys and userCertificates easily
 * Ship samba 4 with schema templates that can be used
 * Schema querying (what objectclass takes this attribute?)
 * Group editing (same as samba-tool user edit)

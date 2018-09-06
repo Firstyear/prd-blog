@@ -5,6 +5,8 @@ Sitemap
    :maxdepth: 1
 
    2018/10/19/rust_rwlock_and_mutex_performance_oddities
+   2018/08/06/photography_why_you_should_use_jpg_not_raw
+   2018/04/30/extracting_formally_verified_c_with_fstar_and_kremlin
    2018/04/26/ad_directory_admins_group_setup
    2018/04/20/understanding_ad_access_control_entries
    2018/04/18/making_samba_4_the_default_ldap_server

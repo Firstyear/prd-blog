@@ -99,3 +99,26 @@ That's it! Now you should be able to test an ldap account with radtest, using th
     	MS-MPPE-Encryption-Policy = Encryption-Allowed
     	MS-MPPE-Encryption-Types = RC4-40or128-bit-Allowed
     
+Why not use KRB?
+----------------
+
+I was asked in IRC about using KRB keytabs for authenticating the service account. Now the configuration is quite easy - but I won't put it hear.
+
+The issue is that it opens up a number of weaknesses. Between FreeRADIUS and LDAP you have communication. Now FreeIPA/389DS doesn't allow GSSAPI over LDAPS/StartTLS. When you are 
+doing an MSCHAPv2 authentication this isn't so bad: FreeRADIUS authenticates with GSSAPI with encryption layers, then reads the NTHash. The NTHash is used inside FreeRADIUS to 
+generate the challenge, and the 802.1x authentication suceeds or fails.
+
+Now what happens when we use PAP instead? FreeRADIUS can either read the NTHash and do a comparison (as above), or it can *directly bind* to the LDAP server. This means in the direct 
+bind case, that the transport *may not be encrypted* due to the keytab. See, the keytab when used for the service account, will install encryption, but when the simple bind occurs, 
+we don't have GSSAPI material, so we would send this clear text. 
+
+Which one will occur ... Who knows! FreeRADIUS is a complex piece of software, as is LDAP. Unless you are willing to test all the different possibilities of 802.1x types and LDAP 
+interactions, there is a risk here.
+
+Today the only secure, guaranteed way to protect your accounts is TLS. You should use LDAPS, and this guarantees all communication will be secure. It's simpler, faster, and better.
+
+That's why I don't document or advise how to use krb keytabs with this configuration.
+
+
+Thanks to _moep_ for helping point out some of the issues with KRB integration.
+
