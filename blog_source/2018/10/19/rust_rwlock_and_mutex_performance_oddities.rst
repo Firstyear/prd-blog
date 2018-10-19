@@ -89,18 +89,18 @@ Other conditions:
 * The test code is identical between Mutex/RwLock (beside the locking costruct)
 * --release is used for compiler optimisations
 * The test hardware is as close as possible (i7 quad core)
+* The tests are run multiple time to construct averages of the performance
 
 The idea being that X target number of writes must occur, while many readers contend as fast
 as possible on the read. We are pressuring the system of choice between "many readers getting
 to read fast" or "writers getting priority to drain/block readers".
 
-On OSX given a target of 500 writes, this was able to complete in 0.01 second for the RwLock. This test was
-run 10 times over to establish an average time to complete. (MBP 2011, 2.8GHz)
+On OSX given a target of 500 writes, this was able to complete in 0.01 second for the RwLock. (MBP 2011, 2.8GHz)
 
 On Linux given a target of 500 writes, this completed in 42 seconds. This is a 4000 times difference. (i7-7700 CPU @ 3.60GHz)
 
 All things considered the Linux machine should have an advantage - it's a desktop processor, of a newer generation, and much faster
-clock speed. So why is the RwLock performance so much worse on Linux.
+clock speed. So why is the RwLock performance so much different on Linux?
 
 To the source code!
 -------------------
@@ -144,7 +144,7 @@ is given to one or the other. The preference basically boils down to the choice 
 * Do you respond to write requests and have new readers block?
 * Do you favour readers but let writers block until reads are complete?
 
-The difference is that on a *read* heavy workload, a write will continue to delay so that
+The difference is that on a *read* heavy workload, a write will continue to be delayed so that
 readers can begin *and* complete (up until some threshold of time). However, on a writer
 focused workload, you allow readers to stall so that writes can complete sooner.
 
@@ -163,7 +163,8 @@ If we were to track the number of reads that completed, I am sure we would see a
 of difference where Linux has allow many more readers to complete than the OSX version.
 
 Linux pthread_rwlock does allow you to change this policy (PTHREAD_RWLOCK_PREFER_WRITER_NP)
-but this isn't exposde via Rust. This means today, you trust the OS default.
+but this isn't exposed via Rust. This means today, you accept (and trust) the OS default. Rust
+is just unaware at compile time and run time that such a different policy exists.
 
 Conclusion
 ----------
@@ -178,7 +179,9 @@ affect the performance of your application - and the decisions behind those trad
 This isn't meant to say "don't use RwLock in Rust on Linux". This is meant to say "choose it
 when it makes sense - on read heavy loads, understanding writers will delay". For my project
 (A copy on write cell) I will likely conditionally compile rwlock on osx, but mutex on linux
-as I require a writer favoured behaviour.
+as I require a writer favoured behaviour. There are certainly applications that will benefit
+from the reader priority in linux (especially if there is low writer volume and low penalty
+to delayed writes).
 
 
 .. author:: default
