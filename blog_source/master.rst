@@ -4,6 +4,7 @@ Sitemap
 .. toctree::
    :maxdepth: 1
 
+   2018/10/19/rust_rwlock_and_mutex_performance_oddities
    2018/04/26/ad_directory_admins_group_setup
    2018/04/20/understanding_ad_access_control_entries
    2018/04/18/making_samba_4_the_default_ldap_server
