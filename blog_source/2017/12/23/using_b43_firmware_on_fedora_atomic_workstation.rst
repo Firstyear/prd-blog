@@ -37,6 +37,33 @@ Atomic has support for “rpm layering”. Ontop of the ostree image (which is c
 
 This way you still have an atomic base platform, with read-only behaviours, but you gain the ability to customise your system. To achive it, it must be possible to write to locations in /usr during rpm install.
 
+New method - install rpmfusion tainted
+--------------------------------------
+
+As I have now learnt, the b43 data is provided as part of rpmfusion nonfree. To enable this, you need to access the tainted repo. I a file such as "/etc/yum.repos.d/rpmfusion-nonfree-tainted.repo" add the content:
+
+::
+
+    [rpmfusion-nonfree-tainted]
+    name=rpmfusion-nonfree-tainted
+    baseurl=https://download1.rpmfusion.org/nonfree/fedora/tainted/$releasever/$basearch/
+    enabled=1
+    gpgcheck=1
+    type=rpm
+
+Now, you should be able to run:
+
+::
+
+    atomic host install b43-firmware
+    reboot
+
+You should have a working wifi chipset!
+
+
+Custom RPM - old method
+-----------------------
+
 This means our problem has a simple solution: Create a b43 rpm package. Note, that you can make this for yourself privately, but you can’t distribute it for legal reasons.
 
 Get setup on atomic to build the packages:
@@ -49,6 +76,7 @@ Get setup on atomic to build the packages:
 RPM specfile:
 
 ::
+
     %define debug_package %{nil}
     Summary: Allow b43 fw to install on ostree installs due to bz1512452
     Name: b43-fw
