@@ -4,6 +4,7 @@ Sitemap
 .. toctree::
    :maxdepth: 1
 
+   2018/11/01/high_available_radvd_on_linux
    2018/10/19/rust_rwlock_and_mutex_performance_oddities
    2018/08/06/photography_why_you_should_use_jpg_not_raw
    2018/04/30/extracting_formally_verified_c_with_fstar_and_kremlin
