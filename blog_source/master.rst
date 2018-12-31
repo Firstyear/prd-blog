@@ -4,6 +4,9 @@ Sitemap
 .. toctree::
    :maxdepth: 1
 
+   2018/12/31/nextcloud_and_badrequest_filesize_incorrect
+   2018/12/21/identity_ideas
+   2018/12/09/work_around_docker_exec_bug
    2018/11/01/high_available_radvd_on_linux
    2018/10/19/rust_rwlock_and_mutex_performance_oddities
    2018/08/06/photography_why_you_should_use_jpg_not_raw
