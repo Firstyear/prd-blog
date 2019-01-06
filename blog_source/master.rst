@@ -4,6 +4,8 @@ Sitemap
 .. toctree::
    :maxdepth: 1
 
+   2019/01/02/useful_usg_pro_4_commands_and_hints
+   2019/01/02/the_idea_of_ci_and_engineering
    2018/12/31/nextcloud_and_badrequest_filesize_incorrect
    2018/12/21/identity_ideas
    2018/12/09/work_around_docker_exec_bug
