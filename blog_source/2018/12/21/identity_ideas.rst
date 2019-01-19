@@ -206,7 +206,7 @@ by dynamic from UUID (or admins can override it).
 * 2FA/u2f/TOTP.
 
 Multi-factor auth is here (not coming, here), and we are behind the game. We
-already have Apply and MS pushing for webauthn in their devices. We need to be
+already have Apple and MS pushing for webauthn in their devices. We need to be
 there for these standards to work, and to support the next authentication tool
 after that.
 
@@ -217,18 +217,22 @@ networks, so RADIUS must "just work". Importantly, this means mschapv2 which
 is the universal default for all clients to operate with, which means nthash.
 
 However, we can make the nthash unlinked from your normal password, so you can
-then have wifi password and a seperate loging password ...
+then have wifi password and a seperate loging password. We could even generate an
+NTHash containing the TOTP token for more high security environments.
 
 * better data structure (flat, defined by object types).
 
 The tree structure of LDAP is confusing, but a flatter structure is easier to
-manage and understand.
+manage and understand. We can use ideas from kubernetes like tags/labels which
+can be used to provide certain controls and filtering capabilities for searches
+and access profiles to apply to.
 
 * structured logging, with in built performance profiling.
 
 Being able to diagnose why an operation is slow is critical and having structured
 logs with profiling information is key to allowing admins and developers to resolve
-performance issues at scale.
+performance issues at scale. It's also critical to have auditing of every single
+change made in the system, including internal changes that occur during operations.
 
 * access profiles with auditing capability.
 

@@ -4,6 +4,8 @@ Sitemap
 .. toctree::
    :maxdepth: 1
 
+   2019/01/19/suse_open_build_system_cheat_sheet
+   2019/01/19/structuring_rust_transactions
    2019/01/02/useful_usg_pro_4_commands_and_hints
    2019/01/02/the_idea_of_ci_and_engineering
    2018/12/31/nextcloud_and_badrequest_filesize_incorrect

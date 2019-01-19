@@ -21,7 +21,9 @@ their characteristics. Engineers consider careful designs, constraints, loads
 and situations that may occur. The structure is planned, reviewed and verified
 mathematically. Procedures and oversight is applied to ensure correct building
 of the structure. Lessons are learnt from past failures and incidents and are
-applied into every layer of the design and construction process.
+applied into every layer of the design and construction process. Communication
+between engineers and many other people is critical to the process. Concerns are
+always addressed and managed.
 
 The first thing to note is that if we just built lots of scale-model bridges and
 continually broke them until we found their limits, this would waste many
@@ -42,6 +44,10 @@ This puts CI techniques out of reach of many application developers due to time
 and energy (translated to dollars) limits. Services like travis on github
 certainly helps to lower the energy requirement, but it doesn't stop the
 time and test writing requirements.
+
+No matter how many tests we have for a program, if that program is written in C
+or something else, we continually see faults and security/stability issues
+in that software.
 
 What if we CI on ... a phone?
 -----------------------------
