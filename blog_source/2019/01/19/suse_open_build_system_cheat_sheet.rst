@@ -30,6 +30,8 @@ On OpenSUSE you will want to use the osc tool for your workflow:
 ::
 
     zypper in osc
+    # If you plan to use the "service" command
+    zypper in obs-service-tar obs-service-obs_scm obs-service-recompress obs-service-set_version obs-service-download_files
 
 You can branch from an existing project to make changes with:
 
@@ -65,12 +67,26 @@ Edit the change log of the project (I think this is used in release notes?)
 
     osc vc
 
+To ammend your changes, use:
+
+::
+
+    osc vc -e
+
 Build your changes locally matching the system you are on. Packages normally build on all/most
 OpenSUSE versions and architectures, this will build just for your local system and arch.
 
 ::
 
     osc build
+
+Make sure you clean up files you aren't using any more with:
+
+::
+
+    osc rm <filename>
+    # This commands removes anything untracked by osc.
+    osc clean
 
 Commit your changes to the OBS server, where a complete build will be triggered:
 
@@ -112,9 +128,36 @@ You can then create a "request" to merge your branch changes back to the project
 
     osc sr
 
+A helpful maintainer will then review your changes. You can see this with.
+
+::
+
+    osc rq show <your request id>
+
+If you change your request, to submit again, use:
+
+::
+
+    osc sr
+
+And it will ask if you want to replace (supercede) the previous request.
+
+
+I was also helped by a friend to provie a "service" configuration that allows generation of tar balls
+from git. It's not always appropriate to use this, but if the repo has a "_service" file, you can
+regenerate the tar with:
+
+::
+
+    osc service ra
+
+
 So far this is as far as I have gotten with OBS, but I already appreciate how great this work flow
 is for package maintainers, reviewers and consumers. It's a pleasure to work with software this well
 built.
+
+As an additional piece of information, it's a good idea to read the `OBS Packaging Guidelines <https://en.opensuse.org/openSUSE:Packaging_Patches_guidelines>`_
+ to be sure that you are doing the right thing!
 
 .. author:: default
 .. categories:: none
