@@ -89,12 +89,25 @@ many tools (Coq, fstar, rust ...) all make formal verification more accessible
 to use in our industry. Verifying our software is a far stronger assertion of quality
 than "throw tests at it and hope it works".
 
+You're crazy William, and also wrong
+------------------------------------
+
+Am I? Looking at "critical" systems like iPhone encryption hardware, they are running
+the formally verified Sel4. We also heard at Kiwicon in 2018 that Microsoft and XBox
+are using formal verification to design their low levels of their system to
+prevent exploits from occuring in the first place.
+
 Over time our industry will evolve, and it will become easier and more cost
 effective to formally verify than to operate and deploy CI. This doesn't mean we
 don't need tests - it means that the first line of quality
 should be in verification of correctness using formal techniques rather than
 using tests and CI to prove correct behaviour. Tests are certainly still required
 to assert further behavioural elements of software.
+
+Today, if you want to do this, you should be looking at Coq and program extraction,
+fstar and the kremlin (project everest, a formally verified https stack), Rust
+(which has a subset of the safe language formally proven). I'm sure there are more,
+but these are the ones I know off the top of my head.
 
 Conclusion
 ----------
@@ -103,7 +116,7 @@ Over time our industry *must* evolve to put the safety of humans first. To achiv
 this we must look to other safety driven cultures such as aviation and civil
 engineering. Only by learning from their strict disciplines and behaviours
 can we start to provide software that matches behavioural and quality expectations
-humans have.
+humans have for software.
 
 
 .. author:: default

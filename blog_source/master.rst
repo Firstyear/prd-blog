@@ -4,6 +4,7 @@ Sitemap
 .. toctree::
    :maxdepth: 1
 
+   2019/02/12/meaningful_2fa_on_modern_linux
    2019/01/30/using_the_latest_389_ds_on_opensuse
    2019/01/19/suse_open_build_system_cheat_sheet
    2019/01/19/structuring_rust_transactions

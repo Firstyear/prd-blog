@@ -38,6 +38,7 @@ to config.json in your controllers sites folder.
     show dns forwarding statistics
     show system name-server
     set service dns forwarding cache-size 10000
+    clear dns forwarding cache
 
 Logging
 -------
@@ -149,6 +150,53 @@ These are configured in config.json with:
                         "key-file": "/config/auth/openvpn/vps/vps-server.key"
                 }
         },
+
+Netflow
+-------
+
+Net flows allow a set of connection tracking data to be sent to a remote host for aggregation and
+analysis. Sadly this process was mostly undocumented, bar some useful forum commentors. Here is the
+process that I came up with. This is how you configure it live:
+
+::
+
+    set system flow-accounting interface eth3.11
+    set system flow-accounting netflow server 172.24.10.22 port 6500
+    set system flow-accounting netflow version 5
+    set system flow-accounting netflow sampling-rate 1
+    set system flow-accounting netflow timeout max-active-life 1
+    commit
+
+To make this persistent:
+
+::
+
+        "system": {
+                    "flow-accounting": {
+                            "interface": [
+                                    "eth3.11",
+                                    "eth3.12"
+                            ],
+                            "netflow": {
+                                    "sampling-rate": "1",
+                                    "version": "5",
+                                    "server": {
+                                            "172.24.10.22": {
+                                                    "port": "6500"
+                                            }
+                                    },
+                                    "timeout": {
+                                            "max-active-life": "1"
+                                    }
+                            }
+                    }
+            },
+
+To show the current state of your flows:
+
+::
+
+    show flow-accounting
 
 
 .. author:: default
