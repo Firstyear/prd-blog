@@ -13,7 +13,7 @@ Today I'm going to break this down - but the conclusion for the lazy is:
 Background
 ----------
 
-So there are a few parts here. AD is for intents an purposes an LDAP server. The <product> is also
+So there are a few parts here. AD is for intents and purposes an LDAP server. The <product> is also
 an LDAP server, that syncs to AD. We don't care if that's 389-ds, freeipa or vendor solution. The
 results are basically the same.
 
@@ -78,6 +78,9 @@ and you have very little admin overhead to configuration of this service on the 
 Think about how easy onboarding is if you only need to put your ssh key in one place and it works
 on every server! Let alone shutting down a compromised account: lock it in one place, and they are
 deny access to every server.
+
+SSSD as the LDAP client on the server can also cache the passwords (hashed) and the ssh public
+keys, which means a disconnected client will still be able to be authenticated to.
 
 At this point, because you have ssh key auth working, you could even *deny* password auth as an
 option in ssh altogether, eliminating an entire class of bruteforce vectors.
