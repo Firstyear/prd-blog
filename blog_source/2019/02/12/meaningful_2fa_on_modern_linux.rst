@@ -52,32 +52,33 @@ every TOTP token on your network. Bad place to be in.
 Smartcards
 ----------
 
-Are notoriously difficult to have functional, let alone with SSH. Don't bother.
+Are notoriously difficult to have functional, let alone with SSH. Don't bother. (Where the Smartcard
+does TLS auth to the SSH server this is.)
 
 Come on William, why are you so doom and gloom!
 -----------------------------------------------
 
 Lets back up for a second and think about what we we are trying to prevent by having mfa at all. We
 want to prevent single factor compromise from having a large impact *and* we want to prevent brute
-force attacks.
+force attacks. (There are probably more reasons, but these are the ones I'll focus on).
 
 So the best answer: Use mfa on the workstation (password + totp), then use ssh keys to the hosts.
 
 This means the target of the attack is small, and the workstation can be protected by things like
-full disk encryption, group policy, etc. SSH keys prevent brute force against your server infrastructure
-and also prevent human error where a password is mistankenly typed into the console. To sudo on the
-host you still need the password (so ssh key + password, becomes mfa for root on the infra anyway).
+full disk encryption and group policy. To sudo on the
+host you still need the password. This makes sudo MFA to root as you need something know, and
+something you have.
 
-If you are extra paranoid you can put your ssh keys on smartcards. This works on linux and osx
-workstations. Apparently you can have ssh keys in TPM, which would give you platform binding,
-but I don't know how to achieve this.
+If you are extra conscious you can put your ssh keys on smartcards. This works on linux and osx
+workstations with yubikeys as I am aware. Apparently you can have ssh keys in TPM, which would give
+you tighter hardware binding, but I don't know how to achieve this (yet).
 
 To make all this better, you can distributed your ssh public keys in ldap, which means you gain
 the benefits of LDAP account locking/revocation, you can remove the keys instantly if they are breached,
 and you have very little admin overhead to configuration of this service on the linux server side.
 Think about how easy onboarding is if you only need to put your ssh key in one place and it works
 on every server! Let alone shutting down a compromised account: lock it in one place, and they are
-deny access to every server.
+denied access to every server.
 
 SSSD as the LDAP client on the server can also cache the passwords (hashed) and the ssh public
 keys, which means a disconnected client will still be able to be authenticated to.
