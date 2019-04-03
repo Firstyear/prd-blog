@@ -4,6 +4,7 @@ Sitemap
 .. toctree::
    :maxdepth: 1
 
+   2019/04/03/gdb_autoloads_for_389_ds
    2019/02/26/programming_lessons_and_methods
    2019/02/12/meaningful_2fa_on_modern_linux
    2019/01/30/using_the_latest_389_ds_on_opensuse
