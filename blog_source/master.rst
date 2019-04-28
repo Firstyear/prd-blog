@@ -4,6 +4,10 @@ Sitemap
 .. toctree::
    :maxdepth: 1
 
+   2019/04/28/implementing_webauthn_a_series_of_complexities
+   2019/04/28/the_case_for_ethics_in_opensource
+   2019/04/13/using_rust_generics_to_enforce_db_record_state
+   2019/04/08/debugging_macos_bluetooth_audio_stutter
    2019/04/03/gdb_autoloads_for_389_ds
    2019/02/26/programming_lessons_and_methods
    2019/02/12/meaningful_2fa_on_modern_linux
