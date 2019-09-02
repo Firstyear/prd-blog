@@ -1,5 +1,8 @@
 python gssapi with flask and s4u2proxy
 ======================================
+
+`UPDATE: 2019 I don't recommend using kerberos - read more here. </blog/html/2017/05/23/kerberos_why_the_world_moved_on.html>`_
+
 I have recently been implementing gssapi negotiate support in a flask application at work. In almost every case I advise that you use mod-auth-gssapi: It's just better. 
 
 But if you have a use case where you cannot avoid implementing you own, there are some really gotchas in using python-gssapi.

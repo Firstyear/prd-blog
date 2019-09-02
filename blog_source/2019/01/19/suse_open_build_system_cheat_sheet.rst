@@ -31,7 +31,7 @@ On OpenSUSE you will want to use the osc tool for your workflow:
 
     zypper in osc
     # If you plan to use the "service" command
-    zypper in obs-service-tar obs-service-obs_scm obs-service-recompress obs-service-set_version obs-service-download_files
+    zypper in obs-service-tar obs-service-obs_scm obs-service-recompress obs-service-set_version obs-service-download_files python-xml obs-service-format_spec_file
 
 You can branch from an existing project to make changes with:
 
@@ -158,6 +158,42 @@ built.
 
 As an additional piece of information, it's a good idea to read the `OBS Packaging Guidelines <https://en.opensuse.org/openSUSE:Packaging_Patches_guidelines>`_
  to be sure that you are doing the right thing!
+
+
+# Acts as tail
+    osc bl
+    osc r -v
+
+# How to access the meta and docker stuff
+
+    osc meta pkg -e
+    osc meta prj -e
+
+(will add vim to the buildroot), then you can chroot
+(allow editing in the build root) 
+
+    osc chroot
+    osc build -x vim 
+
+-k <dir> keeps artifacts in directory dir IE rpm outputs
+
+oscrc buildroot variable, mount tmpfs to that location.
+
+
+docker privs SYS_ADMIN, SYS_CHROOT
+
+Multiple spec: commit second spec to pkg then:
+
+    osc linkpac prj pkg prj new-link-pkg
+
+rpm --eval '%{variable}'
+
+%setup -n "name of what the directory unpacks to, not what to rename to"
+
+When no link exists
+
+    osc submitpac destprj deskpkg
+
 
 .. author:: default
 .. categories:: none

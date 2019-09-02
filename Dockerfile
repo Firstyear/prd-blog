@@ -2,7 +2,7 @@
 FROM centos:7
 MAINTAINER wibrown@redhat.com
 
-EXPOSE 8080 8443
+EXPOSE 8080
 
 # Install apache
 # Install tinkerer, this is from pip atm, but on fedora it's packaged.

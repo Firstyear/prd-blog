@@ -1,5 +1,8 @@
 Securing IPA
 ============
+
+`I no longer recommend using FreeIPA - Read more here! </blog/html/2019/07/10/i_no_longer_recommend_freeipa.html>`_
+
 By default IPA has some weak security around TLS and anonymous binds.
 
 We can improve this by changing the following options.

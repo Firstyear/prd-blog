@@ -81,6 +81,8 @@ We can make a Fully Qualified Distinguished Name (FQDN), or just Distinguished N
 
 This should explain why LDAP is called a "tree", why objects are named the way they are, and help you to visualise the layout of data in your own tree.
 
+`PART 2, Searching! <ldap_guide_part_2_searching.html>`_
+
 
 .. author:: default
 .. categories:: none

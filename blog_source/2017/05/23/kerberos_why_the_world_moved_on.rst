@@ -64,9 +64,9 @@ As a kerberos client, the experience just *sucks*. Even at a work place that hig
 Right - what would you suggest instead then?
 --------------------------------------------
 
-* TLS certificates for identity
+* Machine and device based authentication rather than "what you know" authentication.
 * SSH keys for access to servers
-* SAML portals for web applications (with TLS auth for bonus marks)
+* Webauthn with OIDC/Oauth/SAML for web applications
 * Back these to LDAP.
 
 Because LDAP is a database, containerised applications treat it like another database. SSH keys don't enable the same lateral movement risk. TLS certificates are still a pain to use, but they are still better than KRB for authentication today. Ultimately, we are watching TLS, SAML and Oauth take over SSO. So lets invest in those.

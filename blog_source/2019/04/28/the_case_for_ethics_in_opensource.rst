@@ -36,6 +36,8 @@ and a place where we can begin to improve.
 The Problem
 -----------
 
+TODO: Discuss data handling practices
+
 Let's consider some issues and possible solutions in work that I'm familiar with - identity
 management software. Lets list a few "features". (Please don't email me about how these are
 wrong, I know they are ...)
@@ -53,6 +55,10 @@ of correct).
 
 What do we want to achieve?
 ---------------------------
+
+There are lots of different issues here, but really want to prevent harm to a person. What is harm?
+Well that's a complex topic. To me, it could be emotional harm, disrespect of their person, it
+could be a feeling of a lack of control.
 
 I don't believe it's correct to dictate a set of rules that people should follow. People will
 be fatigued, and will find the process too hard. We need to trust that people can learn and
@@ -120,6 +126,25 @@ name change doesn't matter - what matters is we need to respect peoples right to
 
 A better idea is to use UUID/ID numbers as a primary key, and have name able to be changed at
 any point in time.
+
+* We request sex on signup
+
+Violates a privacy as a first point - we probably have no need for the data unless we are a
+medical application, so we should never ask for this at all. We also need to disclose why
+we need this data to satisfy informed consent, and potentially to allow them to opt-out of
+providing the data. Finally (if we really require this), to not violate self identification,
+we need to allow this to
+be a free-text field rather than a Male/Female boolean. This is not just in respect of
+individuals who are LGBTQI+, but the reality that there are biologically people who
+medically are neither. We also need to allow this to be changed at any time in the future.
+This in mind Sex and Gender are different concepts, so we should be careful which we request - Sex
+is the medical term of a person's genetics, and Gender is who the person identifies as.
+
+Not only this, because this is a very personal piece of information, we must disclose how we
+protect this information from access, who can see it, and if or how we'll ever share it with
+other systems or authorities.
+
+Generally, we probably don't need to know, so don't ask for it at all.
 
 * To change account details, you have to use a command line tool
 

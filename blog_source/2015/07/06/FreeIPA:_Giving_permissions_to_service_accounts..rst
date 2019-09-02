@@ -1,6 +1,8 @@
 FreeIPA: Giving permissions to service accounts.
 ================================================
 
+`I no longer recommend using FreeIPA - Read more here! </blog/html/2019/07/10/i_no_longer_recommend_freeipa.html>`_
+
 I was setting up FreeRADIUS to work with MSCHAPv2 with FreeIPA (Oh god you're a horrible human being I hear you say).
 
 To do this, you need to do a few things, the main one being allowing a service account a read permission to a normally hidden attribute. However, service accounts don't normally have the ability to be added to permission classes.

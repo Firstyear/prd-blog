@@ -223,6 +223,9 @@ Conclusion
 Ldapsearches tend to be very foreign to application developers and engineers when they first encounter them. Unlike SQL they are not based on tables and selects, and often the data is more complex is disparate. However with these controls, being basedn, scope, filter and attributes, you can completely direct your search to return the exact data that you require for your application or query.
 
 
+`PART 3, filters! <ldap_guide_part_3_filters.html>`_
+
+
 Notes:
 ------
 

@@ -1,5 +1,8 @@
 Load balanced 389 instance with freeipa kerberos domain.
 ========================================================
+
+`I no longer recommend using FreeIPA - Read more here! </blog/html/2019/07/10/i_no_longer_recommend_freeipa.html>`_
+
 First, create a fake host that we can assign services too. This is for the load balancer (f5, netscaler, ace, haproxy) 
 
 ::

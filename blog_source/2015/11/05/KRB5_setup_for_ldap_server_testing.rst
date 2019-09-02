@@ -1,5 +1,8 @@
 KRB5 setup for ldap server testing
 ==================================
+
+UPDATE: 2019 this is now automated, but I `don't recommend using kerberos - read more here. </blog/html/2017/05/23/kerberos_why_the_world_moved_on.html>`_
+
 This will eventually get automated, but here is a quick krb recipe for testing. Works in docker containers too!
 
 -- krb5 without ldap backend.

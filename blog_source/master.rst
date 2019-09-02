@@ -4,6 +4,12 @@ Sitemap
 .. toctree::
    :maxdepth: 1
 
+   2019/09/02/opensuse_leap_as_a_virtualisation_host
+   2019/08/29/ldap_filter_syntax_validation
+   2019/08/26/using_ramdisks_with_cargo
+   2019/07/16/cpu_atomics_and_orderings_explained
+   2019/07/10/i_no_longer_recommend_freeipa
+   2019/07/05/using_389ds_with_docker
    2019/04/28/implementing_webauthn_a_series_of_complexities
    2019/04/28/the_case_for_ethics_in_opensource
    2019/04/13/using_rust_generics_to_enforce_db_record_state

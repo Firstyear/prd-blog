@@ -1,5 +1,8 @@
 FreeRADIUS: Using mschapv2 with freeipa
 =======================================
+
+`I no longer recommend using FreeIPA - Read more here! </blog/html/2019/07/10/i_no_longer_recommend_freeipa.html>`_
+
 Wireless and radius is pretty much useless without mschapv2 and peap. This is because iPhones, androids, even linux have fundamental issues with ttls or other 802.1x modes. mschapv2 "just works", yet it's one of the most obscure to get working in some cases without AD.
 
 If you have an active directory environment, it's pretty well a painless process. But when you want to use anything else, you are in a tight spot.
@@ -17,7 +20,7 @@ So the main things here to note:
 
 We can pretty easily make this setup work with freeipa in fact.
 
-First, follow the contents of `my previous blog post <https://firstyear.id.au/entry/22>`_ on how to setup the adtrust components and the access controls. 
+First, follow the contents of `my previous blog post </blog/html/2015/07/06/FreeIPA:_Giving_permissions_to_service_accounts..html>`_ on how to setup the adtrust components and the access controls. 
 
 You don't actually need to complete the trust with AD, you just need to run the setup util, as this triggers IPA to generate and store nthashes in ipaNTHash on the user account.
 

@@ -199,4 +199,5 @@ Conclusion
 
 While search bases can help you to direct a query, filters are how searches are efficently expressed over databases of millions of objects. Being able to use them effectively will help your client applications be much faster.
 
+`PART 4, schema! <ldap_guide_part_4_schema_and_objects.html>`_
 

@@ -1,5 +1,8 @@
 Running your own mailserver: Mailbox rollover
 =============================================
+
+UPDATE 2019: Don't run your own! Use fastmail instead :D!
+
 I go to a lot of effort to run my own email server. I don't like google, and I want to keep them away from my messages. While it incurs both financial, and administrative cost, sometimes the benefits are fantastic.
 
 I like to sort my mail to folders based on server side filters (which are fantastic, server side filtering is the way to go). I also like to keep my mailboxes in yearly fashion, so they don't grow tooo large. I keep every email I ever receive, and it's saved my arse a few times.
