@@ -4,6 +4,7 @@ Sitemap
 .. toctree::
    :maxdepth: 1
 
+   2019/09/18/announcing_kanidm_a_new_idm_project
    2019/09/02/opensuse_leap_as_a_virtualisation_host
    2019/08/29/ldap_filter_syntax_validation
    2019/08/26/using_ramdisks_with_cargo
