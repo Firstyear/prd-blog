@@ -4,6 +4,12 @@ Sitemap
 .. toctree::
    :maxdepth: 1
 
+   2019/12/18/packaging_vendoring_and_how_it_s_changing
+   2019/12/15/fixing_opensuse_virtual_machines_with_resume
+   2019/12/07/password_quality_and_badlisting_in_kanidm
+   2019/11/28/rust_2020_helping_to_get_rust_deployed
+   2019/11/26/recovering_lvm_when_a_device_is_missing_with_a_cache_pool_lv
+   2019/09/25/upgrading_opensuse_15_0_to_15_1
    2019/09/18/announcing_kanidm_a_new_idm_project
    2019/09/02/opensuse_leap_as_a_virtualisation_host
    2019/08/29/ldap_filter_syntax_validation

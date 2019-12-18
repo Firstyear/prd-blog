@@ -89,7 +89,7 @@ Finally put this in your `cargo file of choice <https://doc.rust-lang.org/cargo/
 ::
 
     [build]
-    target = "/Volumes/ramdisk/rs"
+    target-dir = "/Volumes/ramdisk/rs"
 
 Future william will need to work out if there are negative consequences to multiple cargo projects
 sharing the same target directory ... hope not!

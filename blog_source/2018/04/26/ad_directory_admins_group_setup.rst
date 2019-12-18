@@ -94,12 +94,25 @@ Now lets actually apply this and do a test:
     # /usr/local/samba/bin/samba-tool group listmembers 'directory admins' -U 'da_william%...'
     da_william
     Administrator
-    # /usr/local/samba/bin/samba-tool group removemembers 'directory admins' -U 'da_william%...'
-    Removed members from group directory admins
-    # /usr/local/samba/bin/samba-tool group listmembers 'directory admins' -U 'da_william%...'
-    da_william
 
-It works!
+After we have completed our tasks, we remove da_william from the directory admins group as we no
+longer required the privileges. You can self-remove, or have the Administrator account do the
+removal.
+
+::
+
+    # /usr/local/samba/bin/samba-tool group removemembers 'directory admins' da_william -U 'da_william%...'
+    Removed members from group directory admins
+
+    # /usr/local/samba/bin/samba-tool group removemembers 'directory admins' da_william -U 'Administrator'
+    Removed members from group directory admins
+
+Finally check that da_william is no longer in the group.
+
+::
+
+    # /usr/local/samba/bin/samba-tool group listmembers 'directory admins' -U 'da_william%...'
+    Administrator
 
 Conclusion
 ----------
