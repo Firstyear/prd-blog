@@ -4,6 +4,7 @@ Sitemap
 .. toctree::
    :maxdepth: 1
 
+   2020/01/20/there_are_no_root_causes
    2019/12/29/concurrency_2_concurrently_readable_structures
    2019/12/29/concurrency_1_types_of_concurrency
    2019/12/19/packaging_and_the_security_proposition
