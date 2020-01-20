@@ -6,7 +6,7 @@ and how that interacts with language based packaging tools. This is a complex an
 topic, so I'll start with my summary:
 
 Today, distributions should focus on supporting and distributing _applications_ and work with
-native language supply changes to enable this.
+native language supply chains to enable this.
 
 Distribution Packaging
 ----------------------
@@ -24,11 +24,11 @@ This process is really optimised for C applications. C has been the "system lang
 decades now, and so we can really see these features designed to promote - and fill in gaps - for
 these applications.
 
-For example, C applications are dynamicly linked. Because of this it encourages package maintainers
+For example, C applications are dynamically linked. Because of this it encourages package maintainers
 to "split" applications into smaller units that can have shared elements. An example that I know
 is openldap which may be a single source tree, but often is packaged to multiple parts such as
 the libldap.so, lmdb, openldap-client applications, it's server binary, and probably others. The
-package maintainer is used to taking their scapels and carfully slicing sources into elegant
+package maintainer is used to taking their scalpels and carefully slicing sources into elegant
 packages that can minimise how many things are installed to what is "just needed".
 
 We also see other behaviours where C shared objects have "versions", which means you can install
@@ -64,7 +64,7 @@ tools to have their dependencies requested from the "package", and having the pa
 checked for them.
 
 But overtime, conflicts started, and issues arose. A real turning point was ruby in debian/ubuntu
-where debian package maintainers (who are used to C) brought out the scapel and attempted to slice
+where debian package maintainers (who are used to C) brought out the scalpel and attempted to slice
 ruby down to "parts" that could be reused form a C mindset. This led to a combinations of packages
 that didn't make sense (rubygems minus TLS, but rubygems requires https), which really disrupted
 the communities.
@@ -86,21 +86,22 @@ New kids on the block
 Since then I would say three languages have risen to importance and learnt from the experiences of
 Ruby - This is Javascript (npm/node), Go and Rust.
 
-I'll focus on Rust as it's what I'm most familiar with. Rust went further and embedded distribution
+Rust went further than Ruby and Python and embedded distribution
 of libraries into it's build tools from an early date with Cargo. As Rust is staticly linked (libraries
 are build into the final binary, rather than being dynamicly loaded), this moves all dependency
-management to build time. And because Cargo is involved and controls all the paths, it can do things
+management to build time - which prevents runtime library conflict. And because Cargo is involved
+and controls all the paths, it can do things
 such as having multiple versions available in a single build for different components and coordinating
 all these elements.
 
-Now to hope back to npm/js. This introduced a new concept - microdependencies. This happened because
-javascript doesn't have deadcode elimination. So if given a large utility library, and you call one
+Now to hop back to npm/js. This ecosystem introduced a new concept - micro-dependencies. This happened because
+javascript doesn't have dead code elimination. So if given a large utility library, and you call one
 function out of 100, you still have to ship all 99 unused ones. This means they needed a way to
 manage and distribute hundreds, if not thousands of tiny libraries, each that did "one thing" so that
 you pulled in "exactly" the minimum required (that's not how it turned out ... but it was the
 intent).
 
-Rust also has inherited a similar culture - not to the same extreme as npm because rust DOES have
+Rust also has inherited a similar culture - not to the same extreme as npm because Rust DOES have
 dead code elimination, but still enough that my concread library with 3 dependencies pulls in 32
 dependencies, and kanidm from it's 30 dependencies, pulls in 365 into it's graph.
 
@@ -111,21 +112,12 @@ versions at build are used in production due to the static linking.
 This has led to a great challenge is distribution packaging for Rust - there are so many
 "libraries" that to package them all would be a monumental piece of human effort, time, and work.
 
-But once again, we see the distribution maintainers, scapel in hand, a shine in their eyes looking
+But once again, we see the distribution maintainers, scalpel in hand, a shine in their eyes looking
 and thinking "excellent, time to package 365 libraries ...". In the name of a "supply chain" and
-distributing "security changes".
+adding "security".
 
-We have to ask though, what is the *value* of spending all this time to package 365 libraries?
-
-Many dynamic library entusiasts would say "security" but this is not a strong argument. As an
-upstream project we have to update our project to gain security updates, and check the build time
-assertions, before distributing these changes to users. It's also been shown that most distributions
-lag in security updates by more than a month in many cases. When there are 365 libraries needed for
-one application, over say ... suse, redhat, fedora, debian ... that's only going to exhaust resources
-and cause these to lag further.
-
-Instead we should focus on the upstreams to be enabled though tools like cargo-audit to update
-and release often, and distributions to support rebuilds as needed.
+We have to ask though, is there really *value* of spending all this time to package 365 libraries
+when Rust functions so differently?
 
 What are you getting at here?
 -----------------------------
@@ -137,9 +129,9 @@ Packaging *is* the C language source and binary distribution mechanism - and for
 Now that we can frame it like this we can see *why* there are so many challenges when we attempt
 to package Rust, Python or friends in rpms.
 
-Rust isn't C. We can't think about Rust like C.
+Rust isn't C. We can't think about Rust like C. We can't secure Rust like C.
 
-Python isn't C. We can't think about Python like C.
+Python isn't C. We can't think about Python like C. We can't secure Python like C.
 
 These languages all have their own quirks, behaviours, flaws, benefits, and goals. They need to be
 distributed in unique ways appropriate to those languages.
@@ -152,12 +144,10 @@ due to it's *huge* number of C, Python and Java dependencies. Recently on twitte
 annouced that "FreeIPA has been packaged for debian" as the last barrier (being dogtag/java)
 was overcome to package the hundreds of required dependencies.
 
-The inevitable outcome of this is that:
+The inevitable outcome of debian now packaging FreeIPA will be:
 
-* FreeIPA will break in some future event as one of the python or java libraries was changed in
-a way that was not expected by the developers or package maintainers.
-* Other applications may be "held back" from updating at risk/fear of breaking FreeIPA which stiffles
-innovation in the java/python ecosystems surrounding.
+* FreeIPA will break in some future event as one of the python or java libraries was changed in a way that was not expected by the developers or package maintainers.
+* Other applications may be "held back" from updating at risk/fear of breaking FreeIPA which stifles innovation in the java/python ecosystems surrounding.
 
 It won't be the fault of FreeIPA. It won't be the fault of the debian maintainers. It will be that
 we are shoving square applications through round C shaped holes and hoping it works.
@@ -171,18 +161,49 @@ will go their whole lives never knowing how this process works.
 
 We need to stop focusing on packaging *libraries* and start to focus on how we distribute *applications*.
 
-This is why projects like docker and flatpak have suprised traditional packaging advocates. These tools
-are about how we ship *applications*, and their build and supply chains are seperated from these.
+This is why projects like docker and flatpak have surprised traditional packaging advocates. These tools
+are about how we ship *applications*, and their build and supply chains are separated from these.
 
 This is why I have really started to advocate and say:
 
 
 Today, distributions should focus on supporting and distributing _applications_ and work with
-native language supply changes to enable this.
+native language supply chains to enable this.
 
 
 Only we accept this shift, we can start to find value in distributions again as sources of trusted applications, and how we
 see the distribution as an application platform rather than a collection of tiny libraries.
+
+The risk of not doing this is alienating communities (again) from being involved in our platforms.
+
+
+Follow Up
+---------
+
+There have been some major comments since:
+
+First, there  is now a C package manager named `conan <https://conan.io/>`_ . I have no experience
+with this tool, so at a distance I can only assume it works well for what it does. However it was
+noted it's not gained much popularity, likely due to the fact that distro packages are the current C
+language distribution channels.
+
+The second was about the security components of distribution packaging and this - that topic is
+so long I've written `another post <../19/packaging_and_the_security_proposition.html>`_ about the topic instead, to try and keep this post focused
+on the topic.
+
+Finally, The Fedora Modularity effort is trying to deal with some of these issues - that modules, aka
+applications have different cadences and requirements, and those modules can move more freely
+from the base OS.
+
+Some of the challenges have been `explored by LWN <https://lwn.net/Articles/805180/>`_ and it's worth
+reading. But I think the underlying issue is that again we are approaching things in a way that
+may not align with reality - people are looking at modules as libraries, not applications which is
+causing things to go sideways. And when those modules are installed, they aren't `isolated from each other <https://lwn.net/ml/fedora-devel/4040208.GuUW4P68lE@marvin.jharris.pw/>`_
+, meaning we are back to square one, with a system designed only for C. People are
+`starting to see that <https://lwn.net/ml/fedora-devel/CAB-QmhSdQ+Gwuf6gnLaiziMY+nxNgTSFaUyzRuJqO6sN7_6wzw@mail.gmail.com/>`_
+but the key point is continually missed - that modularity should be about *applications* and their isolation not about
+*multiple library versions*.
+
 
 
 .. author:: default

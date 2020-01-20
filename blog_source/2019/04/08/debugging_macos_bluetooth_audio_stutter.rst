@@ -30,7 +30,8 @@ So I went back and thought about what macOS services could be the problem, and I
 airdrop would scan periodically for other devices to send and recieve files. Disabling Airdrop
 from the sharing menu in System Prefrences cleared my audio right up.
 
-
+UPDATE 2019-12-20: It looks like the Airdrop sharing option in system preferences has been
+removed in 10.15, so I don't believe it's possible to resove this issue now - audio stutter forever!
 
 
 

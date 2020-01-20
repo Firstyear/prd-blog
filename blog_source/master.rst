@@ -4,6 +4,9 @@ Sitemap
 .. toctree::
    :maxdepth: 1
 
+   2019/12/29/concurrency_2_concurrently_readable_structures
+   2019/12/29/concurrency_1_types_of_concurrency
+   2019/12/19/packaging_and_the_security_proposition
    2019/12/18/packaging_vendoring_and_how_it_s_changing
    2019/12/15/fixing_opensuse_virtual_machines_with_resume
    2019/12/07/password_quality_and_badlisting_in_kanidm
