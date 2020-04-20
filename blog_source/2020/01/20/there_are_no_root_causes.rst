@@ -93,7 +93,8 @@ Community Reactions
 
 Since this has been found, a large amount of the community reaction has been about the "root cause".
 'Clearly' the root cause is "Intel are bad at making CPU's" and so everyone should buy AMD instead
-because they "weren't affected quite as badly". We've had some intel CPU updates and kernel/program
+because they "weren't affected quite as badly" (Narrators voice: `They were absolutely just as bad <https://www.zdnet.com/article/amd-processors-from-2011-to-2019-vulnerable-to-two-new-attacks/>`_).
+We've had some intel CPU updates and kernel/program
 fixes so all good right? We addressed the root cause.
 
 Or ... did we?

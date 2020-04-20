@@ -4,6 +4,12 @@ Sitemap
 .. toctree::
    :maxdepth: 1
 
+   2020/04/20/building_containers_on_obs
+   2020/03/28/389ds_in_containers
+   2020/03/28/apfs_why_is_df_showing_me_funny_numbers
+   2020/03/15/usg_fixing_some_basic_issues
+   2020/03/14/fedora_32_wallpaper_submission_story
+   2020/02/04/fixing_a_macbook_pro_8_2_with_dead_amd_gpu
    2020/01/20/there_are_no_root_causes
    2019/12/29/concurrency_2_concurrently_readable_structures
    2019/12/29/concurrency_1_types_of_concurrency
