@@ -27,50 +27,27 @@ long to clone on each write. A good estimate is that if your data in the cell is
 In a concurrent tree, only the *branches* involved in the operation are cloned. Imagine the following
 tree:
 
-::
+.. image:: /_static/cow_1.png
 
-             --- root 1 ---
-            /               \
-        branch 1         branch 2
-        /     \         /        \
-    leaf 1   leaf 2  leaf 3    leaf 4
+When we attempt to change a value in the 4th leaf we copy it before we begin, and all it's parents
+to update their pointers.
 
-When we attempt to change a value in leaf 4 we copy it before we begin.
+.. image:: /_static/cow_2.png
 
-::
-
-          ---------------------------
-         /   --- root 1 ---          \-- root 2
-         v  /               \                \
-        branch 1         branch 2            branch 2(c)
-        /     \         /        \           /    \
-    leaf 1   leaf 2  leaf 3    leaf 4        |    leaf 4(c)
-                        ^                    |
-                        \-------------------/
-
-
-
-In the process the pointers from the new root 2 to branch 1 are maintained. branch 2(c) also
-maintains a pointer to leaf 3.
+In the process the pointers from the new root b to branch 1 are maintained. The new second branch also
+maintains a pointer to the original 3rd leaf.
 
 This means that in this example only 3/7 nodes are copied, saving a lot of cloning. As your tree
 grows this saves a lot of work. Consider a tree with node-widths of 7 pointers and at height level
 5. Assuming perfect layout, you only need to clone 5/~16000 nodes. A huge saving in memory copy!
 
-The interesting part is a reader of root 1, also is unaffected by the changes to root 2  - the tree
-from root 1 hasn't been changed, as all it's pointers and nodes are still valid.
+The interesting part is a reader of root a, also is unaffected by the changes to root b  - the tree
+from root a hasn't been changed, as all it's pointers and nodes are still valid.
 
-When any reader of root 1 ends, we clean up all the nodes it pointed to that no longer are needed
-by root 2 (this can be done with atomic reference counting, or garbage lists in transactions).
+When all readers of root a end, we clean up all the nodes it pointed to that no longer are needed
+by root b (this can be done with atomic reference counting, or garbage lists in transactions).
 
-::
-
-             --- root 2 ---
-            /               \
-        branch 1         branch 2(c)
-        /     \         /        \
-    leaf 1   leaf 2  leaf 3    leaf 4(c)
-
+.. image:: /_static/cow_3.png
 
 It is through this copy-on-write (also called multi view concurrency control) that we achieve
 concurrent readability in the tree.
@@ -80,172 +57,71 @@ to the database transactions. In kanidm an example is the in-memory schema that 
 but loaded from the database. They require transactional behaviours to match the database, and ACID
 properties so that readers of a past transaction have the "matched" schema in memory.
 
-Future Idea - Concurrent Cache
-------------------------------
+Concurrent Cache (Updated 2020-05-13)
+-------------------------------------
 
-A design I have floated in my head is a concurrently readable cache - it should have the same
-transactional properties as a concurrently readable structure - one writer, multiple readers
-with consistent views of the data. As well it should support rollbacks if a writer fails.
+A design that I have thought about for a long time has finally come to reality. This is a concurrently
+readable transactional cache. One writer, multiple readers with consistent views of the data.
+Additionally due to the transactioal nature, rollbacks and commits are fulled supported.
 
-This scheme should work with any cache type - LRU, LRU2Q, LFU. I plan to use ARC however.
+For a more formal version of this design, please see `my concurrent ARC draft paper <https://github.com/Firstyear/concread/blob/master/CACHE.md>`_.
 
-ARC was popularised by ZFS - ARC is not specific to ZFS, it's a strategy for cache replacement.
+This scheme should work with any cache type - LRU, LRU2Q, LFU. I have used `ARC <https://web.archive.org/web/20100329071954/http://www.almaden.ibm.com/StorageSystems/projects/arc/>`_.
 
-ARC is a combination of an LRU and LFU with a set of ghost lists and a weighting factor. When an
-entry is "missed" it's inserted to the LRU. When it's accessed from the LRU a second time, it moves
-to the LFU.
+ARC was popularised by ZFS - ARC is not specific to ZFS, it's a strategy for cache replacement, despite
+the comment association between the two.
 
-When entries are evicted from the LRU or LFU they are added to the ghost list. When a cache miss
-occurs, the ghost list is consulted. If the entry "would have been" in the LRU, but was not, the
-LRU grows and the LFU shrinks. If the item "would have been" in the LFU but was not, the LFU is expanded.
+ARC is a pair of LRU's with a set of ghost lists and a weighting factor. When an
+entry is "missed" it's inserted to the "recent" LRU. When it's accessed from the LRU a second time, it moves
+to the "frequent" LRU.
+
+When entries are evicted from their sets they are added to the ghost list. When a cache miss
+occurs, the ghost list is consulted. If the entry "would have been" in the "recent" LRU, but was not, the
+"recent" LRU grows and the "frequent" LRU shrinks. If the item "would have been" in the "frequent"
+LRU but was not, the "frequent" LRU is expanded, and the "recent" LRU shrunk.
 
 This causes ARC to be self tuning to your workload, as well as balancing "high frequency" and "high
-locality" operations.
+locality" operations. It's also resistant to many cache invalidation or busting patterns that can
+occur in other algorithms.
 
-A major problem though is ARC is not designed for concurrency - LFU/LRU rely on double linked lists
-which is *very* much something that only a single thread can modify safely.
+A major problem though is ARC is not designed for concurrency - LRU's rely on double linked lists
+which is *very* much something that only a single thread can modify safely due to the number of pointers
+that are not aligned in a single cache line, prevent atomic changes.
 
 How to make ARC concurrent
 --------------------------
 
 To make this concurrent, I think it's important to specify the goals.
 
-* Readers should be able to read and find entries in the cache
-* If a reader locates a missing entry it must be able to load it from the database
-* The reader should be able to send loaded entries to the cache so they can be used.
-* Reader access metrics should be acknowledged by the cache.
-* Multiple reader generations should exist
-* A writer should be able to load entries to the cache
-* A writer should be able to modify an entry of the cache without affecting readers
-* Writers should be able to be rolled back with low penalty
+* Readers must always have a correct "point in time" view of the cache and its data
+* Readers must be able to trigger cache inclusions
+* Readers must be able to track cache hits accurately
+* Readers are isolated from all other readers and writer actions
+* Writers must always have a correct "point in time" view
+* Writers must be able to rollback changes without penalty
+* Writers must be able to trigger cache inclusions
+* Writers must be able to track cache hits accurately
+* Writers are isolated from all readers
+* The cache must maintain correct temporal ordering of items in the cache
+* The cache must properly update hit and inclusions based on readers and writers
+* The cache must provide ARC semantics for management of items
+* The cache must be concurrently readable and transactional
+* The overhead compared to single thread ARC is minimal
 
 There are a lot of places to draw inspiration from, and I don't think I can list - or remember them
 all.
 
-My current "work in progress" is that we use a concurrently readable pair of trees to store the LRU
-and LFU. These trees are able to be read by readers, and a writer can concurrently write changes.
+My current design uses a per-thread reader cache to allow inclusions, with a channel to asynchronously
+include and track hits to the write thread. The writer also maintains a local cache of items including
+markers of removed items. When the writer commits, the channel is drained to a time point T, and actions
+on the ARC taken.
 
-The ghost lists of the LRU/LFU are maintained single thread by the writer. The linked lists for both
-are also single threaded and use key-references from the main trees to maintain themselves. The writer
-maintains the recv end of an mpsc queue. Finally a writer has an always-incrementing transaction
-id associated.
+This means the LRU's are maintained only in a single write thread, but the readers changes are able
+to influence the caching decisions.
 
-A reader when initiated has access to the writer of the queue and the transaction id of the writer
-that created this generation. The reader has a an empty hash map.
-
-Modification to ARC
--------------------
-
-A modification is that we need to retain the transaction id's related to items. This means the
-LRU and LFU contain:
-
-::
-
-    type Txid: usize;
-
-    struct ARC<K, Value<V>> {
-        lru: LRU<K, Value<V>>,
-        lfu: LFU<K, Value<V>>,
-        ghost_lru: BTreeMap<K, Txid>
-        ghost_lfu: BTreeMap<K, Txid>
-    }
-
-    struct Value<V> {
-        txid: Txid,
-        data: V,
-    }
-
-Reader Behaviour
-----------------
-
-The reader is the simpler part of the two, so we'll start with that.
-
-When a reader seeks an item in the cache, it references the read-only LRU/LFU trees. If found, we queue
-a cache-hit marker to the channel.
-
-If we miss, we look in our local hashmap. If found we return that.
-
-If it is not in the local hashmap, we now seek in the database - if found, we load the entry.
-The entry is stored in our local hashmap.
-
-As the reader transaction ends, we send the set of entries in our local hash map as values (see
-Modification to ARC), so that the data and the transaction id of the generation when we loaded
-is associated. This has to be kept together as the queue could be recieving items from many generations
-at once.
-
-The reader attempts a "try_include" at the end of the operation, and if unable, it proceeds.
-
-::
-
-    enum State<V> {
-        Missed<V>
-        Accessed
-    }
-
-    struct ChanValue<K, V> {
-        txid: Txid,
-        key: K,
-        data: State<V>
-    }
-
-Writer Behaviour
-----------------
-
-There are two major aspects to writer behaviour. The writer is responsible for maintaining a local
-cache of missed items, a local cache of writen (dirty) items, managing the global LRU/LFU, and responding
-to the reader inclusion requests.
-
-When the writer looks up a value, it looks in the LFU/LRU. If found (and the writer is reading) we
-return the data to the caller, and add an "accessed" value to the local thread store.
-
-If the writer is attempting to mutate, we clone the value and put it into the local thread store in
-the "dirty" state.
-
-::
-
-    enum State {
-        Dirty(V),
-        Clean(V),
-        Accessed
-    }
-
-    struct Value<V> {
-        txid: usize,
-        state: State<V>
-    }
-
-If it is not found, we seek the value in the database. It is added to the cache. If this is a write,
-we flag the entry as dirty. Else it's flagged clean.
-
-If we abort, we move to the include step before we complete the operation.
-
-If we commit, we write our clean and dirty flagged data to the LFU/LRU as required. The LRU/LFU
-self manages it's lists and sets, it's okay to the concurrent behaviours. We indicate which items
-have been accessed.
-
-We the perform an "include" operation. Readers attempt this at the end of their operations if the
-lock can be taken, and skip if not.
-
-We dequeue from the queue up to some limit of values. For each value that is requested, we look it
-up in our LRU/LFU.
-
-* If the value was not in the ARC, and in the ghost list, include it + it's txid if the txid is higher than the ghost key txid
-* If the value was not in the ARC, and not in the ghost list, include it.
-* If the value is in the ARC, but a lower txid, we update the access metrics.
-* If the value is in the ARC and a higher txid, we update the access metrics and update the value
-  to the newer version.
-
-* If the value is an accessed marker, and the item is in the ghost list, continue
-* If the value is an accessed marker, and the item is in the ARC, we update it's access metrics
-
-Questions for Future William
-----------------------------
-
-ARC moves from LRU -> LFU if the LRU has a hit, but this seems overly aggresive. Perhaps this should
-be if LRU is a hit on 2 occasions move to LFU?
-
-A thread must wake and feed the cache if we are unable to drain the readers, as we don't want the
-queue to grow without bound.
+To maintain consistency, and extra set is added which is the haunted set, so that a key that has
+existed at some point can be tracked to identify it's point in time of eviction and last update
+so that stale data can never be included by accident.
 
 Limitations and Concerns
 ------------------------
@@ -255,10 +131,19 @@ the value, and the writer must then act on the queue. Sizing the cache to be lar
 critically important as eviction/missing will have a higher penalty than normal. Optimally
 the cache will be "as large or larger" than the working set.
 
-Due to the inclusion cost, the cache may be "slow" during the warm up, so this style of cache
-really matters for highly concurrent software that can not tolerate locking behaviour, and
-for items where the normal code paths are extremely slow. IE large item deserialisation
-and return.
+But with a concurrent ARC we now have a cache where each reader thread has a thread local cache
+and the writer is communicated to by channels. This may make the cache's memory limit baloon
+to a high amount over a normal cache. To help, an algorithm was developed based on expect cache
+behaviour for misses and communication to help size the caches of readers and writers.
+
+Conclusion
+----------
+
+This is a snapshot of some concurrently readable datastructures, and how they are implemented
+and useful in your projects. Using them in `Kanidm <https://github.com/kanidm/kanidm/blob/master/README.md>`_
+we have already seen excellent performance and scaling of the server, with very little effort for
+tuning. We plan to adapt these for use in 389 Directory Server too. Stay tuned!
+
 
 .. author:: default
 .. categories:: none
