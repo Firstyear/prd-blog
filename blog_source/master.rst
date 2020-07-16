@@ -4,6 +4,7 @@ Sitemap
 .. toctree::
    :maxdepth: 1
 
+   2020/07/13/developer_perspective_on_docker
    2020/06/15/virt_manager_missing_pci_ids_usb_ids_macos
    2020/05/03/resolving_airplayxpchelper_perr_null_kcancelederr_with_apple_tv_and_macos
    2020/04/20/building_containers_on_obs
