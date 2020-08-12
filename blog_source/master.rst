@@ -4,6 +4,8 @@ Sitemap
 .. toctree::
    :maxdepth: 1
 
+   2020/08/12/user_gesture_is_not_detected_using_ios_touchid_with_webauthn_rs
+   2020/08/06/docker_buildx_for_multiarch_builds
    2020/07/13/developer_perspective_on_docker
    2020/06/15/virt_manager_missing_pci_ids_usb_ids_macos
    2020/05/03/resolving_airplayxpchelper_perr_null_kcancelederr_with_apple_tv_and_macos
