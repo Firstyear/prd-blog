@@ -4,6 +4,9 @@ Sitemap
 .. toctree::
    :maxdepth: 1
 
+   2020/09/01/how_a_search_query_is_processed_in_kanidm
+   2020/08/26/using_suse_leap_enterprise_with_docker
+   2020/08/24/windows_hello_in_webauthn_rs
    2020/08/12/user_gesture_is_not_detected_using_ios_touchid_with_webauthn_rs
    2020/08/06/docker_buildx_for_multiarch_builds
    2020/07/13/developer_perspective_on_docker

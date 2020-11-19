@@ -86,7 +86,7 @@ CPU's have to be async to be fast - remember spectre and meltdown? These are att
 measuring the side effects of CPU's asynchronous behaviour. While computers are "fast" these
 attacks will always be possible, because to make a CPU synchronous is *slow* - and asynchronous
 behaviour will always have measurable side effects. Every modern CPU's
-performance is an illusion of async black magic.
+performance is an illusion of async forbidden magic.
 
 A large portion of the async behaviour comes from the interaction of the CPU, cache, and memory.
 
@@ -114,8 +114,8 @@ Ahhh! Suddenly we can see where problems can occur - each CPU has an L1 cache, w
 to memory but *unique* to the CPU. This means that each CPU can make a change to the same piece of
 memory in their L1 cache *without the other CPU knowing*. To help explain, let's show a demo.
 
-CPU just trash my variables fam
--------------------------------
+CPU just trash my variables
+---------------------------
 
 We'll assume we now have two threads - my code is in rust again, and there is a good reason for the
 unsafes - this code really is unsafe!
