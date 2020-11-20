@@ -228,7 +228,18 @@ In addition, sccache even in distributed mode can still use cloud or remote stor
 items, using it's cache first, and the distributed complitation second. Anything that can't
 be remotely complied will be run locally.
 
+Verifying
+---------
 
+If you compile something from your client, you should see messages like this appear in journald
+in the builder/scheduler machine:
+
+::
+
+    INFO 2020-11-19T22:23:46Z: sccache_dist: Job 140 created and will be assigned to server ServerId(V4(x.x.x.x:10501))
+    INFO 2020-11-19T22:23:46Z: sccache_dist: Job 140 successfully assigned and saved with state Ready
+    INFO 2020-11-19T22:23:46Z: sccache_dist: Job 140 updated state to Started
+    INFO 2020-11-19T22:23:46Z: sccache_dist: Job 140 updated state to Complete
 
 
 .. author:: default

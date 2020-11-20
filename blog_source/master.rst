@@ -4,6 +4,7 @@ Sitemap
 .. toctree::
    :maxdepth: 1
 
+   2020/11/20/rust_and_target_feature_flags
    2020/11/19/deploying_sccache_on_suse
    2020/09/01/how_a_search_query_is_processed_in_kanidm
    2020/08/26/using_suse_leap_enterprise_with_docker
