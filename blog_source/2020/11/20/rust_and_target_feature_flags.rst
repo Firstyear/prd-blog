@@ -70,7 +70,7 @@ cpu.
 
 The response was "but that's already how it works".
 
-I was helpfully directory to the `packed_simd perf guide <https://rust-lang.github.io/packed_simd/perf-guide/target-feature/rustflags.html>`_
+I was helpfully directed to the `packed_simd perf guide <https://rust-lang.github.io/packed_simd/perf-guide/target-feature/rustflags.html>`_
 which discusses the use of target features and target cpu. At that point I realised that for this
 whole time I've only been using the default:
 
