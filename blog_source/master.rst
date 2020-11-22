@@ -152,4 +152,5 @@ Sitemap
    pages/ldap_guide_part_4_schema_and_objects
    pages/nss_and_openssl_command_reference
    pages/about
+   pages/rss
 
