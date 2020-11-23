@@ -227,11 +227,6 @@ If we requested Required, we would exclude the U2F device.
 
 If we requested Discouraged, we would exclude the iPhone.
 
-If we request Preferred, the U2F device could be used on a different browser with CTAP2 either
-bypassing the password since the device is now a self contained Multi-Factor. The U2F device could
-prompt for the PIN needlessly and we progress to the password. Or the request to the iPhone could be
-tampered with preventing the verification occurring turning it to a single factor (presence only).
-
 If we request Preferred, the U2F device could be used on a different browser with CTAP2, either:
 
 * bypassing the password, since the device is now a self contained Multi-Factor; or
@@ -283,6 +278,11 @@ In the meantime, I am going to make changes to Webauthn RS to help avoid some of
 * Authentication User Verification Policy is derived from the set of credentials having a consistent user-verification boolean
 
 While not perfect, it will mean that it's "hard to hold it wrong" with Webauthn RS.
+
+Acknowledgements
+----------------
+
+Thanks to both @Charcol0x89 and @JuxhinDB for reviewing this post.
 
 .. author:: default
 .. categories:: none
