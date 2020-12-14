@@ -1,7 +1,9 @@
 Webauthn UserVerificationPolicy Curiosities
 ===========================================
 
-Recently I received a pair of interesting bugs in `Webauthn RS <https://github.com/kanidm/webauthn-rs/>`_
+Recently I received a `pair <https://github.com/kanidm/webauthn-rs/issues/32>`_ 
+`of <https://github.com/kanidm/webauthn-rs/issues/34>`_ interesting bugs 
+in `Webauthn RS <https://github.com/kanidm/webauthn-rs/>`_
 where certain types of authenticators would not work in Firefox, but did work in Chromium. This confused
 me, and I couldn't reproduce the behaviour. So like any obsessed person I ordered myself one of the affected
 devices and waited for Australia Post to lose it, find it, lose it again, and then finally deliver
