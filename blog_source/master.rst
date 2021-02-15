@@ -4,6 +4,7 @@ Sitemap
 .. toctree::
    :maxdepth: 1
 
+   2021/02/15/getting_started_packaging_a_rust_cli_tool_in_suse_obs
    2020/11/21/webauthn_userverificationpolicy_curiosities
    2020/11/20/rust_and_target_feature_flags
    2020/11/19/deploying_sccache_on_suse
