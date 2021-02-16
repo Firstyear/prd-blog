@@ -243,7 +243,7 @@ Next you can commit to your project. Add the files that we created:
     A    hellorust.spec
     A    vendor.tar.xz
 
-HINT: You DO NOT need to commit _servicedata OR hellorust-0.1.1~git0.db340ad.obscpio OR hellorust.obsinfo
+* HINT: You DO NOT need to commit _servicedata OR hellorust-0.1.1~git0.db340ad.obscpio OR hellorust.obsinfo
 
 ::
 
