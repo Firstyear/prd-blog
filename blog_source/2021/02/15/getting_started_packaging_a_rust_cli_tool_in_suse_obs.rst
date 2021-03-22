@@ -27,7 +27,8 @@ Inside of this we'll need some packages to help make the process easier.
 ::
 
     zypper install obs-service-cargo_vendor osc obs-service-tar obs-service-obs_scm \
-        obs-service-recompress obs-service-set_version obs-service-format_spec_file cargo sudo
+        obs-service-recompress obs-service-set_version obs-service-format_spec_file \
+        obs-service-cargo_audit cargo sudo
 
 You should also install your editor of choice in this command (docker images tend not to come
 with any editors!)
@@ -154,11 +155,16 @@ file that allows OBS to help get our sources and bundle them for us. This should
         <param name="compression">xz</param>
       </service>
       <service mode="disabled" name="set_version"/>
+      <service name="cargo_audit" mode="disabled">
+          <!-- ✨ The name of the project here ✨ -->
+         <param name="srcdir">hellorust</param>
+      </service>
       <service name="cargo_vendor" mode="disabled">
           <!-- ✨ The name of the project here ✨ -->
          <param name="srcdir">hellorust</param>
          <param name="compression">xz</param>
       </service>
+
     </services>
 
 Now this service file does a lot of the heavy lifting for us:
@@ -166,6 +172,7 @@ Now this service file does a lot of the heavy lifting for us:
 * It will fetch the sources from git, based on the version we set.
 * It will turn them into a tar.xz for us.
 * It will update the changelog for the rpm, and set the correct version in the spec file.
+* It scans our project for any known vulnerabilities
 * It will download our rust dependencies, and then bundle them to vendor.tar.xz.
 
 So our current work dir should look like:
