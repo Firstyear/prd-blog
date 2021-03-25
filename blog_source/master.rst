@@ -4,6 +4,7 @@ Sitemap
 .. toctree::
    :maxdepth: 1
 
+   2021/03/23/open_source_enshrines_the_wrong_privilege
    2021/03/22/time_machine_on_samba_with_zfs
    2021/02/16/against_packaging_rust_crates
    2021/02/15/getting_started_packaging_a_rust_cli_tool_in_suse_obs
