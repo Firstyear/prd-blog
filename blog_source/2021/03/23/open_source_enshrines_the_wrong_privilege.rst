@@ -43,11 +43,11 @@ Open Source is Selfish
 
 These licenses that we have in FLOSS all enshrine selfish and privileged behaviours.
 
-*I* have the rights to freely access this code so *I* can read it or alter it.
+**I** have the rights to freely access this code so **I** can read it or alter it.
 
-*I* can change this project to fix issues *I* have.
+**I** can change this project to fix issues **I** have.
 
-*I* have freedoms.
+**I** have freedoms.
 
 None of these statements from FLOSS describe other people - the people who consume our software
 (in some cases, without choice). People who are not subject matter experts and can't contribute
