@@ -61,13 +61,13 @@ contribute, that the barriers to contribution are so high (both in programming e
 knowledge). They design the software to work the way they want, because they understand it and it
 "works for me".
 
-This is reflected in our software. Software that does not care for the needs, experiences or rights
+This is reflected in our software. Software that not does not care for the needs, experiences or rights
 of others. Software that pretends to be accessible, all while creating gated communities of control.
 Software that is out of reach of people, the same people that we "claim" to be working for and supporting.
 
 It leads to our communities that are selfish, and do not empathise with people. Communities that have
 placed negative behaviours on pedestals and turned these people into "leaders". Software that does
-account for the experiences of our users, believing that the "community knows best".
+not account for the experiences of our users, believing that the "community knows best".
 
 One does not need to look far for FLOSS projects that speak one set of words, but their actions do
 not align.
