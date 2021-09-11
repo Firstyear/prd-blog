@@ -4,6 +4,9 @@ Sitemap
 .. toctree::
    :maxdepth: 1
 
+   2021/08/12/starttls_in_ldap
+   2021/06/20/getting_started_with_yew
+   2021/05/12/compiler_bootstrapping_can_we_trust_rust
    2021/03/23/open_source_enshrines_the_wrong_privilege
    2021/03/22/time_machine_on_samba_with_zfs
    2021/02/16/against_packaging_rust_crates

@@ -10,6 +10,16 @@ a custom location based on SMB shares.
 Since I have a fileserver at home, I use this as my Time Machine backup target. To make this work
 really smoothly there are a few setup steps.
 
+MacOS Time Machine Performance
+------------------------------
+
+By default timemachine operates as a low priority process. You can set a sysctl to improve
+the performance of this:
+
+::
+
+    sysctl -w debug.lowpri_throttle_enabled=0
+
 ZFS
 ---
 
