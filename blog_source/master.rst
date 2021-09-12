@@ -4,6 +4,7 @@ Sitemap
 .. toctree::
    :maxdepth: 1
 
+   2021/09/12/gnome_3_compare_to_macos
    2021/08/12/starttls_in_ldap
    2021/06/20/getting_started_with_yew
    2021/05/12/compiler_bootstrapping_can_we_trust_rust
