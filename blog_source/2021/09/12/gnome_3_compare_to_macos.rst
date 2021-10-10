@@ -238,7 +238,9 @@ to get out of the way and show you how to use the computer for yourself. MacOS t
 of the computer.
 
 Gnome however feels like it wants to be front and centre. It needs you to know all the time "you're using Gnome!".
-It takes you on a small adventure tour to complete simple actions or to discover new things.
+It takes you on a small adventure tour to complete simple actions or to discover new things. It even
+feels like Gnome has tried to reduce "complexity" so much that they have thrown away many rich
+features and interactions that could make a computer easier to use and interact with.
 
 So for me, this is why I feel that Gnome is like MacOS with rough edges. There are many small, subtle
 and frustrating user interactions like this all through out the Gnome 3 experience that just aren't

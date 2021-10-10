@@ -20,6 +20,8 @@ the performance of this:
 
     sysctl -w debug.lowpri_throttle_enabled=0
 
+You will need a launchd script to make this setting survive a reboot.
+
 ZFS
 ---
 
@@ -102,6 +104,12 @@ In smb.conf I offer two shares for the A and B stripe. These have identical conf
     kernel oplocks = no
     kernel share modes = no
     posix locking = no
+    # NOTE: Changing these will require a new initial backup cycle if you already have an existing
+    # timemachine share.
+    case sensitive = true
+    default case = lower
+    preserve case = no
+    short preserve case = no
 
 The fruit settings are required to help Time Machine understand that this share is usable for it.
 Most of the durable settings are related to performance improvement to help minimise file locking
