@@ -4,6 +4,7 @@ Sitemap
 .. toctree::
    :maxdepth: 1
 
+   2021/11/14/transactional_operations_in_rust
    2021/10/08/results_from_the_opensuse_2021_rust_survey
    2021/09/12/gnome_3_compare_to_macos
    2021/08/12/starttls_in_ldap
