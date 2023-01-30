@@ -14,7 +14,7 @@ MacOS Time Machine Performance
 ------------------------------
 
 By default timemachine operates as a low priority process. You can set a sysctl to improve
-the performance of this:
+the performance of this (especially helpful for a first backup!)
 
 ::
 
@@ -27,83 +27,99 @@ ZFS
 
 I'm using ZFS on my server, which is probably the best filesystem available. To make Time Machine
 work well on ZFS there are a number of tuning options that can help. As these backups write and
-read many small files, you should have a large amount of RAM for ARC (best) or a ZIL + L2ARC
+read many small files, you should have a large amount of RAM for ARC (best) or a ZIL
 on nvme. RAID 10 will likely work better than RAIDZ here as you need better seek latency than write
-throughput due to the need to access many small files.
+throughput due to the need to access many small files. Generally time machine is very "IO demanding".
 
-For the ZFS properties on the filesystem I have set:
+For the ZFS properties on the filesystem I created it with the following options to `zfs create`. Each
+once is set with `-o attribute=value`
 
 ::
 
     atime: off
     dnodesize: auto
     xattr: sa
-    logbias: latency
-    recordsize: 32K
-    compression: zstd-10
-    quota: 3T
-    # optional
+    logbias: throughput
+    recordsize: 1M
+    compression: zstd-10 | zle
+    refquota: 3T
+    # optional - greatly improves write performance
     sync: disabled
+    # security
+    setuid: off
+    exec: off
+    devices: off
 
-The important ones here are the compression setting, which in my case gives a 1.3x compression ratio
-to save space, the quota to prevent the backups overusing space, the recordsize that helps to minimise
-write fragmentation.
+The important ones here are the compression setting. If you choose zle, you gain much faster write performance,
+but you dont get much in the way of compression. zstd-10 gives me about 1.3x compression, but at the loss
+of performance. Generally the decision is based on your pool and storage capacity.
+
+Also note the use of refquota instead of quota. This applies the quota to this filesystem only excluding
+snapshots - if you use quota, the space taken by snapshots it also applied to this filesystem, which
+may cause you to run out of space.
 
 You may optionally choose to disable sync. This is because Time Machine issues a sync after every
 single file write to the server, which can cause low performance with many small files. To mitigate
-the data loss risk here, I both snapshot the backups directory hourly, but I also have two stripes
-(an A/B backup target) so that if one of the stripes goes back, I can still access the other. This
-is another reason that compression is useful, to help offset the cost of the duplicated data.
+the data loss risk here, I snapshot the backups filesystem hourly.
 
-Quota
------
-
-Inside of the backups filessytem I have two folders:
+If you want to encrypt at the ZFS level instead of through time machine you need to enable this
+as you create the filesystem.
 
 ::
 
-    timemachine_a
-    timemachine_b
+    # create a key file to unlock the zfs filesystem
+    openssl rand -hex -out /root/key 32
 
-In each of these you can add a PList that applies quota limits to the time machine stripes.
+    # Add the following settings during zfs create:
+    -o encryption=aes-128-gcm -o keyformat=hex -o keylocation=file:///root/key
+
+If you add any subvolumes, you need to repeat the same encryption steps during the create of these
+subvolumes.
+
+For example a create may look like:
 
 ::
 
-    <?xml version="1.0" encoding="UTF-8"?>
-    <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-    <plist version="1.0">
-    <dict>
-      <key>GlobalQuota</key>
-        <integer>1000000000000</integer>
-      </dict>
-    </plist>
+    zfs create \
+        -o encryption=aes-128-gcm -o keyformat=hex -o keylocation=file:///root/key \
+        -o atime=off -o dnodesize=auto -o xattr=sa -o logbias=throughput \
+        -o recordsize=1M -o compression=zle -o refquota=3T -o sync=disabled \
+        -o setuid=off -o exec=off -o devices=off tank/backups
 
-
-The quota is in bytes. You may not need this if you use the smb fruit:time machine max size setting.
 
 smb.conf
 --------
 
-In smb.conf I offer two shares for the A and B stripe. These have identical configurations beside the paths.
+In smb.conf you define the share that exposes the timemachine backup location. You need to set additional
+metadata on this so that macos will recognise it correctly.
 
 ::
 
-    [timemachine_b]
+    [global]
+    min protocol = SMB2
+    ea support = yes
+
+    # This needs to be global else time machine ops can fail.
+    vfs objects = fruit streams_xattr
+    fruit:aapl = yes
+    fruit:metadata = stream
+    fruit:model = MacSamba
+    fruit:posix_rename = yes
+    fruit:veto_appledouble = no
+    fruit:nfs_aces = no
+    fruit:wipe_intentionally_left_blank_rfork = yes
+    fruit:delete_empty_adfiles = yes
+    spotlight = no
+
+    [timemachine_a]
     comment = Time Machine
-    path = /var/data/backup/timemachine_b
+    fruit:time machine = yes
+    fruit:time machine max size = 1050G
+    path = /var/data/backup/timemachine_a
     browseable = yes
     write list = timemachine
     create mask = 0600
     directory mask = 0700
-    spotlight = no
-    vfs objects = catia fruit streams_xattr
-    fruit:aapl = yes
-    fruit:time machine = yes
-    fruit:time machine max size = 1050G
-    durable handles = yes
-    kernel oplocks = no
-    kernel share modes = no
-    posix locking = no
     # NOTE: Changing these will require a new initial backup cycle if you already have an existing
     # timemachine share.
     case sensitive = true
@@ -111,30 +127,31 @@ In smb.conf I offer two shares for the A and B stripe. These have identical conf
     preserve case = no
     short preserve case = no
 
-The fruit settings are required to help Time Machine understand that this share is usable for it.
-Most of the durable settings are related to performance improvement to help minimise file locking
-and to improve throughput. These are "safe" only because we know that this volume is ALSO not accessed
-or manipulated by any other process or nfs at the same time.
-
-I have also added a custom timemachine user to smbpasswd, and created a matching posix account who should
+The fruit settings are required to help Time Machine understand that this share is usable for it. I have
+also added a custom timemachine user to smbpasswd, and created a matching posix account who should
 own these files.
 
 MacOS
 -----
 
-You can now add this to MacOS via system preferences. Alternately you can use the command line.
+You can now add this to MacOS via system preferences. If your ZFS volume is NOT encyrpted, you should
+add the timemachine volume via system preferences, as it is the only way to enable encryption of the
+time machine backup. For system preferences to "see" the samba share you may need to mount it manually
+via finder as the time machine user.
+
+If you are using ZFS encryption, you can add the time machine backup from the command line instead.
 
 ::
 
     tmutil setdestination smb://timemachine:password@hostname/timemachine_a
 
-If you intend to have stripes (A/B), MacOS is capable of mirroring between two strips alternately.
-You can append the second stripe with (note the -a).
+If you intend to have multiple time machine targets, MacOS is capable of mirroring between multilple stripes alternately.
+You can append the second stripe with (note the -a). You could do this with other shares (offsite for example)
+or with a HDD on your desk.
 
 ::
 
     tmutil setdestination -a smb://timemachine:password@hostname/timemachine_b
-
 
 
 .. author:: default

@@ -4,6 +4,14 @@ Sitemap
 .. toctree::
    :maxdepth: 1
 
+   2022/11/25/why_are_pbkdf2_sha256_and_pbkdf2_sha256_different_in_389_ds
+   2022/11/17/why_decentralised_id_won_t_work
+   2022/08/24/where_to_start_with_linux_authentication
+   2022/06/13/exploring_webauthn_use_cases
+   2022/04/04/enable_cable_on_your_iphone_for_testing
+   2022/03/15/documentation_pr_s_welcome_why_docs_are_not_a_beginner_friendly_task
+   2022/01/19/how_ctap2_0_made_userverification_even_more_confusing
+   2021/12/21/nextcloud_unable_to_open_photos_library
    2021/11/14/transactional_operations_in_rust
    2021/10/08/results_from_the_opensuse_2021_rust_survey
    2021/09/12/gnome_3_compare_to_macos

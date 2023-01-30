@@ -18,11 +18,17 @@ To be clear: security systems like IDM or LDAP can *never* go down. That's not a
 What do you recommend instead?
 ------------------------------
 
+* `Kanidm <https://kanidm.github.io/kanidm/stable/>`_
 * Samba with AD
 * AzureAD
 * 389 Directory Server
 
-All of these projects are very reliable, secure, scalable. We have done a lot of work into 389
+All of these projects are very reliable, secure, scalable.
+
+Kanidm specifically is my own project built from the ground up, which has tried to learn from the
+mistakes and successes of AD, FreeIPA and 389-ds. It's what I recommend the most.
+
+Additionally, we have done a lot of work into 389
 to improve our out of box IDM capabilities too, but there is more to be done too. The
 Samba AD team have done great things too, and deserve a lot of respect for what they have done.
 
@@ -34,14 +40,7 @@ Yes - buy me a drink and I'll talk :)
 Didn't you help?
 ----------------
 
-I tried and it was not taken on board.
-
-So what now?
-------------
-
-Hopefully in the next year we'll see new IDM
-projects for opensource released that have totally different approachs to the legacy we currently
-ride upon.
+I tried and it was not taken on board. Issues I reported years ago still exist today 🙃.
 
 .. author:: default
 .. categories:: none
