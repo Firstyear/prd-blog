@@ -4,6 +4,7 @@ Sitemap
 .. toctree::
    :maxdepth: 1
 
+   2023/02/02/how_hype_will_turn_your_security_key_into_junk
    2022/11/25/why_are_pbkdf2_sha256_and_pbkdf2_sha256_different_in_389_ds
    2022/11/17/why_decentralised_id_won_t_work
    2022/08/24/where_to_start_with_linux_authentication
