@@ -128,19 +128,23 @@ the hype and obsession with *passkeys*.
 
 In 2022 Apple annouced their passkeys feature on MacOS/iOS allowing the use of touchid/faceid
 as a webauthn authenticator similar to your security key. Probably quite wisely, rather than calling
-them "touchid" or "credentials" or "authenticators" apple chose to have a nicer name for users.
+them "touchid" or "credentials" or "authenticators" Apple chose to have a nicer name for users.
 Honestly passkeys is a good name rather than "webauthn authenticator" or "security key". It evokes
-a similar though to passwords which people are highly accustomed to, while also being different enough
+a similar concept to passwords which people are highly accustomed to, while also being different enough
 with the 'key' to indicate that it operates in a different way.
 
 The problem (from an external view) is that passkeys was a branding or naming term of something - but
-overnight authentication thought leaders needed to be on the hype. "What is a passkey?". Since Apple
-didn't actually define it, this left a void for our thought leaders to answer than question for users
+overnight authentication thought leaders needed to be *on the hype*. "What is a passkey?". Since Apple
+didn't actually define it, this left a void for our thought leaders to answer that question for users
 hungry to know "what indeed is a passkey?".
 
 As a creator of a relying party and the webauthn library for Rust, we defined passkeys as the name
 for "all possible authenticators" that a person may choose to use. We wanted to support the goal to
 remove and eliminate passwords, and passkeys are a nice name for this.
+
+Soon after that, some community members took to referring to passkeys to mean "credentials that are
+synchronised between multiple devices". This definition is at the least, not harmful, even if it doesn't
+express that there are many possible types of authenticators that can be used.
 
 Some months later a person took the stage at FIDO's Authenticate conference and annouced
 "a passkey is a resident key". Because of the scale and size of the platform, this definition has
@@ -158,9 +162,18 @@ I would need to buy at lesat 5 yubikeys to store all the accounts, and then anot
 I really don't want to have to juggle and maintain 10 to 15 yubikeys ...
 
 This is an awful user experience to put it mildly. People who choose to use security keys, now won't
-be able to due to passkeys resident key requirements.
+be able to due to passkeys resident key requirements. What will also confuse users is this comes on the tail
+of FIDO certified keys marketing with statements (which are true with non-resident keys) like:
 
-This leaves few authenticators which work properly in this passkey world. Apples own passkeys, Android
+*Infinite key pair storage*
+
+*There is no limit to the number of accounts registered in [redacted] FIDO® Security Key.*
+
+To add further insult, an expressed goal of the Webauthn Work Group is that users should always be free
+to choose any authenticator they wish without penalty. Passkeys forcing key residency flies directly
+in the face of this.
+
+This leaves few authenticator types which will work properly in this passkey world. Apples own passkeys, Android
 passkeys, password managers that support webauthn, Windows with TPM 2.0, and Chromium based browsers on MacOS
 (because of how they use the touchid as a TPM).
 
@@ -197,6 +210,9 @@ what happens with different authenticator types when you submit each level.
     │    rk=required     │ │      RK true       │      RK true       │      RK true       │
     │                    │ │                    │                    │                    │
     └────────────────────┘ └────────────────────┴────────────────────┴────────────────────┘
+
+
+Notice that in rk=preferred the three columns behave the same as rk=required?
 
 Rather than passkeys setting rk=required, if rk=preferred were softened so that on preferred meant
 "create a resident key only if storage is unlimited" then we would have a situation where Android/iOS
