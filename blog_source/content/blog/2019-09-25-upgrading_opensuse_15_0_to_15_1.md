@@ -3,7 +3,7 @@ title = "Upgrading OpenSUSE 15.0 to 15.1"
 date = 2019-09-25
 slug = "2019-09-25-upgrading_opensuse_15_0_to_15_1"
 # This is relative to the root!
-aliases = [ "2019/09/25/upgrading_opensuse_15_0_to_15_1.html" ]
+aliases = [ "2019/09/25/upgrading_opensuse_15_0_to_15_1.html", "blog/html/2019/09/25/upgrading_opensuse_15_0_to_15_1.html" ]
 +++
 # Upgrading OpenSUSE 15.0 to 15.1
 

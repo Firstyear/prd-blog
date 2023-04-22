@@ -3,7 +3,7 @@ title = "Fixing a MacBook Pro 8,2 with dead AMD GPU"
 date = 2020-02-04
 slug = "2020-02-04-fixing_a_macbook_pro_8_2_with_dead_amd_gpu"
 # This is relative to the root!
-aliases = [ "2020/02/04/fixing_a_macbook_pro_8_2_with_dead_amd_gpu.html" ]
+aliases = [ "2020/02/04/fixing_a_macbook_pro_8_2_with_dead_amd_gpu.html", "blog/html/2020/02/04/fixing_a_macbook_pro_8_2_with_dead_amd_gpu.html" ]
 +++
 # Fixing a MacBook Pro 8,2 with dead AMD GPU
 

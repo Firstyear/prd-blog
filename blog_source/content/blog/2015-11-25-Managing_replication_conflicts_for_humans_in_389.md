@@ -3,7 +3,7 @@ title = "Managing replication conflicts for humans in 389"
 date = 2015-11-25
 slug = "2015-11-25-Managing_replication_conflicts_for_humans_in_389"
 # This is relative to the root!
-aliases = [ "2015/11/25/Managing_replication_conflicts_for_humans_in_389.html" ]
+aliases = [ "2015/11/25/Managing_replication_conflicts_for_humans_in_389.html", "blog/html/2015/11/25/Managing_replication_conflicts_for_humans_in_389.html" ]
 +++
 # Managing replication conflicts for humans in 389
 

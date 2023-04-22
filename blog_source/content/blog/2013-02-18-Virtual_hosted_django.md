@@ -3,7 +3,7 @@ title = "Virtual hosted django"
 date = 2013-02-18
 slug = "2013-02-18-Virtual_hosted_django"
 # This is relative to the root!
-aliases = [ "2013/02/18/Virtual_hosted_django.html" ]
+aliases = [ "2013/02/18/Virtual_hosted_django.html", "blog/html/2013/02/18/Virtual_hosted_django.html" ]
 +++
 # Virtual hosted django
 

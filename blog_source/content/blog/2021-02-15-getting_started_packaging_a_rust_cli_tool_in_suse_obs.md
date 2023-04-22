@@ -3,7 +3,7 @@ title = "Getting Started Packaging A Rust CLI Tool in SUSE OBS"
 date = 2021-02-15
 slug = "2021-02-15-getting_started_packaging_a_rust_cli_tool_in_suse_obs"
 # This is relative to the root!
-aliases = [ "2021/02/15/getting_started_packaging_a_rust_cli_tool_in_suse_obs.html" ]
+aliases = [ "2021/02/15/getting_started_packaging_a_rust_cli_tool_in_suse_obs.html", "blog/html/2021/02/15/getting_started_packaging_a_rust_cli_tool_in_suse_obs.html" ]
 +++
 # Getting Started Packaging A Rust CLI Tool in SUSE OBS
 

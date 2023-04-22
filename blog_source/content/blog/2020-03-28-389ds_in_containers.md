@@ -3,7 +3,7 @@ title = "389ds in containers"
 date = 2020-03-28
 slug = "2020-03-28-389ds_in_containers"
 # This is relative to the root!
-aliases = [ "2020/03/28/389ds_in_containers.html" ]
+aliases = [ "2020/03/28/389ds_in_containers.html", "blog/html/2020/03/28/389ds_in_containers.html" ]
 +++
 # 389ds in containers
 

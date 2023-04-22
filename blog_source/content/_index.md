@@ -1,4 +1,3 @@
-
 +++
 template = "oceanic-zen/templates/index.html"
 draft = false

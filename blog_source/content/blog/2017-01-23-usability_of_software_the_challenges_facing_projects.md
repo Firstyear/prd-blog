@@ -3,7 +3,7 @@ title = "Usability of software: The challenges facing projects"
 date = 2017-01-23
 slug = "2017-01-23-usability_of_software_the_challenges_facing_projects"
 # This is relative to the root!
-aliases = [ "2017/01/23/usability_of_software_the_challenges_facing_projects.html" ]
+aliases = [ "2017/01/23/usability_of_software_the_challenges_facing_projects.html", "blog/html/2017/01/23/usability_of_software_the_challenges_facing_projects.html" ]
 +++
 # Usability of software: The challenges facing projects
 

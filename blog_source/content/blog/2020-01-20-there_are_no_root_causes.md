@@ -3,7 +3,7 @@ title = "There are no root causes"
 date = 2020-01-20
 slug = "2020-01-20-there_are_no_root_causes"
 # This is relative to the root!
-aliases = [ "2020/01/20/there_are_no_root_causes.html" ]
+aliases = [ "2020/01/20/there_are_no_root_causes.html", "blog/html/2020/01/20/there_are_no_root_causes.html" ]
 +++
 # There are no root causes
 

@@ -3,7 +3,7 @@ title = "Using ramdisks with Cargo"
 date = 2019-08-26
 slug = "2019-08-26-using_ramdisks_with_cargo"
 # This is relative to the root!
-aliases = [ "2019/08/26/using_ramdisks_with_cargo.html" ]
+aliases = [ "2019/08/26/using_ramdisks_with_cargo.html", "blog/html/2019/08/26/using_ramdisks_with_cargo.html" ]
 +++
 # Using ramdisks with Cargo
 

@@ -3,7 +3,7 @@ title = "KRB5 setup for ldap server testing"
 date = 2015-11-05
 slug = "2015-11-05-KRB5_setup_for_ldap_server_testing"
 # This is relative to the root!
-aliases = [ "2015/11/05/KRB5_setup_for_ldap_server_testing.html" ]
+aliases = [ "2015/11/05/KRB5_setup_for_ldap_server_testing.html", "blog/html/2015/11/05/KRB5_setup_for_ldap_server_testing.html" ]
 +++
 # KRB5 setup for ldap server testing
 

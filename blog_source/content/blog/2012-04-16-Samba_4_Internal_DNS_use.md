@@ -3,7 +3,7 @@ title = "Samba 4 Internal DNS use"
 date = 2012-04-16
 slug = "2012-04-16-Samba_4_Internal_DNS_use"
 # This is relative to the root!
-aliases = [ "2012/04/16/Samba_4_Internal_DNS_use.html" ]
+aliases = [ "2012/04/16/Samba_4_Internal_DNS_use.html", "blog/html/2012/04/16/Samba_4_Internal_DNS_use.html" ]
 +++
 # Samba 4 Internal DNS use
 

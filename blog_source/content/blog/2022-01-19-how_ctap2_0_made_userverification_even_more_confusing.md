@@ -3,7 +3,7 @@ title = "How CTAP2.0 made UserVerification even more confusing"
 date = 2022-01-19
 slug = "2022-01-19-how_ctap2_0_made_userverification_even_more_confusing"
 # This is relative to the root!
-aliases = [ "2022/01/19/how_ctap2_0_made_userverification_even_more_confusing.html" ]
+aliases = [ "2022/01/19/how_ctap2_0_made_userverification_even_more_confusing.html", "blog/html/2022/01/19/how_ctap2_0_made_userverification_even_more_confusing.html" ]
 +++
 # How CTAP2.0 made UserVerification even more confusing
 

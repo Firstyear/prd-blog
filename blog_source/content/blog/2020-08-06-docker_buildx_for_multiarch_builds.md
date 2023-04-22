@@ -3,7 +3,7 @@ title = "docker buildx for multiarch builds"
 date = 2020-08-06
 slug = "2020-08-06-docker_buildx_for_multiarch_builds"
 # This is relative to the root!
-aliases = [ "2020/08/06/docker_buildx_for_multiarch_builds.html" ]
+aliases = [ "2020/08/06/docker_buildx_for_multiarch_builds.html", "blog/html/2020/08/06/docker_buildx_for_multiarch_builds.html" ]
 +++
 # docker buildx for multiarch builds
 

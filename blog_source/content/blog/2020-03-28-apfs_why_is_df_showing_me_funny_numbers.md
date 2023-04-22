@@ -3,7 +3,7 @@ title = "APFS (why is df showing me funny numbers?!)"
 date = 2020-03-28
 slug = "2020-03-28-apfs_why_is_df_showing_me_funny_numbers"
 # This is relative to the root!
-aliases = [ "2020/03/28/apfs_why_is_df_showing_me_funny_numbers.html" ]
+aliases = [ "2020/03/28/apfs_why_is_df_showing_me_funny_numbers.html", "blog/html/2020/03/28/apfs_why_is_df_showing_me_funny_numbers.html" ]
 +++
 # APFS (why is df showing me funny numbers?!)
 

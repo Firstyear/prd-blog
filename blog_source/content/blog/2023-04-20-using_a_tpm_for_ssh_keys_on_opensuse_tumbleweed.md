@@ -3,7 +3,7 @@ title = "Using a TPM for SSH keys on OpenSUSE Tumbleweed"
 date = 2023-04-20
 slug = "2023-04-20-using_a_tpm_for_ssh_keys_on_opensuse_tumbleweed"
 # This is relative to the root!
-aliases = [ "2023/04/20/using_a_tpm_for_ssh_keys_on_opensuse_tumbleweed.html" ]
+aliases = [ "2023/04/20/using_a_tpm_for_ssh_keys_on_opensuse_tumbleweed.html", "blog/html/2023/04/20/using_a_tpm_for_ssh_keys_on_opensuse_tumbleweed.html" ]
 +++
 # Using a TPM for SSH keys on OpenSUSE Tumbleweed
 

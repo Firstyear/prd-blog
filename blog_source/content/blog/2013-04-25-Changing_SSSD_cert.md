@@ -3,7 +3,7 @@ title = "Changing SSSD cert"
 date = 2013-04-25
 slug = "2013-04-25-Changing_SSSD_cert"
 # This is relative to the root!
-aliases = [ "2013/04/25/Changing_SSSD_cert.html" ]
+aliases = [ "2013/04/25/Changing_SSSD_cert.html", "blog/html/2013/04/25/Changing_SSSD_cert.html" ]
 +++
 # Changing SSSD cert
 

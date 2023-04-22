@@ -3,7 +3,7 @@ title = "OpenSUSE leap as a virtualisation host"
 date = 2019-09-02
 slug = "2019-09-02-opensuse_leap_as_a_virtualisation_host"
 # This is relative to the root!
-aliases = [ "2019/09/02/opensuse_leap_as_a_virtualisation_host.html" ]
+aliases = [ "2019/09/02/opensuse_leap_as_a_virtualisation_host.html", "blog/html/2019/09/02/opensuse_leap_as_a_virtualisation_host.html" ]
 +++
 # OpenSUSE leap as a virtualisation host
 

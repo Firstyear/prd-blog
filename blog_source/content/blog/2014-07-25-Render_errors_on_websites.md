@@ -3,7 +3,7 @@ title = "Render errors on websites"
 date = 2014-07-25
 slug = "2014-07-25-Render_errors_on_websites"
 # This is relative to the root!
-aliases = [ "2014/07/25/Render_errors_on_websites.html" ]
+aliases = [ "2014/07/25/Render_errors_on_websites.html", "blog/html/2014/07/25/Render_errors_on_websites.html" ]
 +++
 # Render errors on websites
 

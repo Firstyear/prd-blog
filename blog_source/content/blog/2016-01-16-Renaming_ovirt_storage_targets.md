@@ -3,7 +3,7 @@ title = "Renaming ovirt storage targets"
 date = 2016-01-16
 slug = "2016-01-16-Renaming_ovirt_storage_targets"
 # This is relative to the root!
-aliases = [ "2016/01/16/Renaming_ovirt_storage_targets.html" ]
+aliases = [ "2016/01/16/Renaming_ovirt_storage_targets.html", "blog/html/2016/01/16/Renaming_ovirt_storage_targets.html" ]
 +++
 # Renaming ovirt storage targets
 

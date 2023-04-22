@@ -3,7 +3,7 @@ title = "Disabling journald support"
 date = 2016-04-14
 slug = "2016-04-14-disabling_journald_support"
 # This is relative to the root!
-aliases = [ "2016/04/14/disabling_journald_support.html" ]
+aliases = [ "2016/04/14/disabling_journald_support.html", "blog/html/2016/04/14/disabling_journald_support.html" ]
 +++
 # Disabling journald support
 

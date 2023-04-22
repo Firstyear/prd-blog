@@ -3,7 +3,7 @@ title = "Smartcards and You - How To Make Them Work on Fedora/RHEL"
 date = 2018-02-27
 slug = "2018-02-27-smartcards_and_you_how_to_make_them_work_on_fedora_rhel"
 # This is relative to the root!
-aliases = [ "2018/02/27/smartcards_and_you_how_to_make_them_work_on_fedora_rhel.html" ]
+aliases = [ "2018/02/27/smartcards_and_you_how_to_make_them_work_on_fedora_rhel.html", "blog/html/2018/02/27/smartcards_and_you_how_to_make_them_work_on_fedora_rhel.html" ]
 +++
 # Smartcards and You - How To Make Them Work on Fedora/RHEL
 

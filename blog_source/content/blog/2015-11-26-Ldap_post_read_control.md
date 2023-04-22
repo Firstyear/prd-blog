@@ -3,7 +3,7 @@ title = "Ldap post read control"
 date = 2015-11-26
 slug = "2015-11-26-Ldap_post_read_control"
 # This is relative to the root!
-aliases = [ "2015/11/26/Ldap_post_read_control.html" ]
+aliases = [ "2015/11/26/Ldap_post_read_control.html", "blog/html/2015/11/26/Ldap_post_read_control.html" ]
 +++
 # Ldap post read control
 

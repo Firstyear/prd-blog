@@ -3,7 +3,7 @@ title = "CPU atomics and orderings explained"
 date = 2019-07-16
 slug = "2019-07-16-cpu_atomics_and_orderings_explained"
 # This is relative to the root!
-aliases = [ "2019/07/16/cpu_atomics_and_orderings_explained.html" ]
+aliases = [ "2019/07/16/cpu_atomics_and_orderings_explained.html", "blog/html/2019/07/16/cpu_atomics_and_orderings_explained.html" ]
 +++
 # CPU atomics and orderings explained
 

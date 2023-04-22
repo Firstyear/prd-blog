@@ -3,7 +3,7 @@ title = "Windows Hello in Webauthn-rs"
 date = 2020-08-24
 slug = "2020-08-24-windows_hello_in_webauthn_rs"
 # This is relative to the root!
-aliases = [ "2020/08/24/windows_hello_in_webauthn_rs.html" ]
+aliases = [ "2020/08/24/windows_hello_in_webauthn_rs.html", "blog/html/2020/08/24/windows_hello_in_webauthn_rs.html" ]
 +++
 # Windows Hello in Webauthn-rs
 

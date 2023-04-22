@@ -3,7 +3,7 @@ title = "Securing RHEL - CentOS - Fedora"
 date = 2015-11-15
 slug = "2015-11-15-Securing_RHEL_-_CentOS_-_Fedora"
 # This is relative to the root!
-aliases = [ "2015/11/15/Securing_RHEL_-_CentOS_-_Fedora.html" ]
+aliases = [ "2015/11/15/Securing_RHEL_-_CentOS_-_Fedora.html", "blog/html/2015/11/15/Securing_RHEL_-_CentOS_-_Fedora.html" ]
 +++
 # Securing RHEL - CentOS - Fedora
 

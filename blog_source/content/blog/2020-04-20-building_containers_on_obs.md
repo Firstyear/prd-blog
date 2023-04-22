@@ -3,7 +3,7 @@ title = "Building containers on OBS"
 date = 2020-04-20
 slug = "2020-04-20-building_containers_on_obs"
 # This is relative to the root!
-aliases = [ "2020/04/20/building_containers_on_obs.html" ]
+aliases = [ "2020/04/20/building_containers_on_obs.html", "blog/html/2020/04/20/building_containers_on_obs.html" ]
 +++
 # Building containers on OBS
 

@@ -3,7 +3,7 @@ title = "Debugging MacOS bluetooth audio stutter"
 date = 2019-04-08
 slug = "2019-04-08-debugging_macos_bluetooth_audio_stutter"
 # This is relative to the root!
-aliases = [ "2019/04/08/debugging_macos_bluetooth_audio_stutter.html" ]
+aliases = [ "2019/04/08/debugging_macos_bluetooth_audio_stutter.html", "blog/html/2019/04/08/debugging_macos_bluetooth_audio_stutter.html" ]
 +++
 # Debugging MacOS bluetooth audio stutter
 

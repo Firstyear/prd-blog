@@ -3,7 +3,7 @@ title = "Spamassasin with postfix"
 date = 2015-07-10
 slug = "2015-07-10-Spamassasin_with_postfix"
 # This is relative to the root!
-aliases = [ "2015/07/10/Spamassasin_with_postfix.html" ]
+aliases = [ "2015/07/10/Spamassasin_with_postfix.html", "blog/html/2015/07/10/Spamassasin_with_postfix.html" ]
 +++
 # Spamassasin with postfix
 

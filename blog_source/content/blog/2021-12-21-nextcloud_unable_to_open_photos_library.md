@@ -3,7 +3,7 @@ title = "Nextcloud - Unable to Open Photos Library"
 date = 2021-12-21
 slug = "2021-12-21-nextcloud_unable_to_open_photos_library"
 # This is relative to the root!
-aliases = [ "2021/12/21/nextcloud_unable_to_open_photos_library.html" ]
+aliases = [ "2021/12/21/nextcloud_unable_to_open_photos_library.html", "blog/html/2021/12/21/nextcloud_unable_to_open_photos_library.html" ]
 +++
 # Nextcloud - Unable to Open Photos Library
 

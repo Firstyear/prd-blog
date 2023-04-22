@@ -3,7 +3,7 @@ title = "FreeRADIUS: Using mschapv2 with freeipa"
 date = 2016-01-13
 slug = "2016-01-13-FreeRADIUS:_Using_mschapv2_with_freeipa"
 # This is relative to the root!
-aliases = [ "2016/01/13/FreeRADIUS:_Using_mschapv2_with_freeipa.html" ]
+aliases = [ "2016/01/13/FreeRADIUS:_Using_mschapv2_with_freeipa.html", "blog/html/2016/01/13/FreeRADIUS:_Using_mschapv2_with_freeipa.html" ]
 +++
 # FreeRADIUS: Using mschapv2 with freeipa
 

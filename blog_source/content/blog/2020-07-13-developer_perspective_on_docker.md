@@ -3,7 +3,7 @@ title = "Developer Perspective on Docker"
 date = 2020-07-13
 slug = "2020-07-13-developer_perspective_on_docker"
 # This is relative to the root!
-aliases = [ "2020/07/13/developer_perspective_on_docker.html" ]
+aliases = [ "2020/07/13/developer_perspective_on_docker.html", "blog/html/2020/07/13/developer_perspective_on_docker.html" ]
 +++
 # Developer Perspective on Docker
 

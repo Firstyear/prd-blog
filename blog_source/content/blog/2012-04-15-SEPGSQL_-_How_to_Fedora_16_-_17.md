@@ -3,7 +3,7 @@ title = "SEPGSQL - How to Fedora 16 - 17"
 date = 2012-04-15
 slug = "2012-04-15-SEPGSQL_-_How_to_Fedora_16_-_17"
 # This is relative to the root!
-aliases = [ "2012/04/15/SEPGSQL_-_How_to_Fedora_16_-_17.html" ]
+aliases = [ "2012/04/15/SEPGSQL_-_How_to_Fedora_16_-_17.html", "blog/html/2012/04/15/SEPGSQL_-_How_to_Fedora_16_-_17.html" ]
 +++
 # SEPGSQL - How to Fedora 16 - 17
 

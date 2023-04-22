@@ -3,7 +3,7 @@ title = "GSoC 2017 - Mentor Report from 389 Project"
 date = 2017-08-24
 slug = "2017-08-24-gsoc_2017_mentor_report_from_389_project"
 # This is relative to the root!
-aliases = [ "2017/08/24/gsoc_2017_mentor_report_from_389_project.html" ]
+aliases = [ "2017/08/24/gsoc_2017_mentor_report_from_389_project.html", "blog/html/2017/08/24/gsoc_2017_mentor_report_from_389_project.html" ]
 +++
 # GSoC 2017 - Mentor Report from 389 Project
 

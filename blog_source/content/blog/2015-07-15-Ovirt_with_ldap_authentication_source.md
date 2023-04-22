@@ -3,7 +3,7 @@ title = "Ovirt with ldap authentication source"
 date = 2015-07-15
 slug = "2015-07-15-Ovirt_with_ldap_authentication_source"
 # This is relative to the root!
-aliases = [ "2015/07/15/Ovirt_with_ldap_authentication_source.html" ]
+aliases = [ "2015/07/15/Ovirt_with_ldap_authentication_source.html", "blog/html/2015/07/15/Ovirt_with_ldap_authentication_source.html" ]
 +++
 # Ovirt with ldap authentication source
 

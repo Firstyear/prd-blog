@@ -3,7 +3,7 @@ title = "Structuring Rust Transactions"
 date = 2019-01-19
 slug = "2019-01-19-structuring_rust_transactions"
 # This is relative to the root!
-aliases = [ "2019/01/19/structuring_rust_transactions.html" ]
+aliases = [ "2019/01/19/structuring_rust_transactions.html", "blog/html/2019/01/19/structuring_rust_transactions.html" ]
 +++
 # Structuring Rust Transactions
 

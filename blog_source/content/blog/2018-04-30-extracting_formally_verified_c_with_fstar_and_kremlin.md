@@ -3,7 +3,7 @@ title = "Extracting Formally Verified C with FStar and KreMLin"
 date = 2018-04-30
 slug = "2018-04-30-extracting_formally_verified_c_with_fstar_and_kremlin"
 # This is relative to the root!
-aliases = [ "2018/04/30/extracting_formally_verified_c_with_fstar_and_kremlin.html" ]
+aliases = [ "2018/04/30/extracting_formally_verified_c_with_fstar_and_kremlin.html", "blog/html/2018/04/30/extracting_formally_verified_c_with_fstar_and_kremlin.html" ]
 +++
 # Extracting Formally Verified C with FStar and KreMLin
 

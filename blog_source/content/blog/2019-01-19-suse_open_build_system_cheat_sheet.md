@@ -3,7 +3,7 @@ title = "SUSE Open Build Service cheat sheet"
 date = 2019-01-19
 slug = "2019-01-19-suse_open_build_system_cheat_sheet"
 # This is relative to the root!
-aliases = [ "2019/01/19/suse_open_build_system_cheat_sheet.html" ]
+aliases = [ "2019/01/19/suse_open_build_system_cheat_sheet.html", "blog/html/2019/01/19/suse_open_build_system_cheat_sheet.html" ]
 +++
 # SUSE Open Build Service cheat sheet
 

@@ -3,7 +3,7 @@ title = "ldctl to generate test objects"
 date = 2016-02-23
 slug = "2016-02-23-ldctl_to_generate_test_objects"
 # This is relative to the root!
-aliases = [ "2016/02/23/ldctl_to_generate_test_objects.html" ]
+aliases = [ "2016/02/23/ldctl_to_generate_test_objects.html", "blog/html/2016/02/23/ldctl_to_generate_test_objects.html" ]
 +++
 # ldctl to generate test objects
 

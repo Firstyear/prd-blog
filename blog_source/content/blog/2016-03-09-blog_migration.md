@@ -3,7 +3,7 @@ title = "Blog migration"
 date = 2016-03-09
 slug = "2016-03-09-blog_migration"
 # This is relative to the root!
-aliases = [ "2016/03/09/blog_migration.html" ]
+aliases = [ "2016/03/09/blog_migration.html", "blog/html/2016/03/09/blog_migration.html" ]
 +++
 # Blog migration
 

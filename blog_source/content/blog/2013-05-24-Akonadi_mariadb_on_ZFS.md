@@ -3,7 +3,7 @@ title = "Akonadi mariadb on ZFS"
 date = 2013-05-24
 slug = "2013-05-24-Akonadi_mariadb_on_ZFS"
 # This is relative to the root!
-aliases = [ "2013/05/24/Akonadi_mariadb_on_ZFS.html" ]
+aliases = [ "2013/05/24/Akonadi_mariadb_on_ZFS.html", "blog/html/2013/05/24/Akonadi_mariadb_on_ZFS.html" ]
 +++
 # Akonadi mariadb on ZFS
 

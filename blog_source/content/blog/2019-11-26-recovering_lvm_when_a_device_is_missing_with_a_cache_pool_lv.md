@@ -3,7 +3,7 @@ title = "Recovering LVM when a device is missing with a cache pool lv"
 date = 2019-11-26
 slug = "2019-11-26-recovering_lvm_when_a_device_is_missing_with_a_cache_pool_lv"
 # This is relative to the root!
-aliases = [ "2019/11/26/recovering_lvm_when_a_device_is_missing_with_a_cache_pool_lv.html" ]
+aliases = [ "2019/11/26/recovering_lvm_when_a_device_is_missing_with_a_cache_pool_lv.html", "blog/html/2019/11/26/recovering_lvm_when_a_device_is_missing_with_a_cache_pool_lv.html" ]
 +++
 # Recovering LVM when a device is missing with a cache pool lv
 

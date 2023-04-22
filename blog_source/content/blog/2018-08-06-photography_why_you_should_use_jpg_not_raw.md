@@ -3,7 +3,7 @@ title = "Photography - Why You Should Use JPG (not RAW)"
 date = 2018-08-06
 slug = "2018-08-06-photography_why_you_should_use_jpg_not_raw"
 # This is relative to the root!
-aliases = [ "2018/08/06/photography_why_you_should_use_jpg_not_raw.html" ]
+aliases = [ "2018/08/06/photography_why_you_should_use_jpg_not_raw.html", "blog/html/2018/08/06/photography_why_you_should_use_jpg_not_raw.html" ]
 +++
 # Photography - Why You Should Use JPG (not RAW)
 

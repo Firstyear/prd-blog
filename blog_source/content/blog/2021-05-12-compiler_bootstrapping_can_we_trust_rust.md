@@ -3,7 +3,7 @@ title = "Compiler Bootstrapping - Can We Trust Rust?"
 date = 2021-05-12
 slug = "2021-05-12-compiler_bootstrapping_can_we_trust_rust"
 # This is relative to the root!
-aliases = [ "2021/05/12/compiler_bootstrapping_can_we_trust_rust.html" ]
+aliases = [ "2021/05/12/compiler_bootstrapping_can_we_trust_rust.html", "blog/html/2021/05/12/compiler_bootstrapping_can_we_trust_rust.html" ]
 +++
 # Compiler Bootstrapping - Can We Trust Rust?
 

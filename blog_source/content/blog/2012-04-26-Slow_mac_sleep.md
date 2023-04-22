@@ -3,7 +3,7 @@ title = "Slow mac sleep"
 date = 2012-04-26
 slug = "2012-04-26-Slow_mac_sleep"
 # This is relative to the root!
-aliases = [ "2012/04/26/Slow_mac_sleep.html" ]
+aliases = [ "2012/04/26/Slow_mac_sleep.html", "blog/html/2012/04/26/Slow_mac_sleep.html" ]
 +++
 # Slow mac sleep
 

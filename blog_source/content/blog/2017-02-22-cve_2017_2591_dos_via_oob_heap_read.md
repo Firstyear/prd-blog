@@ -3,7 +3,7 @@ title = "CVE-2017-2591 - DoS via OOB heap read"
 date = 2017-02-22
 slug = "2017-02-22-cve_2017_2591_dos_via_oob_heap_read"
 # This is relative to the root!
-aliases = [ "2017/02/22/cve_2017_2591_dos_via_oob_heap_read.html" ]
+aliases = [ "2017/02/22/cve_2017_2591_dos_via_oob_heap_read.html", "blog/html/2017/02/22/cve_2017_2591_dos_via_oob_heap_read.html" ]
 +++
 # CVE-2017-2591 - DoS via OOB heap read
 

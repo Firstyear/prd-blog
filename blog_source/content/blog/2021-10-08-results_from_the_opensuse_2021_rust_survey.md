@@ -3,7 +3,7 @@ title = "Results from the OpenSUSE 2021 Rust Survey"
 date = 2021-10-08
 slug = "2021-10-08-results_from_the_opensuse_2021_rust_survey"
 # This is relative to the root!
-aliases = [ "2021/10/08/results_from_the_opensuse_2021_rust_survey.html" ]
+aliases = [ "2021/10/08/results_from_the_opensuse_2021_rust_survey.html", "blog/html/2021/10/08/results_from_the_opensuse_2021_rust_survey.html" ]
 +++
 # Results from the OpenSUSE 2021 Rust Survey
 

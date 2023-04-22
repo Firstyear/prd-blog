@@ -3,7 +3,7 @@ title = "The Case for Ethics in OpenSource"
 date = 2019-04-28
 slug = "2019-04-28-the_case_for_ethics_in_opensource"
 # This is relative to the root!
-aliases = [ "2019/04/28/the_case_for_ethics_in_opensource.html" ]
+aliases = [ "2019/04/28/the_case_for_ethics_in_opensource.html", "blog/html/2019/04/28/the_case_for_ethics_in_opensource.html" ]
 +++
 # The Case for Ethics in OpenSource
 

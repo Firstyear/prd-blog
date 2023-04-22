@@ -3,7 +3,7 @@ title = "Custom OSTree images"
 date = 2017-05-22
 slug = "2017-05-22-custom_ostree_images"
 # This is relative to the root!
-aliases = [ "2017/05/22/custom_ostree_images.html" ]
+aliases = [ "2017/05/22/custom_ostree_images.html", "blog/html/2017/05/22/custom_ostree_images.html" ]
 +++
 # Custom OSTree images
 

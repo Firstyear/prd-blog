@@ -3,7 +3,7 @@ title = "Webauthn UserVerificationPolicy Curiosities"
 date = 2020-11-21
 slug = "2020-11-21-webauthn_userverificationpolicy_curiosities"
 # This is relative to the root!
-aliases = [ "2020/11/21/webauthn_userverificationpolicy_curiosities.html" ]
+aliases = [ "2020/11/21/webauthn_userverificationpolicy_curiosities.html", "blog/html/2020/11/21/webauthn_userverificationpolicy_curiosities.html" ]
 +++
 # Webauthn UserVerificationPolicy Curiosities
 

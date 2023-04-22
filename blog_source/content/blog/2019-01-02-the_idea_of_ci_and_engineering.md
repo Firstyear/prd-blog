@@ -3,7 +3,7 @@ title = "The idea of CI and Engineering"
 date = 2019-01-02
 slug = "2019-01-02-the_idea_of_ci_and_engineering"
 # This is relative to the root!
-aliases = [ "2019/01/02/the_idea_of_ci_and_engineering.html" ]
+aliases = [ "2019/01/02/the_idea_of_ci_and_engineering.html", "blog/html/2019/01/02/the_idea_of_ci_and_engineering.html" ]
 +++
 # The idea of CI and Engineering
 

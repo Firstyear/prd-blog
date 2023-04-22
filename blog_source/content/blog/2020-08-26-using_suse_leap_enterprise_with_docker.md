@@ -3,7 +3,7 @@ title = "Using SUSE Leap Enterprise with Docker"
 date = 2020-08-26
 slug = "2020-08-26-using_suse_leap_enterprise_with_docker"
 # This is relative to the root!
-aliases = [ "2020/08/26/using_suse_leap_enterprise_with_docker.html" ]
+aliases = [ "2020/08/26/using_suse_leap_enterprise_with_docker.html", "blog/html/2020/08/26/using_suse_leap_enterprise_with_docker.html" ]
 +++
 # Using SUSE Leap Enterprise with Docker
 

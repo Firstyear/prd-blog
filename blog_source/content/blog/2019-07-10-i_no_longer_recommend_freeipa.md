@@ -3,7 +3,7 @@ title = "I no longer recommend FreeIPA"
 date = 2019-07-10
 slug = "2019-07-10-i_no_longer_recommend_freeipa"
 # This is relative to the root!
-aliases = [ "2019/07/10/i_no_longer_recommend_freeipa.html" ]
+aliases = [ "2019/07/10/i_no_longer_recommend_freeipa.html", "blog/html/2019/07/10/i_no_longer_recommend_freeipa.html" ]
 +++
 # I no longer recommend FreeIPA
 

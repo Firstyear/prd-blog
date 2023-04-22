@@ -3,7 +3,7 @@ title = "Creating yubikey SSH and TLS certificates"
 date = 2017-11-11
 slug = "2017-11-11-creating_yubikey_ssh_and_tls_certificates"
 # This is relative to the root!
-aliases = [ "2017/11/11/creating_yubikey_ssh_and_tls_certificates.html" ]
+aliases = [ "2017/11/11/creating_yubikey_ssh_and_tls_certificates.html", "blog/html/2017/11/11/creating_yubikey_ssh_and_tls_certificates.html" ]
 +++
 # Creating yubikey SSH and TLS certificates
 

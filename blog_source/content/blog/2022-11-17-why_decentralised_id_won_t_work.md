@@ -3,7 +3,7 @@ title = "Why Decentralised ID Won't Work"
 date = 2022-11-17
 slug = "2022-11-17-why_decentralised_id_won_t_work"
 # This is relative to the root!
-aliases = [ "2022/11/17/why_decentralised_id_won_t_work.html" ]
+aliases = [ "2022/11/17/why_decentralised_id_won_t_work.html", "blog/html/2022/11/17/why_decentralised_id_won_t_work.html" ]
 +++
 # Why Decentralised ID Won\'t Work
 

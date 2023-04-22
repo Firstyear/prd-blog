@@ -3,7 +3,7 @@ title = "SELinux for postfix + dovecot"
 date = 2011-07-05
 slug = "2011-07-05-SELinux_for_postfix_+_dovecot"
 # This is relative to the root!
-aliases = [ "2011/07/05/SELinux_for_postfix_+_dovecot.html" ]
+aliases = [ "2011/07/05/SELinux_for_postfix_+_dovecot.html", "blog/html/2011/07/05/SELinux_for_postfix_+_dovecot.html" ]
 +++
 # SELinux for postfix + dovecot
 

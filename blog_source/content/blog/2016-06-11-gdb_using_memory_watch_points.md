@@ -3,7 +3,7 @@ title = "GDB: Using memory watch points"
 date = 2016-06-11
 slug = "2016-06-11-gdb_using_memory_watch_points"
 # This is relative to the root!
-aliases = [ "2016/06/11/gdb_using_memory_watch_points.html" ]
+aliases = [ "2016/06/11/gdb_using_memory_watch_points.html", "blog/html/2016/06/11/gdb_using_memory_watch_points.html" ]
 +++
 # GDB: Using memory watch points
 

@@ -3,7 +3,7 @@ title = "Open Source Enshrines the Wrong Privilege"
 date = 2021-03-23
 slug = "2021-03-23-open_source_enshrines_the_wrong_privilege"
 # This is relative to the root!
-aliases = [ "2021/03/23/open_source_enshrines_the_wrong_privilege.html" ]
+aliases = [ "2021/03/23/open_source_enshrines_the_wrong_privilege.html", "blog/html/2021/03/23/open_source_enshrines_the_wrong_privilege.html" ]
 +++
 # Open Source Enshrines the Wrong Privilege
 

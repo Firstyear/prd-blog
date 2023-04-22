@@ -3,7 +3,7 @@ title = "Using Rust Generics to Enforce DB Record State"
 date = 2019-04-13
 slug = "2019-04-13-using_rust_generics_to_enforce_db_record_state"
 # This is relative to the root!
-aliases = [ "2019/04/13/using_rust_generics_to_enforce_db_record_state.html" ]
+aliases = [ "2019/04/13/using_rust_generics_to_enforce_db_record_state.html", "blog/html/2019/04/13/using_rust_generics_to_enforce_db_record_state.html" ]
 +++
 # Using Rust Generics to Enforce DB Record State
 

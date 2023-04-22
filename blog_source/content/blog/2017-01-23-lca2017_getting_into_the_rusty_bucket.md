@@ -3,7 +3,7 @@ title = "LCA2017 - Getting Into the Rusty Bucket"
 date = 2017-01-23
 slug = "2017-01-23-lca2017_getting_into_the_rusty_bucket"
 # This is relative to the root!
-aliases = [ "2017/01/23/lca2017_getting_into_the_rusty_bucket.html" ]
+aliases = [ "2017/01/23/lca2017_getting_into_the_rusty_bucket.html", "blog/html/2017/01/23/lca2017_getting_into_the_rusty_bucket.html" ]
 +++
 # LCA2017 - Getting Into the Rusty Bucket
 

@@ -3,7 +3,7 @@ title = "Load balanced 389 instance with freeipa kerberos domain."
 date = 2015-12-11
 slug = "2015-12-11-Load_balanced_389_instance_with_freeipa_kerberos_domain."
 # This is relative to the root!
-aliases = [ "2015/12/11/Load_balanced_389_instance_with_freeipa_kerberos_domain..html" ]
+aliases = [ "2015/12/11/Load_balanced_389_instance_with_freeipa_kerberos_domain..html", "blog/html/2015/12/11/Load_balanced_389_instance_with_freeipa_kerberos_domain..html" ]
 +++
 # Load balanced 389 instance with freeipa kerberos domain.
 

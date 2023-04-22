@@ -3,7 +3,7 @@ title = "Zero Outage Migration Of Directory Server Infrastructure"
 date = 2016-06-03
 slug = "2016-06-03-zero_outage_migration_of_directory_server_infrastructure"
 # This is relative to the root!
-aliases = [ "2016/06/03/zero_outage_migration_of_directory_server_infrastructure.html" ]
+aliases = [ "2016/06/03/zero_outage_migration_of_directory_server_infrastructure.html", "blog/html/2016/06/03/zero_outage_migration_of_directory_server_infrastructure.html" ]
 +++
 # Zero Outage Migration Of Directory Server Infrastructure
 

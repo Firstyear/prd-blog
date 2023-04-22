@@ -3,7 +3,7 @@ title = "Fedora 32 Wallpaper Submission - Story"
 date = 2020-03-14
 slug = "2020-03-14-fedora_32_wallpaper_submission_story"
 # This is relative to the root!
-aliases = [ "2020/03/14/fedora_32_wallpaper_submission_story.html" ]
+aliases = [ "2020/03/14/fedora_32_wallpaper_submission_story.html", "blog/html/2020/03/14/fedora_32_wallpaper_submission_story.html" ]
 +++
 # Fedora 32 Wallpaper Submission - Story
 

@@ -3,7 +3,7 @@ title = "Time Machine on Samba with ZFS"
 date = 2021-03-22
 slug = "2021-03-22-time_machine_on_samba_with_zfs"
 # This is relative to the root!
-aliases = [ "2021/03/22/time_machine_on_samba_with_zfs.html" ]
+aliases = [ "2021/03/22/time_machine_on_samba_with_zfs.html", "blog/html/2021/03/22/time_machine_on_samba_with_zfs.html" ]
 +++
 # Time Machine on Samba with ZFS
 

@@ -3,7 +3,7 @@ title = "Kerberos - why the world moved on"
 date = 2017-05-23
 slug = "2017-05-23-kerberos_why_the_world_moved_on"
 # This is relative to the root!
-aliases = [ "2017/05/23/kerberos_why_the_world_moved_on.html" ]
+aliases = [ "2017/05/23/kerberos_why_the_world_moved_on.html", "blog/html/2017/05/23/kerberos_why_the_world_moved_on.html" ]
 +++
 # Kerberos - why the world moved on
 

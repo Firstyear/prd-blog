@@ -3,7 +3,7 @@ title = "User gesture is not detected - using iOS TouchID with webauthn-rs"
 date = 2020-08-12
 slug = "2020-08-12-user_gesture_is_not_detected_using_ios_touchid_with_webauthn_rs"
 # This is relative to the root!
-aliases = [ "2020/08/12/user_gesture_is_not_detected_using_ios_touchid_with_webauthn_rs.html" ]
+aliases = [ "2020/08/12/user_gesture_is_not_detected_using_ios_touchid_with_webauthn_rs.html", "blog/html/2020/08/12/user_gesture_is_not_detected_using_ios_touchid_with_webauthn_rs.html" ]
 +++
 # User gesture is not detected - using iOS TouchID with webauthn-rs
 

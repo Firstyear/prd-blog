@@ -3,7 +3,7 @@ title = "Concurrency 1: Types of Concurrency"
 date = 2019-12-29
 slug = "2019-12-29-concurrency_1_types_of_concurrency"
 # This is relative to the root!
-aliases = [ "2019/12/29/concurrency_1_types_of_concurrency.html" ]
+aliases = [ "2019/12/29/concurrency_1_types_of_concurrency.html", "blog/html/2019/12/29/concurrency_1_types_of_concurrency.html" ]
 +++
 # Concurrency 1: Types of Concurrency
 

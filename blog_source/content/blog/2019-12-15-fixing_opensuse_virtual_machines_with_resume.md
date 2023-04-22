@@ -3,7 +3,7 @@ title = "Fixing opensuse virtual machines with resume"
 date = 2019-12-15
 slug = "2019-12-15-fixing_opensuse_virtual_machines_with_resume"
 # This is relative to the root!
-aliases = [ "2019/12/15/fixing_opensuse_virtual_machines_with_resume.html" ]
+aliases = [ "2019/12/15/fixing_opensuse_virtual_machines_with_resume.html", "blog/html/2019/12/15/fixing_opensuse_virtual_machines_with_resume.html" ]
 +++
 # Fixing opensuse virtual machines with resume
 

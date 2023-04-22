@@ -3,7 +3,7 @@ title = "Getting started with Yew"
 date = 2021-06-20
 slug = "2021-06-20-getting_started_with_yew"
 # This is relative to the root!
-aliases = [ "2021/06/20/getting_started_with_yew.html" ]
+aliases = [ "2021/06/20/getting_started_with_yew.html", "blog/html/2021/06/20/getting_started_with_yew.html" ]
 +++
 # Getting started with Yew
 

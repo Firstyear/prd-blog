@@ -3,7 +3,7 @@ title = "Rust RwLock and Mutex Performance Oddities"
 date = 2018-10-19
 slug = "2018-10-19-rust_rwlock_and_mutex_performance_oddities"
 # This is relative to the root!
-aliases = [ "2018/10/19/rust_rwlock_and_mutex_performance_oddities.html" ]
+aliases = [ "2018/10/19/rust_rwlock_and_mutex_performance_oddities.html", "blog/html/2018/10/19/rust_rwlock_and_mutex_performance_oddities.html" ]
 +++
 # Rust RwLock and Mutex Performance Oddities
 

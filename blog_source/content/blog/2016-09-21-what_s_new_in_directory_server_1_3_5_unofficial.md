@@ -3,7 +3,7 @@ title = "What's new in 389 Directory Server 1.3.5 (unofficial)"
 date = 2016-09-21
 slug = "2016-09-21-what_s_new_in_directory_server_1_3_5_unofficial"
 # This is relative to the root!
-aliases = [ "2016/09/21/what_s_new_in_directory_server_1_3_5_unofficial.html" ]
+aliases = [ "2016/09/21/what_s_new_in_directory_server_1_3_5_unofficial.html", "blog/html/2016/09/21/what_s_new_in_directory_server_1_3_5_unofficial.html" ]
 +++
 # What\'s new in 389 Directory Server 1.3.5 (unofficial)
 

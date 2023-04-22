@@ -3,7 +3,7 @@ title = "ns-slapd access log notes field"
 date = 2015-12-04
 slug = "2015-12-04-ns-slapd_access_log_notes_field"
 # This is relative to the root!
-aliases = [ "2015/12/04/ns-slapd_access_log_notes_field.html" ]
+aliases = [ "2015/12/04/ns-slapd_access_log_notes_field.html", "blog/html/2015/12/04/ns-slapd_access_log_notes_field.html" ]
 +++
 # ns-slapd access log notes field
 

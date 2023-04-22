@@ -3,7 +3,7 @@ title = "Using b43 firmware on Fedora Atomic Workstation"
 date = 2017-12-23
 slug = "2017-12-23-using_b43_firmware_on_fedora_atomic_workstation"
 # This is relative to the root!
-aliases = [ "2017/12/23/using_b43_firmware_on_fedora_atomic_workstation.html" ]
+aliases = [ "2017/12/23/using_b43_firmware_on_fedora_atomic_workstation.html", "blog/html/2017/12/23/using_b43_firmware_on_fedora_atomic_workstation.html" ]
 +++
 # Using b43 firmware on Fedora Atomic Workstation
 

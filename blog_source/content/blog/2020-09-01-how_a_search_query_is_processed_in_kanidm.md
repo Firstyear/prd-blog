@@ -3,7 +3,7 @@ title = "How a Search Query is Processed in Kanidm"
 date = 2020-09-01
 slug = "2020-09-01-how_a_search_query_is_processed_in_kanidm"
 # This is relative to the root!
-aliases = [ "2020/09/01/how_a_search_query_is_processed_in_kanidm.html" ]
+aliases = [ "2020/09/01/how_a_search_query_is_processed_in_kanidm.html", "blog/html/2020/09/01/how_a_search_query_is_processed_in_kanidm.html" ]
 +++
 # How a Search Query is Processed in Kanidm
 

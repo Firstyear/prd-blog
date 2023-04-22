@@ -3,7 +3,7 @@ title = "Useful USG pro 4 commands and hints"
 date = 2019-01-02
 slug = "2019-01-02-useful_usg_pro_4_commands_and_hints"
 # This is relative to the root!
-aliases = [ "2019/01/02/useful_usg_pro_4_commands_and_hints.html" ]
+aliases = [ "2019/01/02/useful_usg_pro_4_commands_and_hints.html", "blog/html/2019/01/02/useful_usg_pro_4_commands_and_hints.html" ]
 +++
 # Useful USG pro 4 commands and hints
 

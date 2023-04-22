@@ -3,7 +3,7 @@ title = "Using the latest 389-ds on OpenSUSE"
 date = 2019-01-30
 slug = "2019-01-30-using_the_latest_389_ds_on_opensuse"
 # This is relative to the root!
-aliases = [ "2019/01/30/using_the_latest_389_ds_on_opensuse.html" ]
+aliases = [ "2019/01/30/using_the_latest_389_ds_on_opensuse.html", "blog/html/2019/01/30/using_the_latest_389_ds_on_opensuse.html" ]
 +++
 # Using the latest 389-ds on OpenSUSE
 

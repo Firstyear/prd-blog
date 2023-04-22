@@ -3,7 +3,7 @@ title = "mod selinux on rhel7"
 date = 2015-08-03
 slug = "2015-08-03-mod_selinux_on_rhel7"
 # This is relative to the root!
-aliases = [ "2015/08/03/mod_selinux_on_rhel7.html" ]
+aliases = [ "2015/08/03/mod_selinux_on_rhel7.html", "blog/html/2015/08/03/mod_selinux_on_rhel7.html" ]
 +++
 # mod selinux on rhel7
 

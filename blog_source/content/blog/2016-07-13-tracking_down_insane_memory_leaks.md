@@ -3,7 +3,7 @@ title = "tracking down insane memory leaks"
 date = 2016-07-13
 slug = "2016-07-13-tracking_down_insane_memory_leaks"
 # This is relative to the root!
-aliases = [ "2016/07/13/tracking_down_insane_memory_leaks.html" ]
+aliases = [ "2016/07/13/tracking_down_insane_memory_leaks.html", "blog/html/2016/07/13/tracking_down_insane_memory_leaks.html" ]
 +++
 # tracking down insane memory leaks
 

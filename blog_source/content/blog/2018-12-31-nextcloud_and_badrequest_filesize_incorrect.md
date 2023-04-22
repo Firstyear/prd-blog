@@ -3,7 +3,7 @@ title = "Nextcloud and badrequest filesize incorrect"
 date = 2018-12-31
 slug = "2018-12-31-nextcloud_and_badrequest_filesize_incorrect"
 # This is relative to the root!
-aliases = [ "2018/12/31/nextcloud_and_badrequest_filesize_incorrect.html" ]
+aliases = [ "2018/12/31/nextcloud_and_badrequest_filesize_incorrect.html", "blog/html/2018/12/31/nextcloud_and_badrequest_filesize_incorrect.html" ]
 +++
 # Nextcloud and badrequest filesize incorrect
 

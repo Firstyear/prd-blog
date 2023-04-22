@@ -3,7 +3,7 @@ title = "StartTLS in LDAP"
 date = 2021-08-12
 slug = "2021-08-12-starttls_in_ldap"
 # This is relative to the root!
-aliases = [ "2021/08/12/starttls_in_ldap.html" ]
+aliases = [ "2021/08/12/starttls_in_ldap.html", "blog/html/2021/08/12/starttls_in_ldap.html" ]
 +++
 # StartTLS in LDAP
 

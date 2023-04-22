@@ -3,7 +3,7 @@ title = "Work around docker exec bug"
 date = 2018-12-09
 slug = "2018-12-09-work_around_docker_exec_bug"
 # This is relative to the root!
-aliases = [ "2018/12/09/work_around_docker_exec_bug.html" ]
+aliases = [ "2018/12/09/work_around_docker_exec_bug.html", "blog/html/2018/12/09/work_around_docker_exec_bug.html" ]
 +++
 # Work around docker exec bug
 

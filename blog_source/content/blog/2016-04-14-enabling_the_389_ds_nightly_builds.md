@@ -3,7 +3,7 @@ title = "Enabling the 389 ds nightly builds"
 date = 2016-04-14
 slug = "2016-04-14-enabling_the_389_ds_nightly_builds"
 # This is relative to the root!
-aliases = [ "2016/04/14/enabling_the_389_ds_nightly_builds.html" ]
+aliases = [ "2016/04/14/enabling_the_389_ds_nightly_builds.html", "blog/html/2016/04/14/enabling_the_389_ds_nightly_builds.html" ]
 +++
 # Enabling the 389 ds nightly builds
 

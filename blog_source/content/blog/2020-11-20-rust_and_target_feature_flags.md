@@ -3,7 +3,7 @@ title = "Rust, SIMD and target-feature flags"
 date = 2020-11-20
 slug = "2020-11-20-rust_and_target_feature_flags"
 # This is relative to the root!
-aliases = [ "2020/11/20/rust_and_target_feature_flags.html" ]
+aliases = [ "2020/11/20/rust_and_target_feature_flags.html", "blog/html/2020/11/20/rust_and_target_feature_flags.html" ]
 +++
 # Rust, SIMD and target-feature flags
 

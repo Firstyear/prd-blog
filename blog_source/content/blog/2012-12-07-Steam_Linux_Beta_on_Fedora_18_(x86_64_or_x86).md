@@ -3,7 +3,7 @@ title = "Steam Linux Beta on Fedora 18 (x86 64 or x86)"
 date = 2012-12-07
 slug = "2012-12-07-Steam_Linux_Beta_on_Fedora_18_(x86_64_or_x86)"
 # This is relative to the root!
-aliases = [ "2012/12/07/Steam_Linux_Beta_on_Fedora_18_(x86_64_or_x86).html" ]
+aliases = [ "2012/12/07/Steam_Linux_Beta_on_Fedora_18_(x86_64_or_x86).html", "blog/html/2012/12/07/Steam_Linux_Beta_on_Fedora_18_(x86_64_or_x86).html" ]
 +++
 # Steam Linux Beta on Fedora 18 (x86 64 or x86)
 

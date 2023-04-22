@@ -3,7 +3,7 @@ title = "Running your own mailserver: Mailbox rollover"
 date = 2016-01-15
 slug = "2016-01-15-Running_your_own_mailserver:_Mailbox_rollover"
 # This is relative to the root!
-aliases = [ "2016/01/15/Running_your_own_mailserver:_Mailbox_rollover.html" ]
+aliases = [ "2016/01/15/Running_your_own_mailserver:_Mailbox_rollover.html", "blog/html/2016/01/15/Running_your_own_mailserver:_Mailbox_rollover.html" ]
 +++
 # Running your own mailserver: Mailbox rollover
 

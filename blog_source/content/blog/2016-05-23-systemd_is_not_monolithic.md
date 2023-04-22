@@ -3,7 +3,7 @@ title = "systemd is not monolithic"
 date = 2016-05-23
 slug = "2016-05-23-systemd_is_not_monolithic"
 # This is relative to the root!
-aliases = [ "2016/05/23/systemd_is_not_monolithic.html" ]
+aliases = [ "2016/05/23/systemd_is_not_monolithic.html", "blog/html/2016/05/23/systemd_is_not_monolithic.html" ]
 +++
 # systemd is not monolithic
 

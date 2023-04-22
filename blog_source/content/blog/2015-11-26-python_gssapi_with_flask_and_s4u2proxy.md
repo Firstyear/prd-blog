@@ -3,7 +3,7 @@ title = "python gssapi with flask and s4u2proxy"
 date = 2015-11-26
 slug = "2015-11-26-python_gssapi_with_flask_and_s4u2proxy"
 # This is relative to the root!
-aliases = [ "2015/11/26/python_gssapi_with_flask_and_s4u2proxy.html" ]
+aliases = [ "2015/11/26/python_gssapi_with_flask_and_s4u2proxy.html", "blog/html/2015/11/26/python_gssapi_with_flask_and_s4u2proxy.html" ]
 +++
 # python gssapi with flask and s4u2proxy
 

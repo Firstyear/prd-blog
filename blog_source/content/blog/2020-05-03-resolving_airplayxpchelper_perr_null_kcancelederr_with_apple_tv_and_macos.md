@@ -3,7 +3,7 @@ title = "Resolving AirPlayXPCHelper Perr NULL kCanceledErr with Apple TV and Mac
 date = 2020-05-03
 slug = "2020-05-03-resolving_airplayxpchelper_perr_null_kcancelederr_with_apple_tv_and_macos"
 # This is relative to the root!
-aliases = [ "2020/05/03/resolving_airplayxpchelper_perr_null_kcancelederr_with_apple_tv_and_macos.html" ]
+aliases = [ "2020/05/03/resolving_airplayxpchelper_perr_null_kcancelederr_with_apple_tv_and_macos.html", "blog/html/2020/05/03/resolving_airplayxpchelper_perr_null_kcancelederr_with_apple_tv_and_macos.html" ]
 +++
 # Resolving AirPlayXPCHelper Perr NULL kCanceledErr with Apple TV and MacOS
 

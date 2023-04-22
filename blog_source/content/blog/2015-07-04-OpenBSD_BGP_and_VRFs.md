@@ -3,7 +3,7 @@ title = "OpenBSD BGP and VRFs"
 date = 2015-07-04
 slug = "2015-07-04-OpenBSD_BGP_and_VRFs"
 # This is relative to the root!
-aliases = [ "2015/07/04/OpenBSD_BGP_and_VRFs.html" ]
+aliases = [ "2015/07/04/OpenBSD_BGP_and_VRFs.html", "blog/html/2015/07/04/OpenBSD_BGP_and_VRFs.html" ]
 +++
 # OpenBSD BGP and VRFs
 

@@ -3,7 +3,7 @@ title = "DHCP6 server"
 date = 2011-08-22
 slug = "2011-08-22-DHCP6_server"
 # This is relative to the root!
-aliases = [ "2011/08/22/DHCP6_server.html" ]
+aliases = [ "2011/08/22/DHCP6_server.html", "blog/html/2011/08/22/DHCP6_server.html" ]
 +++
 # DHCP6 server
 

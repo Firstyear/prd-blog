@@ -3,7 +3,7 @@ title = "MBP b43 wireless"
 date = 2013-05-02
 slug = "2013-05-02-MBP_b43_wireless"
 # This is relative to the root!
-aliases = [ "2013/05/02/MBP_b43_wireless.html" ]
+aliases = [ "2013/05/02/MBP_b43_wireless.html", "blog/html/2013/05/02/MBP_b43_wireless.html" ]
 +++
 # MBP b43 wireless
 

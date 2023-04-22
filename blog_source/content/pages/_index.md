@@ -1,4 +1,3 @@
-
 +++
 title = "Pages"
 template = "oceanic-zen/templates/section.html"

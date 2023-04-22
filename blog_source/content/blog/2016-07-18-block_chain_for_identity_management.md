@@ -3,7 +3,7 @@ title = "Block Chain for Identity Management"
 date = 2016-07-18
 slug = "2016-07-18-block_chain_for_identity_management"
 # This is relative to the root!
-aliases = [ "2016/07/18/block_chain_for_identity_management.html" ]
+aliases = [ "2016/07/18/block_chain_for_identity_management.html", "blog/html/2016/07/18/block_chain_for_identity_management.html" ]
 +++
 # Block Chain for Identity Management
 

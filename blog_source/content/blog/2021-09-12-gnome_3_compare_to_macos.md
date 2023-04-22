@@ -3,7 +3,7 @@ title = "Gnome 3 compare to MacOs"
 date = 2021-09-12
 slug = "2021-09-12-gnome_3_compare_to_macos"
 # This is relative to the root!
-aliases = [ "2021/09/12/gnome_3_compare_to_macos.html" ]
+aliases = [ "2021/09/12/gnome_3_compare_to_macos.html", "blog/html/2021/09/12/gnome_3_compare_to_macos.html" ]
 +++
 # Gnome 3 compare to MacOs
 

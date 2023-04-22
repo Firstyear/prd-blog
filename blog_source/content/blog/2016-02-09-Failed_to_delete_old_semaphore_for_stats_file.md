@@ -3,7 +3,7 @@ title = "Failed to delete old semaphore for stats file"
 date = 2016-02-09
 slug = "2016-02-09-Failed_to_delete_old_semaphore_for_stats_file"
 # This is relative to the root!
-aliases = [ "2016/02/09/Failed_to_delete_old_semaphore_for_stats_file.html" ]
+aliases = [ "2016/02/09/Failed_to_delete_old_semaphore_for_stats_file.html", "blog/html/2016/02/09/Failed_to_delete_old_semaphore_for_stats_file.html" ]
 +++
 # Failed to delete old semaphore for stats file
 

@@ -3,7 +3,7 @@ title = "The next year of Directory Server"
 date = 2017-01-23
 slug = "2017-01-23-the_next_year_of_directory_server"
 # This is relative to the root!
-aliases = [ "2017/01/23/the_next_year_of_directory_server.html" ]
+aliases = [ "2017/01/23/the_next_year_of_directory_server.html", "blog/html/2017/01/23/the_next_year_of_directory_server.html" ]
 +++
 # The next year of Directory Server
 

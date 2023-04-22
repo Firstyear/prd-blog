@@ -3,7 +3,7 @@ title = "Where does that attribute belong?"
 date = 2015-12-04
 slug = "2015-12-04-Where_does_that_attribute_belong"
 # This is relative to the root!
-aliases = [ "2015/12/04/Where_does_that_attribute_belong.html" ]
+aliases = [ "2015/12/04/Where_does_that_attribute_belong.html", "blog/html/2015/12/04/Where_does_that_attribute_belong.html" ]
 +++
 # Where does that attribute belong?
 

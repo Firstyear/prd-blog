@@ -3,7 +3,7 @@ title = "indexed search performance for ds - the mystery of the and query"
 date = 2017-06-26
 slug = "2017-06-26-indexed_search_performance_for_ds_the_mystery_of_the_and_query"
 # This is relative to the root!
-aliases = [ "2017/06/26/indexed_search_performance_for_ds_the_mystery_of_the_and_query.html" ]
+aliases = [ "2017/06/26/indexed_search_performance_for_ds_the_mystery_of_the_and_query.html", "blog/html/2017/06/26/indexed_search_performance_for_ds_the_mystery_of_the_and_query.html" ]
 +++
 # indexed search performance for ds - the mystery of the and query
 

@@ -3,7 +3,7 @@ title = "What's the problem with NUMA anyway?"
 date = 2017-11-07
 slug = "2017-11-07-what_s_the_problem_with_numa_anyway"
 # This is relative to the root!
-aliases = [ "2017/11/07/what_s_the_problem_with_numa_anyway.html" ]
+aliases = [ "2017/11/07/what_s_the_problem_with_numa_anyway.html", "blog/html/2017/11/07/what_s_the_problem_with_numa_anyway.html" ]
 +++
 # What\'s the problem with NUMA anyway?
 

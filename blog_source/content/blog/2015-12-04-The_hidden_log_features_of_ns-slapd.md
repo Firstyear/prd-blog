@@ -3,7 +3,7 @@ title = "The hidden log features of ns-slapd"
 date = 2015-12-04
 slug = "2015-12-04-The_hidden_log_features_of_ns-slapd"
 # This is relative to the root!
-aliases = [ "2015/12/04/The_hidden_log_features_of_ns-slapd.html" ]
+aliases = [ "2015/12/04/The_hidden_log_features_of_ns-slapd.html", "blog/html/2015/12/04/The_hidden_log_features_of_ns-slapd.html" ]
 +++
 # The hidden log features of ns-slapd
 

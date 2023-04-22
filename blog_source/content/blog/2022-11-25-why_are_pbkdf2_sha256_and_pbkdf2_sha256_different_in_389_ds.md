@@ -3,7 +3,7 @@ title = "Why are PBKDF2-SHA256 and PBKDF2_SHA256 different in 389-ds?"
 date = 2022-11-25
 slug = "2022-11-25-why_are_pbkdf2_sha256_and_pbkdf2_sha256_different_in_389_ds"
 # This is relative to the root!
-aliases = [ "2022/11/25/why_are_pbkdf2_sha256_and_pbkdf2_sha256_different_in_389_ds.html" ]
+aliases = [ "2022/11/25/why_are_pbkdf2_sha256_and_pbkdf2_sha256_different_in_389_ds.html", "blog/html/2022/11/25/why_are_pbkdf2_sha256_and_pbkdf2_sha256_different_in_389_ds.html" ]
 +++
 # Why are PBKDF2-SHA256 and PBKDF2_SHA256 different in 389-ds?
 

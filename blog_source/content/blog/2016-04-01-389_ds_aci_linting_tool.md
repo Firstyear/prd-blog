@@ -3,7 +3,7 @@ title = "389 ds aci linting tool"
 date = 2016-04-01
 slug = "2016-04-01-389_ds_aci_linting_tool"
 # This is relative to the root!
-aliases = [ "2016/04/01/389_ds_aci_linting_tool.html" ]
+aliases = [ "2016/04/01/389_ds_aci_linting_tool.html", "blog/html/2016/04/01/389_ds_aci_linting_tool.html" ]
 +++
 # 389 ds aci linting tool
 

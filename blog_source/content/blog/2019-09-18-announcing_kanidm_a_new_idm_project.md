@@ -3,7 +3,7 @@ title = "Announcing Kanidm - A new IDM project"
 date = 2019-09-18
 slug = "2019-09-18-announcing_kanidm_a_new_idm_project"
 # This is relative to the root!
-aliases = [ "2019/09/18/announcing_kanidm_a_new_idm_project.html" ]
+aliases = [ "2019/09/18/announcing_kanidm_a_new_idm_project.html", "blog/html/2019/09/18/announcing_kanidm_a_new_idm_project.html" ]
 +++
 # Announcing Kanidm - A new IDM project
 

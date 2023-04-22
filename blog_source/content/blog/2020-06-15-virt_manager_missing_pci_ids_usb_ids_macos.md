@@ -3,7 +3,7 @@ title = "virt-manager missing pci.ids usb.ids macos"
 date = 2020-06-15
 slug = "2020-06-15-virt_manager_missing_pci_ids_usb_ids_macos"
 # This is relative to the root!
-aliases = [ "2020/06/15/virt_manager_missing_pci_ids_usb_ids_macos.html" ]
+aliases = [ "2020/06/15/virt_manager_missing_pci_ids_usb_ids_macos.html", "blog/html/2020/06/15/virt_manager_missing_pci_ids_usb_ids_macos.html" ]
 +++
 # virt-manager missing pci.ids usb.ids macos
 

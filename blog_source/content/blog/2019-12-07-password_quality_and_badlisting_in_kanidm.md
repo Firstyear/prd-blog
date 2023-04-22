@@ -3,7 +3,7 @@ title = "Password Quality and Badlisting in Kanidm"
 date = 2019-12-07
 slug = "2019-12-07-password_quality_and_badlisting_in_kanidm"
 # This is relative to the root!
-aliases = [ "2019/12/07/password_quality_and_badlisting_in_kanidm.html" ]
+aliases = [ "2019/12/07/password_quality_and_badlisting_in_kanidm.html", "blog/html/2019/12/07/password_quality_and_badlisting_in_kanidm.html" ]
 +++
 # Password Quality and Badlisting in Kanidm
 

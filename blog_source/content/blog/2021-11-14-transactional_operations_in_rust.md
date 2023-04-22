@@ -3,7 +3,7 @@ title = "Transactional Operations in Rust"
 date = 2021-11-14
 slug = "2021-11-14-transactional_operations_in_rust"
 # This is relative to the root!
-aliases = [ "2021/11/14/transactional_operations_in_rust.html" ]
+aliases = [ "2021/11/14/transactional_operations_in_rust.html", "blog/html/2021/11/14/transactional_operations_in_rust.html" ]
 +++
 # Transactional Operations in Rust
 

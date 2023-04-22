@@ -3,7 +3,7 @@ title = "High Available RADVD on Linux"
 date = 2018-11-01
 slug = "2018-11-01-high_available_radvd_on_linux"
 # This is relative to the root!
-aliases = [ "2018/11/01/high_available_radvd_on_linux.html" ]
+aliases = [ "2018/11/01/high_available_radvd_on_linux.html", "blog/html/2018/11/01/high_available_radvd_on_linux.html" ]
 +++
 # High Available RADVD on Linux
 

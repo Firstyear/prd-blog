@@ -3,7 +3,7 @@ title = "Making Samba 4 the default LDAP server"
 date = 2018-04-18
 slug = "2018-04-18-making_samba_4_the_default_ldap_server"
 # This is relative to the root!
-aliases = [ "2018/04/18/making_samba_4_the_default_ldap_server.html" ]
+aliases = [ "2018/04/18/making_samba_4_the_default_ldap_server.html", "blog/html/2018/04/18/making_samba_4_the_default_ldap_server.html" ]
 +++
 # Making Samba 4 the default LDAP server
 

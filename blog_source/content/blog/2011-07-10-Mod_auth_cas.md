@@ -3,7 +3,7 @@ title = "Mod auth cas"
 date = 2011-07-10
 slug = "2011-07-10-Mod_auth_cas"
 # This is relative to the root!
-aliases = [ "2011/07/10/Mod_auth_cas.html" ]
+aliases = [ "2011/07/10/Mod_auth_cas.html", "blog/html/2011/07/10/Mod_auth_cas.html" ]
 +++
 # Mod auth cas
 

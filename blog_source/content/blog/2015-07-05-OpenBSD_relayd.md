@@ -3,7 +3,7 @@ title = "OpenBSD relayd"
 date = 2015-07-05
 slug = "2015-07-05-OpenBSD_relayd"
 # This is relative to the root!
-aliases = [ "2015/07/05/OpenBSD_relayd.html" ]
+aliases = [ "2015/07/05/OpenBSD_relayd.html", "blog/html/2015/07/05/OpenBSD_relayd.html" ]
 +++
 # OpenBSD relayd
 

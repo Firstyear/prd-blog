@@ -3,7 +3,7 @@ title = "Where to start with linux authentication?"
 date = 2022-08-24
 slug = "2022-08-24-where_to_start_with_linux_authentication"
 # This is relative to the root!
-aliases = [ "2022/08/24/where_to_start_with_linux_authentication.html" ]
+aliases = [ "2022/08/24/where_to_start_with_linux_authentication.html", "blog/html/2022/08/24/where_to_start_with_linux_authentication.html" ]
 +++
 # Where to start with linux authentication?
 

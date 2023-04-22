@@ -3,7 +3,7 @@ title = "Understanding AD Access Control Entries"
 date = 2018-04-20
 slug = "2018-04-20-understanding_ad_access_control_entries"
 # This is relative to the root!
-aliases = [ "2018/04/20/understanding_ad_access_control_entries.html" ]
+aliases = [ "2018/04/20/understanding_ad_access_control_entries.html", "blog/html/2018/04/20/understanding_ad_access_control_entries.html" ]
 +++
 # Understanding AD Access Control Entries
 

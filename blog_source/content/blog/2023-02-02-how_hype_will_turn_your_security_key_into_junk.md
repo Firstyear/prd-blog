@@ -3,7 +3,7 @@ title = "How Hype Will Turn Your Security Key Into Junk"
 date = 2023-02-02
 slug = "2023-02-02-how_hype_will_turn_your_security_key_into_junk"
 # This is relative to the root!
-aliases = [ "2023/02/02/how_hype_will_turn_your_security_key_into_junk.html" ]
+aliases = [ "2023/02/02/how_hype_will_turn_your_security_key_into_junk.html", "blog/html/2023/02/02/how_hype_will_turn_your_security_key_into_junk.html" ]
 +++
 # How Hype Will Turn Your Security Key Into Junk
 

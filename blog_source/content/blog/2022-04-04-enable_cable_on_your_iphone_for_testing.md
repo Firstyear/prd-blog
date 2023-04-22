@@ -3,7 +3,7 @@ title = "Enable caBLE on your iPhone for testing"
 date = 2022-04-04
 slug = "2022-04-04-enable_cable_on_your_iphone_for_testing"
 # This is relative to the root!
-aliases = [ "2022/04/04/enable_cable_on_your_iphone_for_testing.html" ]
+aliases = [ "2022/04/04/enable_cable_on_your_iphone_for_testing.html", "blog/html/2022/04/04/enable_cable_on_your_iphone_for_testing.html" ]
 +++
 # Enable caBLE on your iPhone for testing
 

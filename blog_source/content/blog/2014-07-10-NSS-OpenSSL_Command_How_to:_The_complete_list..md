@@ -3,7 +3,7 @@ title = "NSS-OpenSSL Command How to: The complete list."
 date = 2014-07-10
 slug = "2014-07-10-NSS-OpenSSL_Command_How_to:_The_complete_list."
 # This is relative to the root!
-aliases = [ "2014/07/10/NSS-OpenSSL_Command_How_to:_The_complete_list..html" ]
+aliases = [ "2014/07/10/NSS-OpenSSL_Command_How_to:_The_complete_list..html", "blog/html/2014/07/10/NSS-OpenSSL_Command_How_to:_The_complete_list..html" ]
 +++
 # NSS-OpenSSL Command How to: The complete list.
 

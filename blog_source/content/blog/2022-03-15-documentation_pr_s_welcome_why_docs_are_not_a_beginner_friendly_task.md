@@ -3,7 +3,7 @@ title = "Documentation PR's Welcome - Why Docs Are Not A Beginner Friendly Task"
 date = 2022-03-15
 slug = "2022-03-15-documentation_pr_s_welcome_why_docs_are_not_a_beginner_friendly_task"
 # This is relative to the root!
-aliases = [ "2022/03/15/documentation_pr_s_welcome_why_docs_are_not_a_beginner_friendly_task.html" ]
+aliases = [ "2022/03/15/documentation_pr_s_welcome_why_docs_are_not_a_beginner_friendly_task.html", "blog/html/2022/03/15/documentation_pr_s_welcome_why_docs_are_not_a_beginner_friendly_task.html" ]
 +++
 # Documentation PR\'s Welcome - Why Docs Are Not A Beginner Friendly Task
 

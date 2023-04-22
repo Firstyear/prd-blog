@@ -3,7 +3,7 @@ title = "Unit testing LDAP acis for fun and profit"
 date = 2015-07-04
 slug = "2015-07-04-Unit_testing_LDAP_acis_for_fun_and_profit"
 # This is relative to the root!
-aliases = [ "2015/07/04/Unit_testing_LDAP_acis_for_fun_and_profit.html" ]
+aliases = [ "2015/07/04/Unit_testing_LDAP_acis_for_fun_and_profit.html", "blog/html/2015/07/04/Unit_testing_LDAP_acis_for_fun_and_profit.html" ]
 +++
 # Unit testing LDAP acis for fun and profit
 

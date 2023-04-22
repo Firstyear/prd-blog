@@ -3,7 +3,7 @@ title = "Can I cycle through operators in C?"
 date = 2016-07-16
 slug = "2016-07-16-can_i_cycle_through_operators_in_c"
 # This is relative to the root!
-aliases = [ "2016/07/16/can_i_cycle_through_operators_in_c.html" ]
+aliases = [ "2016/07/16/can_i_cycle_through_operators_in_c.html", "blog/html/2016/07/16/can_i_cycle_through_operators_in_c.html" ]
 +++
 # Can I cycle through operators in C?
 

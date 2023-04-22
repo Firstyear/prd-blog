@@ -3,7 +3,7 @@ title = "FreeIPA: Giving permissions to service accounts."
 date = 2015-07-06
 slug = "2015-07-06-FreeIPA:_Giving_permissions_to_service_accounts."
 # This is relative to the root!
-aliases = [ "2015/07/06/FreeIPA:_Giving_permissions_to_service_accounts..html" ]
+aliases = [ "2015/07/06/FreeIPA:_Giving_permissions_to_service_accounts..html", "blog/html/2015/07/06/FreeIPA:_Giving_permissions_to_service_accounts..html" ]
 +++
 # FreeIPA: Giving permissions to service accounts.
 

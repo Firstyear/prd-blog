@@ -60,7 +60,7 @@ title = "{title}"
 date = {year}-{month}-{day}
 slug = "{year}-{month}-{day}-{slug_name}"
 # This is relative to the root!
-aliases = [ "{year}/{month}/{day}/{slug_name}.html" ]
+aliases = [ "{year}/{month}/{day}/{slug_name}.html", "blog/html/{year}/{month}/{day}/{slug_name}.html" ]
 +++
 """)
         file.write(data)
@@ -121,6 +121,8 @@ sort_by = "title"
 
     for blog in blog_posts:
         do_convert_blog(blog)
+
+
 
 
 

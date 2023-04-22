@@ -3,7 +3,7 @@ title = "TLS Authentication and FreeRADIUS"
 date = 2017-05-25
 slug = "2017-05-25-tls_authentication_and_freeradius"
 # This is relative to the root!
-aliases = [ "2017/05/25/tls_authentication_and_freeradius.html" ]
+aliases = [ "2017/05/25/tls_authentication_and_freeradius.html", "blog/html/2017/05/25/tls_authentication_and_freeradius.html" ]
 +++
 # TLS Authentication and FreeRADIUS
 

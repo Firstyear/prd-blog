@@ -3,7 +3,7 @@ title = "Openshift cluster administration"
 date = 2017-01-02
 slug = "2017-01-02-openshift_cluster_administration"
 # This is relative to the root!
-aliases = [ "2017/01/02/openshift_cluster_administration.html" ]
+aliases = [ "2017/01/02/openshift_cluster_administration.html", "blog/html/2017/01/02/openshift_cluster_administration.html" ]
 +++
 # Openshift cluster administration
 

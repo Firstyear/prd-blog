@@ -3,7 +3,7 @@ title = "AD directory admins group setup"
 date = 2018-04-26
 slug = "2018-04-26-ad_directory_admins_group_setup"
 # This is relative to the root!
-aliases = [ "2018/04/26/ad_directory_admins_group_setup.html" ]
+aliases = [ "2018/04/26/ad_directory_admins_group_setup.html", "blog/html/2018/04/26/ad_directory_admins_group_setup.html" ]
 +++
 # AD directory admins group setup
 

@@ -3,7 +3,7 @@ title = "Linux remote desktop from GDM"
 date = 2013-06-19
 slug = "2013-06-19-Linux_remote_desktop_from_GDM"
 # This is relative to the root!
-aliases = [ "2013/06/19/Linux_remote_desktop_from_GDM.html" ]
+aliases = [ "2013/06/19/Linux_remote_desktop_from_GDM.html", "blog/html/2013/06/19/Linux_remote_desktop_from_GDM.html" ]
 +++
 # Linux remote desktop from GDM
 

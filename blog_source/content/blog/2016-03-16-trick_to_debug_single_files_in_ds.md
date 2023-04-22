@@ -3,7 +3,7 @@ title = "Trick to debug single files in ds"
 date = 2016-03-16
 slug = "2016-03-16-trick_to_debug_single_files_in_ds"
 # This is relative to the root!
-aliases = [ "2016/03/16/trick_to_debug_single_files_in_ds.html" ]
+aliases = [ "2016/03/16/trick_to_debug_single_files_in_ds.html", "blog/html/2016/03/16/trick_to_debug_single_files_in_ds.html" ]
 +++
 # Trick to debug single files in ds
 

@@ -3,7 +3,7 @@ title = "Deploying sccache on SUSE"
 date = 2020-11-19
 slug = "2020-11-19-deploying_sccache_on_suse"
 # This is relative to the root!
-aliases = [ "2020/11/19/deploying_sccache_on_suse.html" ]
+aliases = [ "2020/11/19/deploying_sccache_on_suse.html", "blog/html/2020/11/19/deploying_sccache_on_suse.html" ]
 +++
 # Deploying sccache on SUSE
 

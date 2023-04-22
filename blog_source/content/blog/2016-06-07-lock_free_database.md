@@ -3,7 +3,7 @@ title = "lock free database"
 date = 2016-06-07
 slug = "2016-06-07-lock_free_database"
 # This is relative to the root!
-aliases = [ "2016/06/07/lock_free_database.html" ]
+aliases = [ "2016/06/07/lock_free_database.html", "blog/html/2016/06/07/lock_free_database.html" ]
 +++
 # lock free database
 

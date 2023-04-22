@@ -3,7 +3,7 @@ title = "LDAP Filter Syntax Validation"
 date = 2019-08-29
 slug = "2019-08-29-ldap_filter_syntax_validation"
 # This is relative to the root!
-aliases = [ "2019/08/29/ldap_filter_syntax_validation.html" ]
+aliases = [ "2019/08/29/ldap_filter_syntax_validation.html", "blog/html/2019/08/29/ldap_filter_syntax_validation.html" ]
 +++
 # LDAP Filter Syntax Validation
 

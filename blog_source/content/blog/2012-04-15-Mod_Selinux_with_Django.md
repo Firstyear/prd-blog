@@ -3,7 +3,7 @@ title = "Mod Selinux with Django"
 date = 2012-04-15
 slug = "2012-04-15-Mod_Selinux_with_Django"
 # This is relative to the root!
-aliases = [ "2012/04/15/Mod_Selinux_with_Django.html" ]
+aliases = [ "2012/04/15/Mod_Selinux_with_Django.html", "blog/html/2012/04/15/Mod_Selinux_with_Django.html" ]
 +++
 # Mod Selinux with Django
 

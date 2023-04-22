@@ -3,7 +3,7 @@ title = "Acis for group creation and delegataion in DS"
 date = 2016-05-25
 slug = "2016-05-25-acis_for_group_creation_and_delegataion_in_ds"
 # This is relative to the root!
-aliases = [ "2016/05/25/acis_for_group_creation_and_delegataion_in_ds.html" ]
+aliases = [ "2016/05/25/acis_for_group_creation_and_delegataion_in_ds.html", "blog/html/2016/05/25/acis_for_group_creation_and_delegataion_in_ds.html" ]
 +++
 # Acis for group creation and delegataion in DS
 

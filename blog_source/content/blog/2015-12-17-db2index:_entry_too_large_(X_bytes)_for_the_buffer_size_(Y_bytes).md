@@ -3,7 +3,7 @@ title = "db2index: entry too large (X bytes) for the buffer size (Y bytes)"
 date = 2015-12-17
 slug = "2015-12-17-db2index:_entry_too_large_(X_bytes)_for_the_buffer_size_(Y_bytes)"
 # This is relative to the root!
-aliases = [ "2015/12/17/db2index:_entry_too_large_(X_bytes)_for_the_buffer_size_(Y_bytes).html" ]
+aliases = [ "2015/12/17/db2index:_entry_too_large_(X_bytes)_for_the_buffer_size_(Y_bytes).html", "blog/html/2015/12/17/db2index:_entry_too_large_(X_bytes)_for_the_buffer_size_(Y_bytes).html" ]
 +++
 # db2index: entry too large (X bytes) for the buffer size (Y bytes)
 

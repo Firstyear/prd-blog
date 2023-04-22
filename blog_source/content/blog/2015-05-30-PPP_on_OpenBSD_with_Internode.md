@@ -3,7 +3,7 @@ title = "PPP on OpenBSD with Internode"
 date = 2015-05-30
 slug = "2015-05-30-PPP_on_OpenBSD_with_Internode"
 # This is relative to the root!
-aliases = [ "2015/05/30/PPP_on_OpenBSD_with_Internode.html" ]
+aliases = [ "2015/05/30/PPP_on_OpenBSD_with_Internode.html", "blog/html/2015/05/30/PPP_on_OpenBSD_with_Internode.html" ]
 +++
 # PPP on OpenBSD with Internode
 

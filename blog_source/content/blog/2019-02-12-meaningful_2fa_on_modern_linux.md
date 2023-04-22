@@ -3,7 +3,7 @@ title = "Meaningful 2fa on modern linux"
 date = 2019-02-12
 slug = "2019-02-12-meaningful_2fa_on_modern_linux"
 # This is relative to the root!
-aliases = [ "2019/02/12/meaningful_2fa_on_modern_linux.html" ]
+aliases = [ "2019/02/12/meaningful_2fa_on_modern_linux.html", "blog/html/2019/02/12/meaningful_2fa_on_modern_linux.html" ]
 +++
 # Meaningful 2fa on modern linux
 

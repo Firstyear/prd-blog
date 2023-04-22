@@ -3,7 +3,7 @@ title = "GDB autoloads for 389 DS"
 date = 2019-04-03
 slug = "2019-04-03-gdb_autoloads_for_389_ds"
 # This is relative to the root!
-aliases = [ "2019/04/03/gdb_autoloads_for_389_ds.html" ]
+aliases = [ "2019/04/03/gdb_autoloads_for_389_ds.html", "blog/html/2019/04/03/gdb_autoloads_for_389_ds.html" ]
 +++
 # GDB autoloads for 389 DS
 

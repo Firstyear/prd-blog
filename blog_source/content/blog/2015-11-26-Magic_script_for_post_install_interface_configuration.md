@@ -3,7 +3,7 @@ title = "Magic script for post install interface configuration"
 date = 2015-11-26
 slug = "2015-11-26-Magic_script_for_post_install_interface_configuration"
 # This is relative to the root!
-aliases = [ "2015/11/26/Magic_script_for_post_install_interface_configuration.html" ]
+aliases = [ "2015/11/26/Magic_script_for_post_install_interface_configuration.html", "blog/html/2015/11/26/Magic_script_for_post_install_interface_configuration.html" ]
 +++
 # Magic script for post install interface configuration
 

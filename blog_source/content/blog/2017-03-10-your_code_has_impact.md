@@ -3,7 +3,7 @@ title = "Your Code Has Impact"
 date = 2017-03-10
 slug = "2017-03-10-your_code_has_impact"
 # This is relative to the root!
-aliases = [ "2017/03/10/your_code_has_impact.html" ]
+aliases = [ "2017/03/10/your_code_has_impact.html", "blog/html/2017/03/10/your_code_has_impact.html" ]
 +++
 # Your Code Has Impact
 

@@ -3,7 +3,7 @@ title = "So you want to script gdb with python ..."
 date = 2017-08-04
 slug = "2017-08-04-so_you_want_to_script_gdb_with_python"
 # This is relative to the root!
-aliases = [ "2017/08/04/so_you_want_to_script_gdb_with_python.html" ]
+aliases = [ "2017/08/04/so_you_want_to_script_gdb_with_python.html", "blog/html/2017/08/04/so_you_want_to_script_gdb_with_python.html" ]
 +++
 # So you want to script gdb with python \...
 

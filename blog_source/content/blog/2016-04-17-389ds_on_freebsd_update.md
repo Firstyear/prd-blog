@@ -3,7 +3,7 @@ title = "389ds on freebsd update"
 date = 2016-04-17
 slug = "2016-04-17-389ds_on_freebsd_update"
 # This is relative to the root!
-aliases = [ "2016/04/17/389ds_on_freebsd_update.html" ]
+aliases = [ "2016/04/17/389ds_on_freebsd_update.html", "blog/html/2016/04/17/389ds_on_freebsd_update.html" ]
 +++
 # 389ds on freebsd update
 

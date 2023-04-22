@@ -3,7 +3,7 @@ title = "NSS commands and how to"
 date = 2012-05-01
 slug = "2012-05-01-NSS_commands_and_how_to"
 # This is relative to the root!
-aliases = [ "2012/05/01/NSS_commands_and_how_to.html" ]
+aliases = [ "2012/05/01/NSS_commands_and_how_to.html", "blog/html/2012/05/01/NSS_commands_and_how_to.html" ]
 +++
 # NSS commands and how to
 

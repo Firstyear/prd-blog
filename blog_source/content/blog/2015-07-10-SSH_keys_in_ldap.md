@@ -3,7 +3,7 @@ title = "SSH keys in ldap"
 date = 2015-07-10
 slug = "2015-07-10-SSH_keys_in_ldap"
 # This is relative to the root!
-aliases = [ "2015/07/10/SSH_keys_in_ldap.html" ]
+aliases = [ "2015/07/10/SSH_keys_in_ldap.html", "blog/html/2015/07/10/SSH_keys_in_ldap.html" ]
 +++
 # SSH keys in ldap
 
