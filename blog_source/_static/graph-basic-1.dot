@@ -1,6 +1,0 @@
-
-graph undirected1 {
-    rankdir=LR;
-    A -- B -- C;
-    B -- D -- C;
-}

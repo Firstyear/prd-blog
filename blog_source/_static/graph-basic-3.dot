@@ -1,7 +1,0 @@
-
-digraph directed1 {
-    rankdir=LR;
-    A -> B -> C;
-    D -> B;
-    D -> C;
-}
