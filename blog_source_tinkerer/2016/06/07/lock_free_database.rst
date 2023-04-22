@@ -10,8 +10,6 @@ It's a good idea to read `this article <http://liblfds.org/mediawiki/index.php?t
 
 When you think about the way a mutex has to work, it takes advantage of these primitives to create a full barrier, and do the compare and exchange to set the value of the lock, and to guarantee the other memory is synced to our core. This is pretty full on for cpu time, and in reverse, to unlock you have to basically do the same again. That's a lot of operations! (NOTE: You do a load barrier on the way in to the lock, and a store barrier on the unlock. The end result is the full barrier over the set of operations as a whole.)
 
-.. more::
-
 Lock contenion is really the killer though. If every thread is blocked on a single lock, they cannot progress. Given the cost of our lock, if we are stalling our threads behind a lock, we have cpus waiting to do nothing during this process. The OS scheduler helps mask this by waking and running another thread, but eventually contenion will win out.
 
 If we bring NUMA into the picture, our mutex may be in a different NUMA region than the thread requesting the lock. This adds an impact to latency as well!

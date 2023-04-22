@@ -1,6 +1,6 @@
 Renaming ovirt storage targets
 ==============================
-I run an ovirt server, and sometimes like a tinker that I am, I like to rename things due to new hardware or other ideas that come up. 
+I run an ovirt server, and sometimes like a tinker that I am, I like to rename things due to new hardware or other ideas that come up.
 
 Ovirt makes it quite hard to change the nfs target or name of a storage volume. Although it's not supported, I'm more than happy to dig through the database.
 
@@ -29,7 +29,7 @@ First, we need to look at the main tables that are involved in nfs storage:
      f5be3009-4c84-4d59-9cfe-a1bcedac4038 | mion.ipa.example.com:/var/lib/exports/t1/def_t1_nfs_sas
     
 
-So we are going to rename the def_t2_nfs_* targets to def_t3_nfs. First we need to update the mount point:
+So we are going to rename the def_t2_nfs targets to def_t3_nfs. First we need to update the mount point:
 
 ::
     

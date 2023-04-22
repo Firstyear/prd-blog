@@ -402,7 +402,7 @@ that trees can be created/removed in transactions.
 The primary storage of all entries is in the table `id2entry <https://github.com/kanidm/kanidm/blob/master/kanidmd/src/lib/be/idl_sqlite.rs#L1134>`_ which has
 an id column (the key) and stores serialised entries in the data column.
 
-Indexes are stored in a collection of their own tables, named in the scheme "idx_<type>_<attr>". For
+Indexes are stored in a collection of their own tables, named in the scheme "idx\_<type>_<attr>". For
 example, "idx_eq_name" or "idx_pres_class". These are stored as two columns, where the "key" column
 is a precomputed result of a value in the entry, and the "value" is a set of integer ID's related
 to the entries that contain the relevant match.
@@ -512,7 +512,7 @@ returned to the caller. If not, it is requested from the `sqlite layer <https://
         $self.idl_cache.insert(cache_key, Box::new(idl.clone()))
     }
 
-This sqlite layer performs the select from the "idx_<type>_<attr>" table, and then deserialises the stored
+This sqlite layer performs the select from the "idx\_<type>_<attr>" table, and then deserialises the stored
 id list (IDL).
 
 ::

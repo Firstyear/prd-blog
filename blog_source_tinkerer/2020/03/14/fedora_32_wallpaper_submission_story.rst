@@ -6,7 +6,6 @@ to be submitted for the next version of the release. I used fedora for a long ti
 to submit this photo, and write this post to talk about it:
 
 .. image:: /_static/20191119_184819_DSCF0043_5.jpg
-    :width: 850 px
 
 This was takeing on 2019-11-19 in my home city of Adelaide, South Australia. I had traveled
 to see some friends over Christmas. We went to `Mount Osmond <https://www.google.com/maps/@-34.9656653,138.6670176,14.51z>`_

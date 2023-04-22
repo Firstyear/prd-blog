@@ -16,16 +16,13 @@ of the respective environment. Both are set to the resolution of 1680x1050, with
 from retina (2880x1800) to this size.
 
 .. image:: /_static/gnome_v_macos/gnome-settings-1.png
-    :width: 850 px
 
 .. image:: /_static/gnome_v_macos/macos-settings-1.png
-    :width: 850 px
 
 From this view, we can already make some observations. Both of these have a really similar structure
 which when we look at appears like this:
 
 .. image:: /_static/gnome_v_macos/skeleton.png
-    :width: 850 px
 
 The skeleton overall looks really similar, if not identical. We have a top bar that provides a system tray and status
 and a system context in the top left, as well as application context.
@@ -74,7 +71,6 @@ to search. Inside any menu of the system preferences, search is always accesible
 location of the application.
 
 .. image:: /_static/gnome_v_macos/macos-settings-search.png
-    :width: 600 px
 
 When we look at Gnome, in the settings application we see that not all available settings are displayed - the
 gutter column on the left is a scrollable UI element, but with no scroll bars present, this could
@@ -94,7 +90,6 @@ a sub-gutter menu for privacy, and not discoverable at the top level as an eleme
 gutters here adds confusion about where items are due to all the gutter content changes.
 
 .. image:: /_static/gnome_v_macos/gnome-settings-search.png
-    :width: 600 px
 
 Again we are starting to see differences here:
 
@@ -118,20 +113,17 @@ exist. We aren't overwhelmed with settings or choices, but we do have the abilit
 common options and shortcut links to get to the extended settings if needed.
 
 .. image:: /_static/gnome_v_macos/macos-audio-1.png
-    :width: 300 px
 
 A common trick in MacOS though is holding the option key during interactions. Often this can display
 power-user or extended capabilities. When done on the audio menu, we are also able to then control
 our input device selection.
 
 .. image:: /_static/gnome_v_macos/macos-audio-2.png
-    :width: 300 px
 
 On Gnome, in the system tray there is only a single element, that controls audio, power, network and
 more.
 
 .. image:: /_static/gnome_v_macos/gnome-audio-1.png
-    :width: 300 px
 
 All we can do in this menu is control the volume - that's it. There are no links to direct audio settings,
 device management, and there are no "hidden" shortcuts (like option) that allows greater context
@@ -150,7 +142,6 @@ Finally lets look at the file browser. For fairness, I've changed Gnome's defaul
 to match my own usage in finder.
 
 .. image:: /_static/gnome_v_macos/macos-files-1.png
-    :width: 600 px
 
 We can already see a number of useful elements here. We have the ability to "tree" folders through
 the ">" icon, and rows of the browser alternate white/grey to help us visually identify lines
@@ -160,7 +151,6 @@ locations. And as before, we have our application context menu in the top bar wi
 of actions available.
 
 .. image:: /_static/gnome_v_macos/gnome-files-1.png
-    :width: 600 px
 
 Gnomes rows are all white with extremely faint grey lines to delineate, making it hard to horizontally
 track items if the window was expanded. The icons are larger, and there is no ability to tree
@@ -182,7 +172,6 @@ Keyboard shortcuts are something that aide powerusers to achieve tasks quicker, 
 often *finding* what shortcuts exist to use them. Lets look at how MacOS and Gnome solve this.
 
 .. image:: /_static/gnome_v_macos/macos-shortcut-1.png
-    :width: 300 px
 
 Here in MacOS, anytime we open a menu, we can see the shortcut listed next to the menu item that
 is present, including disabled items (that are dimmed). Each shortcut's symbols match the symbols
@@ -194,7 +183,6 @@ menu's, MacOS opens the menu and points us to where we are trying to go, allowin
 the action we want *and* learn it's shortcut!
 
 .. image:: /_static/gnome_v_macos/macos-shortcut-2.png
-    :width: 600 px
 
 This is great, because it means in the process of getting help, we are shown how to perform the
 action for future interactions. Because of the nature of MacOS human interface guidelines this
@@ -205,13 +193,11 @@ Gnome however takes a really different approach. Keyboard shortcuts are listed a
 our burger menu.
 
 .. image:: /_static/gnome_v_macos/gnome-shortcut-1.png
-    :width: 200 px
 
 When we select it, our applications context is taken away and replaced with a dictionary of keyboard
 shortcuts, spread over three pages.
 
 .. image:: /_static/gnome_v_macos/gnome-shortcut-2.png
-    :width: 600 px
 
 I think the use of the keyboard icons here is excellent, but because we are now in a dictionary of
 shortcuts, it's hard to find what we want to use, and we "taken away" from the context of the actions

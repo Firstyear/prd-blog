@@ -1,0 +1,8 @@
+
+digraph tree {
+    rankdir=LR;
+    A -> B;
+    B -> C;
+    B -> D;
+    D -> E;
+}

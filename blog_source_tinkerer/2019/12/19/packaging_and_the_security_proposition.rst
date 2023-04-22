@@ -176,7 +176,7 @@ large human risk factor that currently exists.
 We can't keep looking to the models of the past, we need to start to invest in new methods
 for the future.
 
-Today, distributions should focus on supporting and distributing _applications_ and work with
+Today, distributions should focus on supporting and distributing *applications* and work with
 native language supply chains to enable this.
 
 Which is why I'll keep using cargo's tooling and auditing, and use distribution packages as a delievery mechanism

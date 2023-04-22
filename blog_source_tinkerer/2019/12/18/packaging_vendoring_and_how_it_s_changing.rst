@@ -5,7 +5,7 @@ In today's thoughts, I was considering packaging for platforms like opensuse or 
 and how that interacts with language based packaging tools. This is a complex and ... difficult
 topic, so I'll start with my summary:
 
-Today, distributions should focus on supporting and distributing _applications_ and work with
+Today, distributions should focus on supporting and distributing *applications* and work with
 native language supply chains to enable this.
 
 Distribution Packaging
@@ -167,7 +167,7 @@ are about how we ship *applications*, and their build and supply chains are sepa
 This is why I have really started to advocate and say:
 
 
-Today, distributions should focus on supporting and distributing _applications_ and work with
+Today, distributions should focus on supporting and distributing *applications* and work with
 native language supply chains to enable this.
 
 

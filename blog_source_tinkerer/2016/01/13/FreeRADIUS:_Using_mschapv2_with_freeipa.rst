@@ -123,5 +123,5 @@ Today the only secure, guaranteed way to protect your accounts is TLS. You shoul
 That's why I don't document or advise how to use krb keytabs with this configuration.
 
 
-Thanks to _moep_ for helping point out some of the issues with KRB integration.
+Thanks to *moep* for helping point out some of the issues with KRB integration.
 

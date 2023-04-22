@@ -1,0 +1,16 @@
+
+digraph tree {
+    rankdir=LR;
+
+    node [shape=record];
+    A [label="{dc=com|{dc: com}}"];
+    B [label="{dc=example|{dc: example}}"];
+    C [label="{ou=Groups|{ou: Groups|description: Groups}}"];
+    D [label="{ou=People|{ou: People}}"];
+    E [label="{uid=user|{uid: user|cn: bob}}"];
+
+    A -> B;
+    B -> C;
+    B -> D;
+    D -> E;
+}
