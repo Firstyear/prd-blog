@@ -1,0 +1,1 @@
+../2016/06/20/the_ldap_guide_part_1_foundations.rst
