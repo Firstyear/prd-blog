@@ -150,8 +150,7 @@ There are many other potential ways to improve this:
     prevents more moving between NUMA regions, again yielding a benefit.
     It would basically be:
 
-```{=html}
-<!-- -->
+
 ```
     Thread A                              Thread DB
     Queue a read transaction with
@@ -174,6 +173,8 @@ There are many other potential ways to improve this:
 
     Queue a transaction complete  -->
                               <--   Done
+```
+
 
 ## Acknowledgement
 

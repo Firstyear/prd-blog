@@ -7,6 +7,9 @@ aliases = [ "2021/06/20/getting_started_with_yew.html", "blog/html/2021/06/20/ge
 +++
 # Getting started with Yew
 
+> **NOTE** This post is really out dated now, there are easier ways to start. See the [yew official docs](https://yew.rs/)
+> as this process has gotten much easier!
+
 Yew is a really nice framework for writing single-page-applications in
 Rust, that is then compiled to wasm for running in the browser. For me
 it has helped make web development much more accessible to me, but
@@ -27,35 +30,34 @@ applications.
 -   Install wasm-pack. wasm-pack is what drives the rust to wasm build
     process.
 
-```{=html}
-<!-- -->
-```
+```bash
     cargo install wasm-pack
+```
 
 -   Install npm and rollup. npm is needed to install rollup, and rollup
     is what takes our wasm and javacript and bundles them together for
     our browser.
 
-```{=html}
-<!-- -->
-```
+```bash
     brew install npm
     npm install --global rollup
+```
 
 -   Install miniserve for hosting our website locally during
     development.
 
-```{=html}
-<!-- -->
-```
+```bash
     brew install miniserve
+```
 
 ## A new project
 
 We can now create a new rust project. Note we use \--lib to indicate
 that it\'s a library, not an executable.
 
+```bash
     cargo new --lib yewdemo
+```
 
 To start with we\'ll need some boilerplate and helpers to get ourselves
 started.
@@ -64,6 +66,7 @@ started.
 run. This is our \"entrypoint\" into the site that starts everything
 else off. In this case it loads our bundled javascript.
 
+```html
     <!DOCTYPE html>
     <html>
       <head>
@@ -74,41 +77,49 @@ else off. In this case it loads our bundled javascript.
       <body>
       </body>
     </html>
+```
 
 [main.js]{.title-ref} - this is our javascript entrypoint that we\'ll be
 using. Remember to change PROJECTNAME to your crate name (ie yewdemo).
 This will be combined with our wasm to create the bundle.js file.
 
+```js
     import init, { run_app } from './pkg/PROJECTNAME.js';
     async function main() {
        await init('/pkg/PROJECTNAME_bg.wasm');
        run_app();
       }
     main()
+```
 
 [Cargo.toml]{.title-ref} - we need to extend Cargo.toml with some
 dependencies and settings that allows wasm to build and our framework
 dependencies.
 
+```toml
     [lib]
     crate-type = ["cdylib"]
 
     [dependencies]
     wasm-bindgen = "^0.2"
     yew = "0.18"
+```
 
 [build_wasm.sh]{.title-ref} - create this file to help us build our
 project. Remember to call [chmod +x build_wasm.sh]{.title-ref} so that
 you can execute it later.
 
+```bash
     #!/bin/sh
     wasm-pack build --target web && \
         rollup ./main.js --format iife --file ./pkg/bundle.js
+```
 
 [src/lib.rs]{.title-ref} - this is a template of a minimal start point
 for yew. This has all the stubs in place for a minimal \"hello world\"
 website.
 
+```rust
     use wasm_bindgen::prelude::*;
     use yew::prelude::*;
     use yew::services::ConsoleService;
@@ -155,16 +166,21 @@ website.
         yew::start_app::<App>();
         Ok(())
     }
+```
 
 ## Building your Hello World
 
 Now you can build your project with:
 
+```bash
     ./build_wasm.sh
+```
 
 And if you want to see it on your machine in your browser:
 
+```bash
     miniserve -v --index index.html .
+```
 
 Navigate to <http://127.0.0.1:8080> to see your Hello World!
 
@@ -183,8 +199,10 @@ I made all the following mistakes while writing this blog 😅
 
 ### build_wasm.sh - permission denied
 
+```bash
     ./build_wasm.sh
     zsh: permission denied: ./build_wasm.sh
+```
 
 You need to run \"chmod +x build_wasm.sh\" so that you can execute this.
 Permission denied means that the executable bits are missing from the
@@ -192,9 +210,11 @@ file.
 
 ### building - \'Could not resolve\'
 
+```bash
     ./main.js → ./pkg/bundle.js...
     [!] Error: Could not resolve './pkg/PROJECTNAME.js' from main.js
     Error: Could not resolve './pkg/PROJECTNAME.js' from main.js
+```
 
 This error means you need to edit main.js so that PROJECTNAME matches
 your crate name.
@@ -209,13 +229,17 @@ From there refresh your page, and see if any files 404. If they do you
 may need to rename them or there is an error in yoru main.js. A common
 one is:
 
+```
     PROJECTNAME.wasm: 404
+```
 
 This is because in main.js you may have changed the await init line, and
 removed the suffix [\_bg]{.title-ref}.
 
+```js
     # Incorrect
     await init('/pkg/PROJECTNAME.wasm');
     # Correct
     await init('/pkg/PROJECTNAME_bg.wasm');
+```
 

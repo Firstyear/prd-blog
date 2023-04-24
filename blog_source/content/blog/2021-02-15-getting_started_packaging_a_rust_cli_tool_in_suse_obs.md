@@ -22,9 +22,11 @@ To do this you\'ll need a SUSE environment. Docker is an easy way to
 create this without having to commit to a full virtual machine /
 install.
 
+```bash
     docker run \
         --security-opt=seccomp:unconfined --cap-add=SYS_PTRACE --cap-add=SYS_CHROOT --cap-add=SYS_ADMIN \
         -i -t opensuse/tumbleweed:latest /bin/sh
+bash
 
 -   NOTE: We need these extra privileges so that the osc build command
     can work due to how it uses chroots/mounts.
@@ -32,9 +34,11 @@ install.
 Inside of this we\'ll need some packages to help make the process
 easier.
 
+```bash
     zypper install obs-service-cargo_vendor osc obs-service-tar obs-service-obs_scm \
         obs-service-recompress obs-service-set_version obs-service-format_spec_file \
         obs-service-cargo_audit cargo sudo
+```
 
 You should also install your editor of choice in this command (docker
 images tend not to come with any editors!)
@@ -43,6 +47,7 @@ You\'ll need to configure osc, which is the CLI interface to OBS. This
 is done in the file [\~/.config/osc/oscrc]{.title-ref}. A minimal
 starting configuration is:
 
+```ini
     [general]
     # URL to access API server, e.g. https://api.opensuse.org
     # you also need a section [https://api.opensuse.org] with the credentials
@@ -50,17 +55,22 @@ starting configuration is:
     [https://api.opensuse.org]
     user = <username>
     pass = <password>
+```
 
 You can check this works by using the \"whois\" command.
 
+```bash
     # osc whois
     firstyear: "William Brown" <email here>
+```
 
 Optionally, you may install [cargo
 lock2rpmprovides](https://github.com/Firstyear/cargo-lock2rpmprovides)
 to assist with creation of the license string for your package:
 
+```bash
     cargo install cargo-lock2rpmprovides
+```
 
 ## Packaging A Rust Project
 
@@ -74,15 +84,18 @@ free to choose your own project or Rust project you want to package!
 
 First we\'ll create a package in our OBS home project.
 
+```bash
     osc co home:<username>
     cd home:<username>
     osc mkpac hellorust
     cd hellorust
+```
 
 OBS comes with a lot of useful utilities to help create and manage
 sources for our project. First we\'ll create a skeleton RPM spec file.
 This should be in a file named [hellorust.spec]{.title-ref}
 
+```
     %global rustflags -Clink-arg=-Wl,-z,relro,-z,now -C debuginfo=2
 
     Name:           hellorust
@@ -128,12 +141,14 @@ This should be in a file named [hellorust.spec]{.title-ref}
     %{_bindir}/hellorust
 
     %changelog
+```
 
 There are a few commented areas you\'ll need to fill in and check. But
 next we will create a service file that allows OBS to help get our
 sources and bundle them for us. This should go in a file called
-[\_service]{.title-ref}
+`_service`
 
+```
     <services>
       <service mode="disabled" name="obs_scm">
         <!-- ✨ URL of the git repo ✨ -->
@@ -166,6 +181,7 @@ sources and bundle them for us. This should go in a file called
       </service>
 
     </services>
+```
 
 Now this service file does a lot of the heavy lifting for us:
 
@@ -179,15 +195,18 @@ Now this service file does a lot of the heavy lifting for us:
 
 So our current work dir should look like:
 
+```bash
     # ls -1 .
     .osc
     _service
     hellorust.spec
+```
 
 Now we can run [osc service ra]{.title-ref}. This will run the services
 in our [\_service]{.title-ref} file as we mentioned. Once it\'s complete
 we\'ll have quite a few more files in our directory:
 
+```bash
     # ls -1 .
     _service
     _servicedata
@@ -198,6 +217,7 @@ we\'ll have quite a few more files in our directory:
     hellorust.obsinfo
     hellorust.spec
     vendor.tar.xz
+```
 
 Inside the [hellorust]{.title-ref} folder
 ([home:username/hellorust/hellorust]{.title-ref}), is a checkout of our
@@ -205,12 +225,16 @@ source. If you cd to that directory, you can run [cargo
 lock2rpmprovides]{.title-ref} which will display your license string you
 need:
 
+```
     License: ( Apache-2.0 OR MIT ) AND ( Apache-2.0 WITH LLVM-exception OR Apache-2.0 OR MIT ) AND
+```
 
 Just add the license from the project, and then we can update our
 [hellorust.spec]{.title-ref} with the correct license.
 
+```
     License: ( Apache-2.0 OR MIT ) AND ( Apache-2.0 WITH LLVM-exception OR Apache-2.0 OR MIT ) AND MPL-2.0
+```
 
 -   HINT: You don\'t need to use the emitted \"provides\" lines here.
     They are just for fedora rpms to adhere to some of their policy
@@ -220,19 +244,24 @@ Now we can build our package on our local system to test it. This may
 take a while to get all its build dependencies and other parts, so be
 patient :)
 
+```bash
     osc build
+```
 
 If that completes successfully, you can now test these rpms:
 
+```bash
     # zypper in /var/tmp/build-root/openSUSE_Tumbleweed-x86_64/home/abuild/rpmbuild/RPMS/x86_64/hellorust-0.1.1~git0.db340ad-0.x86_64.rpm
     (1/1) Installing: hellorust-0.1.1~git0.db340ad-0.x86_64  ... [done]
     # rpm -ql hellorust
     /usr/bin/hellorust
     # hellorust
     Hello, Rust! The number of the day is: 68
+```
 
 Next you can commit to your project. Add the files that we created:
 
+```bash
     # osc add _service cargo_config hellorust-0.1.1~git0.db340ad.tar.xz hellorust.spec vendor.tar.xz
     # osc status
     A    _service
@@ -243,14 +272,14 @@ Next you can commit to your project. Add the files that we created:
     ?    hellorust.obsinfo
     A    hellorust.spec
     A    vendor.tar.xz
+```
 
 -   HINT: You DO NOT need to commit \_servicedata OR
     hellorust-0.1.1\~git0.db340ad.obscpio OR hellorust.obsinfo
 
-```{=html}
-<!-- -->
-```
+```bash
     osc ci
+```
 
 From here, you can use your packages from your own respository, or you
 can forward them to OpenSUSE Tumbleweed (via Factory). You likely need

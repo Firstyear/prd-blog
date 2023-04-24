@@ -9,6 +9,7 @@ build_search_index = true
 
 # Create rss
 generate_feed = true
+feed_filename = "rss.xml"
 
 theme = "oceanic-zen"
 

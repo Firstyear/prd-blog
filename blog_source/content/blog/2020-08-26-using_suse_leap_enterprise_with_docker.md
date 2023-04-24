@@ -21,13 +21,12 @@ in summary:
     install that has been registered. The SLE version does not matter.
 -   Mount them into the image:
 
-```{=html}
-<!-- -->
-```
+```bash
     docker ... -v /scc/SUSEConnect:/etc/SUSEConnect \
         -v /scc/SCCcredentials:/etc/zypp/credentials.d/SCCcredentials \
         ...
         registry.suse.com/suse/sle15:15.2
+```
 
 Now you can use the images from [the SUSE
 registry](https://registry.suse.com/). For example [docker pull
@@ -39,11 +38,13 @@ available with container-suseconnect from an existing SLE container of
 the same version), you can do this by adding environment variables at
 startup. For example, to add dev tools like gdb:
 
+```bash
     docker ... -e ADDITIONAL_MODULES=sle-module-development-tools \
         -v /scc/SUSEConnect:/etc/SUSEConnect \
         -v /scc/SCCcredentials:/etc/zypp/credentials.d/SCCcredentials \
         ...
         registry.suse.com/suse/sle15:15.2
+```
 
 This also works during builds to add extra modules.
 
