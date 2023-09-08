@@ -173,12 +173,12 @@ version, we can use the rust language\'s provided signed binaries to
 reset the chain, allowing us to miss versions of rust, or to re-package
 older versions in some cases.
 
-    ┌──────────────┐             ┌──────────────┐              
-    │      │   Trusted    │             │   Trusted    │              
-    Missed    │   Sources    │──────┐      │   Sources    │──────┐       
-    Version!   │              │      │      │              │      │       
-    │      └──────────────┘      │      └──────────────┘      │       
-    │                            │                            │        
+                            ┌──────────────┐             ┌──────────────┐              
+                     │      │   Trusted    │             │   Trusted    │              
+                 Missed     │   Sources    │──────┐      │   Sources    │──────┐       
+                 Version!   │              │      │      │              │      │       
+                     │      └──────────────┘      │      └──────────────┘      │       
+                     │                            │                            │        
     ┌──────────────┐ │      ┌──────────────┐      │      ┌──────────────┐      │       
     │              │ │      │Trusted Binary│      ▼      │              │      ▼       
     │Trusted Binary│ │      │ (from rust)  ├──Produces──▶│Trusted Binary│──Produces───▶ ...

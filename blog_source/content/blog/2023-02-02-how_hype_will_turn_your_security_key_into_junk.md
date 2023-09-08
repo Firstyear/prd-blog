@@ -55,8 +55,8 @@ key that is specific to that single RP that you can use for signatures.
                             │                            │                       
 
 This is what is called a non-resident or non-discoverable credential.
-The reason is that the private key must be *discovered* by the security
-key having the Credential ID provided to it externally. This is because
+The reason is that the private key can *not be discovered* by the security
+key without the Credential ID provided to it externally. This is because
 the private keys are *not resident* inside the security enclave - only
 the master key is.
 
@@ -106,6 +106,15 @@ key, they probably could also break TLS encyrption, attack ssh and do
 much worse. Your key wrapped keys rely on the same security features
 that TLS relies on.
 
+### How does userverification factor in here?
+
+Another frequent question (or confusion) is that a credential needs to be resident
+to enforce userVerification. That's not the case! Your device can assert not just
+presence by touch, but that it's really you holding the device by internally
+validating a PIN or biometric. This is governed by the userVerification flags
+which are seperate to residency. This allows your device to be "a self contained
+multifactor authenticator". Very cool!
+
 ## Resident Keys and Your Security Key
 
 Now that we know what a resident key is, we can look at how these work
@@ -120,17 +129,20 @@ keys. Yubikeys generally support between 20 and 32. Some keys support
 The other problem is what CTAP standard your key implements. There are
 three versions - CTAP2.0, CTAP2.1PRE and CTAP2.1.
 
-In CTAP2.1 (the latest) you can individually manage, update and delete
+In CTAP2.1 (the latest) and CTAP2.1PRE you can individually manage, update and delete
 specific resident keys from your device.
 
-In CTAP2.0 and CTAP2.1PRE however, you can not. You can not delete a
+In CTAP2.0 however, you can not. You can not delete a
 residentkey without *resetting the whole device*. Resetting the device
 also resets your master key, meaning all your non-resident keys will no
-longer work either. This makes resident keys on a CTAP2.0 and CTAP2.1PRE
+longer work either. This makes resident keys on a CTAP2.0
 device a serious commitment. You really don\'t want to accidentally fill
 up that limited space you have!
 
-In most cases, your key is *very likely* to be CTAP2.0 or CTAP2.1PRE.
+In most cases, your key is *very likely* to be CTAP2.0. For example
+some manufacturers like yubico, they're keys CTAP version is defined
+by their firmware version. I have multiple yk5 series keys that have
+different levels of CTAP support.
 
 ## So Why Are Resident Keys a Problem?
 
@@ -180,7 +192,7 @@ follow this advice without seeing the problem.
 The problem is that security keys with their finite storage and lack of
 credential management will fill up *rapidly*. In my password manager I
 have more than 150 stored passwords. If all of these were to become
-resident keys I would need to buy at lesat 5 yubikeys to store all the
+resident keys I would need to buy at least 5 yubikeys to store all the
 accounts, and then another 5-10 as \"backups\". I really don\'t want to
 have to juggle and maintain 10 to 15 yubikeys \...
 
@@ -219,11 +231,12 @@ Currently there are three levels of request an RP can make to request
 resident keys. Discouraged, Preferred and Required. Here is what happens
 with different authenticator types when you submit each level.
 
-    ┌────────────────────┬────────────────────┬────────────────────┐
-    │      Roaming       │      Platform      │      Platform      │
-    │   Authenticator    │   Authenticator    │   Authenticator    │
-    │     (Yubikey)      │(Android Behaviour) │  (iOS Behaviour)   │
-    └────────────────────┴────────────────────┴────────────────────┘
+```
+                           ┌────────────────────┬────────────────────┬────────────────────┐
+                           │      Roaming       │      Platform      │      Platform      │
+                           │   Authenticator    │   Authenticator    │   Authenticator    │
+                           │     (Yubikey)      │(Android Behaviour) │  (iOS Behaviour)   │
+                           └────────────────────┴────────────────────┴────────────────────┘
     ┌────────────────────┐ ┌────────────────────┬────────────────────┬────────────────────┐
     │                    │ │                    │                    │                    │
     │   rk=discouraged   │ │      RK false      │     RK false       │      RK true       │
@@ -237,6 +250,7 @@ with different authenticator types when you submit each level.
     │    rk=required     │ │      RK true       │      RK true       │      RK true       │
     │                    │ │                    │                    │                    │
     └────────────────────┘ └────────────────────┴────────────────────┴────────────────────┘
+```
 
 Notice that in rk=preferred the three columns behave the same as
 rk=required?
