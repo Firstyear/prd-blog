@@ -27,6 +27,12 @@ Almost all commands in this document require root privilieges.
 
 This document is a work in progress!
 
+## General Advice
+
+Before executing commands that will change your storage you should analyse your storage,
+make notes, and prepare your commands in a notepad before you execute the commands. This
+will allow you to review before making changes.
+
 ## Understanding Your Storage
 
 Before changing your storage configurations you need to understand what you have and what you may
@@ -176,15 +182,15 @@ Here are some questions that may help you to decide how to configure the storage
 
 * Use ZFS
 
-#### I Want One Giant Pool Of Storage That I Will Never Touch Again
+#### I Want One Giant Pool Of Storage That I Will Expand In Future
 
 * Use ZFS
 
-#### I Plan To Add/Remove/Change Disks Again Frequently
+#### I Plan To Add/Remove/Change Disks Again When Ever I Feel Like
 
 * Use LVM+RAID
 
-#### I Just Want Disks Mounted However
+#### I Just Want Disks Mounted Like A Chaos Goblin
 
 * You should use GPT for partitioning.
 * You should use LVM to allow resizing partitions, creating raid or changing disks in the future.
@@ -295,6 +301,8 @@ Ensure man is installed, and reinstall lvm2 to make sure it's man pages are pres
   lv_raid vg00 rwi-a-r--- 80.00g
 ```
 
+Show the internal details of LVs
+
 ```
 # lvs -a
   LV                 VG   Attr       LSize  Pool Origin Data%  Meta%  Move Log Cpy%Sync Convert
@@ -306,6 +314,8 @@ Ensure man is installed, and reinstall lvm2 to make sure it's man pages are pres
   [lv_raid_rmeta_1]  vg00 ewi-aor---  4.00m
   [lv_raid_rmeta_2]  vg00 ewi-aor---  4.00m
 ```
+
+Show the internal details of LVs and which devices are backing their storage.
 
 ```
 # lvs -a -o +devices
@@ -359,16 +369,21 @@ Create a new LV that is at your prefered raid level.
 
 In each case, LVM will make sure that the data of the LV is correctly split to PV's to ensure redundancy.
 
-Raid 5 has better *write* performance but lower *read* performance. Raid 10 has better *read* performance
-but lower *write* performance.
+* Raid 1 mirrors. It has no performance changes.
+* Raid 5/6 have better *write* performance but lower *read* performance compared to raid 10.
+* Raid 10 has better *read* performance but lower *write* performance compared to raid 5/6
 
 ```
-lvcreate [options] -n <name of LV> --type <type> [-L|-l] <size of lv> <VG to create the LV in>
+lvcreate [options] -n <name of LV> --type <type> [-L|-l] <size of lv> --raidintegrity y <VG to create the LV in>
 ## Create an lv that consumes all space in the VG
-# lvcreate -n lv_raid --type raid10 -l 100%FREE vg00
+## NOTE: you may need to reduce this from 100% with raidintegrity to allow LVM the space
+## to create the LV.
+# lvcreate -n lv_raid --type raid10 -l 100%FREE --raidintegrity y vg00
 ## Create an lv that provides 80G of raid storage, but consumers more of the VG underneath
-# lvcreate -n lv_raid --type raid5 -L 80G vg00
+# lvcreate -n lv_raid --type raid5 -L 80G --raidintegrity y vg00
 ```
+
+> HINT: The raidintegrity flag enables checksums of extents to allow detection of potential disk corruption
 
 You can then use `lvs` to show the state of the sync process of the LV.
 
@@ -387,5 +402,93 @@ This can then be added to `/etc/fstab` to mount on boot.
 # $EDITOR /etc/fstab
 ...
 /dev/vg00/lv_raid  /mnt/raid    xfs defaults 0 0
+```
+
+### Managing LVM Raid
+
+#### Replacing a Working Disk
+
+If you want to expand your array, or just replace an old piece of disk media you can do this
+live.
+
+Attach the new disk and locate it with `lsblk`. Note it's name, path or other identifier.
+
+Locate the disk you want to replace by it's path or identifier.
+
+Create a new PV on the new disk.
+
+```
+# pvcreate /dev/vdf
+```
+
+Extend the VG with the new PV
+
+```
+# vgextend vg00 /dev/vdf
+```
+
+Check the pv was added to the vg
+
+```
+# pvs
+```
+
+Move the extents from the original device, to the new device.
+
+```
+## This blocks and monitors the move. If you ctrl-c it continues in the background.
+# pvmove /dev/vde /dev/vdf
+## Run the move in the background
+# pvmove -b /dev/vde /dev/vdf
+```
+
+If backgrounded, you can monitor the move with:
+
+```
+# lvs -a
+```
+
+#### Replacing a Corrupted/Missing Disk
+
+When checking lvs if a disk is corrupted or missing you will see errors such as:
+
+```
+# lvs
+  WARNING: Couldn't find device with uuid weDidc-rBve-EL25-NqTG-X2n6-fGmW-FGCs9l.
+  WARNING: VG vg00 is missing PV weDidc-rBve-EL25-NqTG-X2n6-fGmW-FGCs9l (last written to /dev/vdd).
+  WARNING: Couldn't find all devices for LV vg00/lv_raid_rimage_2 while checking used and assumed devices.
+  WARNING: Couldn't find all devices for LV vg00/lv_raid_rmeta_2 while checking used and assumed devices.
+  LV      VG   Attr       LSize  Pool Origin Data%  Meta%  Move Log Cpy%Sync Convert
+  lv_raid vg00 rwi-a-r-p- 99.98g                                    100.00
+```
+
+Create a new PV on a replacement disk, and add it to the vg.
+
+```
+# pvcreate /dev/path/to/disk
+# vgextend vg00 /dev/path/to/disk
+```
+
+The logical volume must be active to initiate the replacement:
+
+```
+# lvchange -ay vg00/lv_raid
+```
+
+Replace the failed device allocating the needed extents.
+
+```
+## To any free device in the VG
+# lvconvert --repair vg00/lv_raid
+## To a specific PV
+# lvconvert --repair vg00/lv_raid /dev/vde
+```
+
+You can view the progress of the repair with `lvs`
+
+Instruct the vg to remove the missing device metadata now that the replacement is complete.
+
+```
+# vgreduce --removemissing vg00
 ```
 
