@@ -1,0 +1,26 @@
+
+digraph tree {
+    rankdir=LR;
+
+    node [shape=record];
+    A [label="{dc=com|{dc: com}}"];
+    B [label="{dc=example|{dc: example}}"];
+    C [label="{ou=Groups|{ou: Groups|description: Groups}}"];
+    D [label="{ou=People|{ou: People}}"];
+    E [label="{cn=Directory Administrators|{cn: Directory Administrators}}"]
+    F [label="{ou=Special Users|{ou: Special Users}}"]
+    G [label="{cn=Accounting Managers|{cn: Accounting Managers}}"]
+    H [label="{cn=HR Managers|{cn: HR Managers}}"]
+    I [label="{cn=QA Managers|{cn: QA Managers}}"]
+    J [label="{cn=PD Managers|{cn: PD Managers}}"]
+
+    A -> B;
+    B -> C;
+    B -> D;
+    B -> E;
+    B -> F;
+    C -> G;
+    C -> H;
+    C -> I;
+    C -> J;
+}

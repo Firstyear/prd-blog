@@ -1,0 +1,376 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+        <meta name="description" content="Firstyear&#x27;s blog">
+        
+
+        <title>Firstyear&#x27;s blog-a-log</title>
+
+        
+          <link rel="alternate" type="application/rss+xml" title="RSS" href="https://fy.blackhats.net.au/rss.xml">
+        
+
+        
+            <link rel="stylesheet" href="https://fy.blackhats.net.au/theme.css">
+        
+        
+    </head>
+    <body>
+        <div class="content">
+        
+        
+            <header>
+                <div class="header-left">
+                    <a href="https:&#x2F;&#x2F;fy.blackhats.net.au" class="logo">Firstyear&#x27;s blog-a-log</a>
+                </div>
+                <div class="header-right">
+                    <nav itemscope itemtype="http://schema.org/SiteNavigationElement">
+                      <ul>
+                        
+                        
+                            
+                            <li class="nav">
+                                <a itemprop="url" href="https://fy.blackhats.net.au/blog/">
+                                    <span itemprop="name">Blog</span>
+                                </a>
+                            </li>
+                        
+                            
+                            <li class="nav">
+                                <a itemprop="url" href="https://fy.blackhats.net.au/pages/">
+                                    <span itemprop="name">Pages</span>
+                                </a>
+                            </li>
+                        
+                        
+                        <li class="nav">
+                            <a itemprop="url" href="https://github.com/firstyear">
+                                <img class="icon" src="https:&#x2F;&#x2F;fy.blackhats.net.au/icons/github.svg" alt="Github">
+                            </a>
+                        </li>
+                        
+                        <li class="nav">
+                            <a itemprop="url" href="/rss.xml">
+                                <img class="icon" src="https:&#x2F;&#x2F;fy.blackhats.net.au/rss-logo.png" alt="rss">
+                            </a>
+                        </li>
+                      </ul>
+                    </nav>
+                </div>
+            </header>
+        
+        
+        <main>
+            
+<article itemscope itemtype="http://schema.org/BlogPosting">
+    <div itemprop="headline">
+        <h1>LDAP Filter Syntax Validation</h1>
+        <div class="border"></div>
+        <time datetime="2019-08-29" class="date" itemprop="datePublished">
+            29 Aug 2019
+        </time>
+    </div>
+    <div itemprop="articleBody">
+        <h1 id="ldap-filter-syntax-validation">LDAP Filter Syntax Validation</h1>
+<p>Today I want to do a deep-dive into a change that will be released in
+389 Directory Server 1.4.2. It's a reasonably complicated change for
+our server, but it has a simple user interaction for admins and
+developers. I want to peel back some of the layers to explain what kind
+of experience, thought and team work goes into a change like this.</p>
+<p>TL;DR - just keep upgrading your 389 Directory Server instance, and our
+'correct by default' policy will apply, and you'll keep having the
+best LDAP server we can make :)</p>
+<h2 id="ldap-filters-and-how-they-work">LDAP Filters and How They Work</h2>
+<p><a href="/blog/html/pages/ldap_guide_part_3_filters.html">LDAP filters</a> are one
+of the primary methods of expression in LDAP, and are used in almost
+every aspect of the system - from finding who you are when you login, to
+asserting you are member of a group or have other security attributes.</p>
+<p>For the purposes of this discussion we'll look at this filter:</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>&#39;(|(cn=william)(cn=claire))&#39;
+</span></code></pre>
+<p>In order to execute these queries quickly (LDAP is designed to handle
+thousands of operations per second) we heavily rely on indexing.
+Indexing is often a topic where people believe it to be some kind of
+&quot;magic&quot; but it's reasonably simple: indexes are pre-computed partial
+result sets. So why do we need these?</p>
+<p>We'll imagine we have two entries (invalid, and truncated for brevity).</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>dn: cn=william,...
+</span><span>cn: william
+</span><span>
+</span><span>dn: cn=claire,...
+</span><span>cn: claire
+</span></code></pre>
+<p>These entries both have entry-ids - these id's are <em>per-server</em> in a
+replication group and are integers. You can show them by requesting
+entryid as an attribute in 389.</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>dn: cn=william,...
+</span><span>entryid: 1
+</span><span>cn: william
+</span><span>
+</span><span>dn: cn=claire,...
+</span><span>entryid: 2
+</span><span>cn: claire
+</span></code></pre>
+<p>Our entries are stored in the main-entry database in
+<em>/var/lib/dirsrv/slapd-standalone1/db/userRoot</em> in the file
+&quot;id2entry.db4&quot;. This is a key-value database where the keys are the
+entryid, and the value is the serialised entry itself. Roughly, it's:</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>[ ID ][ Entry             ]
+</span><span>  1     dn: cn=william,...
+</span><span>        cn: william
+</span><span>
+</span><span>  2     dn: cn=claire,...
+</span><span>        cn: claire
+</span></code></pre>
+<p>Now, if we had NO indexes, to evaluate our filters we have to scan every
+entry of id2entry to determine if the filter matches. This algorithm is:</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>candidate_set = []
+</span><span>for id in id-min to id-max:
+</span><span>    entry = load_entry_by_id(id)
+</span><span>    if apply_filter(filter, entry):
+</span><span>        candidate_set.append(entry)
+</span></code></pre>
+<p>For two entries, this may be fast, but when you have 1000, 10.000, or
+even millions, this is extremely slow. We call these searches <em>full
+table scans</em> or in 389 DS, <em>ALLIDS</em> searches.</p>
+<p>To make our searches faster we have indexes. An index is a mapping of a
+partial query term to an id list (In 389 we call these IDLs). An IDL is
+a set of integers. Our index for these examples would likely be
+something like:</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>cn
+</span><span>=william: [1, ]
+</span><span>=claire: [2, ]
+</span></code></pre>
+<p>These indexes are also stored in key-value databases in userRoot - you
+can see this as cn.db4.</p>
+<p>So when we have an indexed term, to evaluate the query, we'll load the
+indexes, then using mathematical set operations, we then produce a
+candidate_id_set, and we can then load the entries that only match.</p>
+<p>For example in psuedo python code:</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span># Assume query is: (cn=william)
+</span><span>
+</span><span>attr = filter.get_attr_name()
+</span><span>with open(&#39;%s.db&#39; % attr) as index:
+</span><span>    idl = index.get(&#39;=william&#39;) # from the filter :)
+</span><span>
+</span><span>for id in idl:
+</span><span>    ... # as before.
+</span></code></pre>
+<p>So we can see now that when we load the idl for cn index, this would
+give us the set [1, ]. Even if the database had 100 million entries,
+as our idl is a single value, we only need to load the one entry that
+matches. Neat!</p>
+<p>When we have a more complex operation such as AND and OR, we can now
+manipulate the idl sets. For example:</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>(|(uid=claire)(uid=william))
+</span><span>   uid =claire -&gt; idl [2, ]
+</span><span>   uid =william -&gt; idl [1, ]
+</span><span>
+</span><span>candidate_idl_set = union([2, ], [1, ])
+</span><span># [1, 2]
+</span></code></pre>
+<p>This means again, even with millions of entries, we only need to load
+entry 1 and 2 to uphold the query provided to us.</p>
+<p>So we finally know enough to understand how our example query is
+executed. PHEW!</p>
+<h2 id="unindexed-attributes">Unindexed Attributes</h2>
+<p>However, it's not always so easy. When we have an attribute that isn't
+indexed, we have to handle this situation. In these cases, while we
+operate on the idl set, we may insert an idl with the value of ALLIDS
+(which as previously mentioned, is the &quot;set of all entries&quot;). This can
+have various effects.</p>
+<p>If this was an AND query, we can annotate that the filter is <em>partially</em>
+resolved. This means that if we had:</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>(&amp;(cn=william)(unindexed=foo))
+</span></code></pre>
+<p>Because an AND condition, both filter components must be satisfied, we
+have a partial candidate set from cn=william of [1, ]. We can load
+this partial candidate set, and then apply the filter test as in the
+full table scan case, but as we only apply it to a single entry this is
+really fast.</p>
+<p>The real problem is OR queries. If we had:</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>(|(cn=william)(unindexed=foo))
+</span></code></pre>
+<p>Because OR means that both filter components <em>could</em> be satisfied, we
+have to turn unindexd into ALLIDS, and the result of the OR as a whole
+is ALLIDS. So even if we have 30 indexed values in the OR, a single
+ALLIDS (unindexed value) will always turn that OR into a full table
+scan. This is not good for performance!</p>
+<h2 id="missing-attributes">Missing Attributes</h2>
+<p>So as a weirder case ... what if the attribute doesn't exist in schema
+at all? For example we could search for Microsoft AD attributes in 389
+Directory Server, or we could submit bogus filters like
+&quot;(whargarble=foo)&quot;. What happens here?</p>
+<p>Well, historically we treated these the same as <em>unindexed</em> queries.
+Which means that any term that is not in schema, would be treated as
+ALLIDS. This led to a &quot;quitely known&quot; denial of service attack again
+389 Directory Server where you could emit a large number of queries for
+attributes that don't exist, causing the server to attempt many ALLIDS
+scans. We have some defences like the allids limit (how many entries you
+can full table scan before giving up). But it can still cause entry
+cache churn and other performance issues.</p>
+<p>I was first made aware of this issue in 2014 while working for
+University of Adelaide where our VMWare service would query LDAP for MS
+attributes, causing a large performance issue. We resolved this by
+adding the MS attributes to schema and indexing them so that they would
+create empty indexes - now we would call this in 389 Directory Server
+and &quot;idl_alloc(0)&quot; or &quot;empty IDL&quot;.</p>
+<p>When initially hired by Red Hat in 2015 I knew this issue existed but I
+didn't know enough about the server core to really fix it, so it went
+in the back of my mind ... it was rare to have a customer raise this
+issue, but we had the work around and so I was able to advise support
+services on how to mitigate this.</p>
+<p>In 2019 however, while investigating an issue related to filter
+optimisation, I was made aware of an issue with FreeIPA where they were
+doing certmap queries that requested MS Cert attributes. However it
+would cause large performance issues. We now had the issue again, and in
+a large widely installed product so it was time to tackle it.</p>
+<h2 id="how-to-handle-this">How to handle this?</h2>
+<p>A major issue in this is &quot;never breaking customers&quot;. Because we had
+always supported this behaviour there is a risk that any solution would
+cause customer queries to &quot;silently&quot; begin to break if we issued a fix
+or change. More accurately, any change to how we execute the filters
+could cause results of the filters to change, which would disrupt
+customers.</p>
+<p>Saying this, there is also precedent that 389 Directory Server was
+handling this incorrectly. From the RFC for LDAP it was noted:</p>
+<p><em>Any assertion about the values of such an attribute is only defined if
+the AttributeType is known by the evaluating mechanism, the purported
+AttributeValue(s) conforms to the attribute syntax defined for that
+attribute type, the implied or indicated matching rule is applicable to
+that attribute type, and (when used) a presented matchValue conforms to
+the syntax defined for the indicated matching rules. When these
+conditions are not met, the FilterItem shall evaluate to the logical
+value UNDEFINED. An assertion which is defined by these conditions
+additionally evaluates to UNDEFINED if it relates to an attribute value
+and the attribute type is not present in an attribute against which the
+assertion is being tested. An assertion which is defined by these
+conditions and relates to the presence of an attribute type evaluates to
+FALSE.</em></p>
+<p>Translation: If a filter component (IE nonexist=foo) is in a filter but
+NOT in the schema, the result of the filter's evaluation is an
+empty-set aka undefined.</p>
+<p>It was also clear that if an engaged and active consumer like FreeIPA is
+making this mistake, then it must be overlooked by many others without
+notice. So there is sometimes value in helping to raise the standard so
+that everyone benefits, and highlight mistakes quicker.</p>
+<h2 id="the-technical-solution">The Technical Solution</h2>
+<p>This is the easy part - we add a new configuration option with three
+states. &quot;on&quot;, &quot;off&quot;, &quot;warn&quot;. &quot;On&quot; would enable the strictest
+handling of filters, rejecting them an not continuing if any attribute
+requested was not in the schema. &quot;Warn&quot; would provide the rfc
+compliant behaviour, mapping to empty-set index, and notifying in the
+logs that this occured. Finally, &quot;off&quot; would be the previous
+&quot;silently allow&quot; behaviour.</p>
+<p>This was easily achieved in filter parsing, by checking the attribute of
+each filter component against our schema hashmap. We then tag the filter
+element, and depending on the current setting level reject or continue.</p>
+<p>In the query execution code, we now check the filter tag to understand
+if the attribute is schema present or not. If it's flagged as
+&quot;undefined&quot;, then we immediately shortcut to return idl_alloc(0)
+instead of returning ALLIDS on the failure to find the relevant index
+db.</p>
+<p>We can show the performance impact of this change:</p>
+<p>Before with non-existant attribute</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>Average rate:    7.40/thr
+</span></code></pre>
+<p>After with &quot;warn&quot; enabled (map to empty set)</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>Average rate: 4808.70/thr
+</span></code></pre>
+<p>This is a huge improvement, and certainly shows the risk of DOS and how
+effective the solution was!</p>
+<h2 id="the-social-solution">The Social Solution</h2>
+<p>Of course, this is the hard part - the 389 Directory Server team are all
+amazingly smart people, from many countries, and all live around the
+world. They all care that the server is the best possible, and that our
+standards as a team are high. That means when introducing a change that
+has a risk of affecting query result sets like this, they pay attention,
+and ask many difficult questions about how the feature will be
+implemented.</p>
+<p>The first important justification - is a change like this worth while?
+We can see from the performance results that the risk of DOS is
+reasonable, so the answer there becomes Yes from a security view. But
+it's also important to consider the cost on consumers - is this change
+going to benefit FreeIPA for example? As I am biased being the author I
+want to say &quot;yes&quot; - by notifying or rejecting invalid filters earlier,
+we can help FreeIPA developers improve their code quality, without
+expecting them to know LDAP inside and out.</p>
+<p>The next major question is performance - before the feature was
+developed there is clearly a risk of DOS, but when we implement this we
+are performing additional locking on the schema. Is that a risk to our
+standalone performance or normal operating conditions. This had to also
+be discussed and assessed.</p>
+<p>A really important point that was raised by Thierry is how we
+communicated these errors too. Previously we would use the &quot;notes=&quot;
+field of the access log. It looks like this:</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>conn=1 op=4 RESULT err=0 tag=101 nentries=13 etime=0.0003795424 notes=U
+</span></code></pre>
+<p>The challenge with the notes= field, is that it's easy to overlook, and
+unless you are familar, hard to see what this is indicating. In this
+case, notes=U means partially unindexed query (one filter component but
+not all returned ALLIDS).</p>
+<p>We can't change the notes field due to the risk of breaking our own
+scripts like logconv.pl, support tools developed by RH or SUSE, or even
+integrations to platforms like splunk. But clearly we need a way to
+detail what is happening with your filter. So Thierry suggested an
+extension to have details about the provided notes. Now we get:</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>conn=1 op=4 RESULT err=0 tag=101 nentries=13 etime=0.0003795424 notes=U details=&quot;Partially Unindexed Filter&quot;
+</span><span>conn=1 op=8 RESULT err=0 tag=101 nentries=0 etime=0.0001886208 notes=F details=&quot;Filter Element Missing From Schema&quot;
+</span></code></pre>
+<p>So we have extended our log message, but without breaking existing
+integrations.</p>
+<p>The final question is what our defaults should be. It's one thing to
+have this feature, but what should we ship with? Do we strictly reject
+filters? Warn? Or disable, and expect people to turn this on.</p>
+<p>This became a long discussion with Ludwig, Thierry and I - we discussed
+the risk of DOS in the first place, what the impact of the levels could
+be, how it could break legacy applications or sites using deprecated
+features or with weird data imports. Many different aspects were
+considered. We decided to default to &quot;warn&quot; (non-existant becomes
+empty-set), and we settled on communication with support to advise them
+of the upcoming change, but also we considered that our &quot;back out&quot;
+plan is to change the default and ship a patch if there is a large
+volume of negative feedback.</p>
+<h2 id="conclusion">Conclusion</h2>
+<p>As of today, the PR is merged, and the code on it's way to the next
+release. It's a long process but the process exists to ensure we do
+what's best for our users, while we try to balance many different
+aspects. We have a great team of people, with decades of experience from
+many backgrounds which means that these discussions can be long and
+detailed, but in the end, we hope to give what is the best product
+possible to our community.</p>
+<p>It's also valuable to share how much thought and effort goes into
+projects - in your life you may only interact with 1% of our work
+through our configuration and system, but we have an iceberg of
+decisions and design process that affects you every day, where we have
+to be responsible and considerate in our actions.</p>
+<p>I hope you enjoyed this exploration of this change!</p>
+<h2 id="references">References</h2>
+<p><a href="https://pagure.io/389-ds-base/pull-request/50379">PR#50379</a></p>
+
+    </div>
+</article>
+
+        </main>
+        
+        <footer>
+            
+            <div class="border"></div>
+            <div class="footer">
+                <small class="footer-left">
+                    Copyright &copy; William Brown
+                </small>
+                <small class="footer-right">
+                    Powered by <a href="https://www.getzola.org">Zola</a> | Theme <a href="https://github.com/barlog-m/oceanic-zen">Oceanic Zen</a>
+                </small>
+            </div>
+        
+        </footer>
+    
+        </div>
+    </body>
+</html>

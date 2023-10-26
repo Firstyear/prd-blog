@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+        <meta name="description" content="Firstyear&#x27;s blog">
+        
+
+        <title>Firstyear&#x27;s blog-a-log</title>
+
+        
+          <link rel="alternate" type="application/rss+xml" title="RSS" href="https://fy.blackhats.net.au/rss.xml">
+        
+
+        
+            <link rel="stylesheet" href="https://fy.blackhats.net.au/theme.css">
+        
+        
+    </head>
+    <body>
+        <div class="content">
+        
+        
+            <header>
+                <div class="header-left">
+                    <a href="https:&#x2F;&#x2F;fy.blackhats.net.au" class="logo">Firstyear&#x27;s blog-a-log</a>
+                </div>
+                <div class="header-right">
+                    <nav itemscope itemtype="http://schema.org/SiteNavigationElement">
+                      <ul>
+                        
+                        
+                            
+                            <li class="nav">
+                                <a itemprop="url" href="https://fy.blackhats.net.au/blog/">
+                                    <span itemprop="name">Blog</span>
+                                </a>
+                            </li>
+                        
+                            
+                            <li class="nav">
+                                <a itemprop="url" href="https://fy.blackhats.net.au/pages/">
+                                    <span itemprop="name">Pages</span>
+                                </a>
+                            </li>
+                        
+                        
+                        <li class="nav">
+                            <a itemprop="url" href="https://github.com/firstyear">
+                                <img class="icon" src="https:&#x2F;&#x2F;fy.blackhats.net.au/icons/github.svg" alt="Github">
+                            </a>
+                        </li>
+                        
+                        <li class="nav">
+                            <a itemprop="url" href="/rss.xml">
+                                <img class="icon" src="https:&#x2F;&#x2F;fy.blackhats.net.au/rss-logo.png" alt="rss">
+                            </a>
+                        </li>
+                      </ul>
+                    </nav>
+                </div>
+            </header>
+        
+        
+        <main>
+            
+<article itemscope itemtype="http://schema.org/BlogPosting">
+    <div itemprop="headline">
+        <h1>Debugging MacOS bluetooth audio stutter</h1>
+        <div class="border"></div>
+        <time datetime="2019-04-08" class="date" itemprop="datePublished">
+            08 Apr 2019
+        </time>
+    </div>
+    <div itemprop="articleBody">
+        <h1 id="debugging-macos-bluetooth-audio-stutter">Debugging MacOS bluetooth audio stutter</h1>
+<p>I was noticing that audio to my bluetooth headphones from my iPhone was
+always flawless, but I started to noticed stutter and drops from my MBP.
+After exhausting some basic ideas, I was stumped.</p>
+<p>To the duck duck go machine, and I searched for issues with bluetooth
+known issues. Nothing appeared.</p>
+<p>However, I then decided to debug the issue - thankfully there was plenty
+of advice on this matter. Press shift + option while clicking bluetooth
+in the menu-bar, and then you have a debug menu. You can also open
+Console.app and search for &quot;bluetooth&quot; to see all the bluetooth
+related logs.</p>
+<p>I noticed that when the audio stutter occured that the following pattern
+was observed.</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>default 11:25:45.840532 +1000   wirelessproxd   About to scan for type: 9 - rssi: -90 - payload: &lt;00000000 00000000 00000000 00000000 00000000 0000&gt; - mask: &lt;00000000 00000000 00000000 00000000 00000000 0000&gt; - peers: 0
+</span><span>default 11:25:45.840878 +1000   wirelessproxd   Scan options changed: YES
+</span><span>error   11:25:46.225839 +1000   bluetoothaudiod Error sending audio packet: 0xe00002e8
+</span><span>error   11:25:46.225899 +1000   bluetoothaudiod Too many outstanding packets. Drop packet of 8 frames (total drops:451 total sent:60685 percentDropped:0.737700) Outstanding:17
+</span></code></pre>
+<p>There was always a scan, just before the stutter initiated. So what was
+scanning?</p>
+<p>I searched for the error related to packets, and there were a lot of
+false leads. From weird apps to dodgy headphones. In this case I could
+eliminate both as the headphones worked with other devices, and I don't
+have many apps installed.</p>
+<p>So I went back and thought about what macOS services could be the
+problem, and I found that airdrop would scan periodically for other
+devices to send and recieve files. Disabling Airdrop from the sharing
+menu in System Prefrences cleared my audio right up.</p>
+<p>UPDATE 2019-12-20: It looks like the Airdrop sharing option in system
+preferences has been removed in 10.15, so I don't believe it's
+possible to resove this issue now - audio stutter forever!</p>
+
+    </div>
+</article>
+
+        </main>
+        
+        <footer>
+            
+            <div class="border"></div>
+            <div class="footer">
+                <small class="footer-left">
+                    Copyright &copy; William Brown
+                </small>
+                <small class="footer-right">
+                    Powered by <a href="https://www.getzola.org">Zola</a> | Theme <a href="https://github.com/barlog-m/oceanic-zen">Oceanic Zen</a>
+                </small>
+            </div>
+        
+        </footer>
+    
+        </div>
+    </body>
+</html>

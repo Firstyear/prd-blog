@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+        <meta name="description" content="Firstyear&#x27;s blog">
+        
+
+        <title>Firstyear&#x27;s blog-a-log</title>
+
+        
+          <link rel="alternate" type="application/rss+xml" title="RSS" href="https://fy.blackhats.net.au/rss.xml">
+        
+
+        
+            <link rel="stylesheet" href="https://fy.blackhats.net.au/theme.css">
+        
+        
+    </head>
+    <body>
+        <div class="content">
+        
+        
+            <header>
+                <div class="header-left">
+                    <a href="https:&#x2F;&#x2F;fy.blackhats.net.au" class="logo">Firstyear&#x27;s blog-a-log</a>
+                </div>
+                <div class="header-right">
+                    <nav itemscope itemtype="http://schema.org/SiteNavigationElement">
+                      <ul>
+                        
+                        
+                            
+                            <li class="nav">
+                                <a itemprop="url" href="https://fy.blackhats.net.au/blog/">
+                                    <span itemprop="name">Blog</span>
+                                </a>
+                            </li>
+                        
+                            
+                            <li class="nav">
+                                <a itemprop="url" href="https://fy.blackhats.net.au/pages/">
+                                    <span itemprop="name">Pages</span>
+                                </a>
+                            </li>
+                        
+                        
+                        <li class="nav">
+                            <a itemprop="url" href="https://github.com/firstyear">
+                                <img class="icon" src="https:&#x2F;&#x2F;fy.blackhats.net.au/icons/github.svg" alt="Github">
+                            </a>
+                        </li>
+                        
+                        <li class="nav">
+                            <a itemprop="url" href="/rss.xml">
+                                <img class="icon" src="https:&#x2F;&#x2F;fy.blackhats.net.au/rss-logo.png" alt="rss">
+                            </a>
+                        </li>
+                      </ul>
+                    </nav>
+                </div>
+            </header>
+        
+        
+        <main>
+            
+<article itemscope itemtype="http://schema.org/BlogPosting">
+    <div itemprop="headline">
+        <h1>Creating yubikey SSH and TLS certificates</h1>
+        <div class="border"></div>
+        <time datetime="2017-11-11" class="date" itemprop="datePublished">
+            11 Nov 2017
+        </time>
+    </div>
+    <div itemprop="articleBody">
+        <h1 id="creating-yubikey-ssh-and-tls-certificates">Creating yubikey SSH and TLS certificates</h1>
+<p>Recently yubikeys were shown to have a hardware flaw in the way the
+generated private keys. This affects the use of them to provide PIV
+identies or SSH keys.</p>
+<p>However, you can generate the keys externally, and load them to the key
+to prevent this issue.</p>
+<h2 id="ssh">SSH</h2>
+<p>First, we'll create a new NSS DB on an airgapped secure machine (with
+disk encryption or in memory storage!)</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>certutil -N -d . -f pwdfile.txt
+</span></code></pre>
+<p>Now into this, we'll create a self-signed cert valid for 10 years.</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>certutil -S -f pwdfile.txt -d . -t &quot;C,,&quot; -x -n &quot;SSH&quot; -g 2048 -s &quot;cn=william,O=ssh,L=Brisbane,ST=Queensland,C=AU&quot; -v 120
+</span></code></pre>
+<p>We export this now to PKCS12 for our key to import.</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>pk12util -o ssh.p12 -d . -k pwdfile.txt -n SSH
+</span></code></pre>
+<p>Next we import the key and cert to the hardware in slot 9c</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>yubico-piv-tool -s9c -i ssh.p12 -K PKCS12 -aimport-key -aimport-certificate -k
+</span></code></pre>
+<p>Finally, we can display the ssh-key from the token.</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>ssh-keygen -D /usr/lib64/opensc-pkcs11.so -e
+</span></code></pre>
+<p>Note, we can make this always used by ssh client by adding the following
+into .ssh/config:</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>PKCS11Provider /usr/lib64/opensc-pkcs11.so
+</span></code></pre>
+<h2 id="tls-identities">TLS Identities</h2>
+<p>The process is almost identical for user certificates.</p>
+<p>First, create the request:</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>certutil -d . -R -a -o user.csr -f pwdfile.txt -g 4096 -Z SHA256 -v 24 \
+</span><span>--keyUsage digitalSignature,nonRepudiation,keyEncipherment,dataEncipherment --nsCertType sslClient --extKeyUsage clientAuth \
+</span><span>-s &quot;CN=username,O=Testing,L=example,ST=Queensland,C=AU&quot;
+</span></code></pre>
+<p>Once the request is signed, we should have a user.crt back. Import that
+to our database:</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>certutil -A -d . -f pwdfile.txt -i user.crt -a -n TLS -t &quot;,,&quot;
+</span></code></pre>
+<p>Import our CA certificate also. Next export this to p12:</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>pk12util -o user.p12 -d . -k pwdfile.txt -n TLS
+</span></code></pre>
+<p>Now import this to the yubikey - remember to use slot 9a this time!</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>yubico-piv-tool -s9a -i user.p12 -K PKCS12 -aimport-key -aimport-certificate -k --touch-policy=always
+</span></code></pre>
+<p>Done!</p>
+
+    </div>
+</article>
+
+        </main>
+        
+        <footer>
+            
+            <div class="border"></div>
+            <div class="footer">
+                <small class="footer-left">
+                    Copyright &copy; William Brown
+                </small>
+                <small class="footer-right">
+                    Powered by <a href="https://www.getzola.org">Zola</a> | Theme <a href="https://github.com/barlog-m/oceanic-zen">Oceanic Zen</a>
+                </small>
+            </div>
+        
+        </footer>
+    
+        </div>
+    </body>
+</html>

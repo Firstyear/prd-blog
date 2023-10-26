@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+        <meta name="description" content="Firstyear&#x27;s blog">
+        
+
+        <title>Firstyear&#x27;s blog-a-log</title>
+
+        
+          <link rel="alternate" type="application/rss+xml" title="RSS" href="https://fy.blackhats.net.au/rss.xml">
+        
+
+        
+            <link rel="stylesheet" href="https://fy.blackhats.net.au/theme.css">
+        
+        
+    </head>
+    <body>
+        <div class="content">
+        
+        
+            <header>
+                <div class="header-left">
+                    <a href="https:&#x2F;&#x2F;fy.blackhats.net.au" class="logo">Firstyear&#x27;s blog-a-log</a>
+                </div>
+                <div class="header-right">
+                    <nav itemscope itemtype="http://schema.org/SiteNavigationElement">
+                      <ul>
+                        
+                        
+                            
+                            <li class="nav">
+                                <a itemprop="url" href="https://fy.blackhats.net.au/blog/">
+                                    <span itemprop="name">Blog</span>
+                                </a>
+                            </li>
+                        
+                            
+                            <li class="nav">
+                                <a itemprop="url" href="https://fy.blackhats.net.au/pages/">
+                                    <span itemprop="name">Pages</span>
+                                </a>
+                            </li>
+                        
+                        
+                        <li class="nav">
+                            <a itemprop="url" href="https://github.com/firstyear">
+                                <img class="icon" src="https:&#x2F;&#x2F;fy.blackhats.net.au/icons/github.svg" alt="Github">
+                            </a>
+                        </li>
+                        
+                        <li class="nav">
+                            <a itemprop="url" href="/rss.xml">
+                                <img class="icon" src="https:&#x2F;&#x2F;fy.blackhats.net.au/rss-logo.png" alt="rss">
+                            </a>
+                        </li>
+                      </ul>
+                    </nav>
+                </div>
+            </header>
+        
+        
+        <main>
+            
+<article itemscope itemtype="http://schema.org/BlogPosting">
+    <div itemprop="headline">
+        <h1>systemd is not monolithic</h1>
+        <div class="border"></div>
+        <time datetime="2016-05-23" class="date" itemprop="datePublished">
+            23 May 2016
+        </time>
+    </div>
+    <div itemprop="articleBody">
+        <h1 id="systemd-is-not-monolithic">systemd is not monolithic</h1>
+<p>Go ahead. Please read <a href="http://0pointer.de/blog/projects/the-biggest-myths.html">this post by Lennart about systemd
+myths</a>. I'll
+wait.</p>
+<p>Done? Great. You noticed the first point. &quot;Systemd is monolithic&quot;.
+Which is carefully &quot;debunked&quot;.</p>
+<p>So this morning while building Ds, I noticed my compile failed:</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>configure: checking for Systemd...
+</span><span>checking for --with-systemd... using systemd native features
+</span><span>checking for --with-journald... using journald logging: WARNING, this may cause system instability
+</span><span>checking for pkg-config... (cached) /usr/bin/pkg-config
+</span><span>checking for Systemd with pkg-config... configure: error: no Systemd / Journald pkg-config files
+</span><span>Makefile:84: recipe for target &#39;ds-configure&#39; failed
+</span></code></pre>
+<p>I hadn't changed this part of the code, and it's been reliably
+compiling for me ... What changed?</p>
+<p>Well on RHEL7 here is the layout of the system libraries:</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>/usr/lib64/libsystemd-daemon.so
+</span><span>/usr/lib64/libsystemd-id128.so
+</span><span>/usr/lib64/libsystemd-journal.so
+</span><span>/usr/lib64/libsystemd-login.so
+</span><span>/usr/lib64/libsystemd.so
+</span><span>/usr/lib64/libudev.so
+</span></code></pre>
+<p>They also each come with their own very nice pkg-config file so you can
+find them.</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>/usr/lib64/pkgconfig/libsystemd-daemon.pc
+</span><span>/usr/lib64/pkgconfig/libsystemd-id128.pc
+</span><span>/usr/lib64/pkgconfig/libsystemd-journal.pc
+</span><span>/usr/lib64/pkgconfig/libsystemd-login.pc
+</span><span>/usr/lib64/pkgconfig/libsystemd.pc
+</span><span>/usr/lib64/pkgconfig/libudev.pc
+</span></code></pre>
+<p>Sure these are big libraries, but it's pretty modular. And it's nice
+they are seperate out.</p>
+<p>But today, I compiled on rawhide. What's changed:</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>/usr/lib64/libsystemd.so
+</span><span>/usr/lib64/libudev.so
+</span><span>
+</span><span>/usr/lib64/pkgconfig/libsystemd.pc
+</span><span>/usr/lib64/pkgconfig/libudev.pc
+</span></code></pre>
+<p>I almost thought this was an error. Surely they put libsystemd-journald
+into another package.</p>
+<p>No. No they did not.</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>I0&gt; readelf -Ws /usr/lib64/libsystemd.so | grep -i journal_print
+</span><span>   297: 00000000000248c0   177 FUNC    GLOBAL DEFAULT   12 sd_journal_print@@LIBSYSTEMD_209
+</span><span>   328: 0000000000024680   564 FUNC    GLOBAL DEFAULT   12 sd_journal_printv@@LIBSYSTEMD_209
+</span><span>   352: 0000000000023d80   788 FUNC    GLOBAL DEFAULT   12 sd_journal_printv_with_location@@LIBSYSTEMD_209
+</span><span>   399: 00000000000240a0   162 FUNC    GLOBAL DEFAULT   12 sd_journal_print_with_location@@LIBSYSTEMD_209
+</span></code></pre>
+<p>So we went from these small modular libraries:</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>-rwxr-xr-x. 1 root root  26K May 12 14:29 /usr/lib64/libsystemd-daemon.so.0.0.12
+</span><span>-rwxr-xr-x. 1 root root  21K May 12 14:29 /usr/lib64/libsystemd-id128.so.0.0.28
+</span><span>-rwxr-xr-x. 1 root root 129K May 12 14:29 /usr/lib64/libsystemd-journal.so.0.11.5
+</span><span>-rwxr-xr-x. 1 root root  56K May 12 14:29 /usr/lib64/libsystemd-login.so.0.9.3
+</span><span>-rwxr-xr-x. 1 root root 159K May 12 14:29 /usr/lib64/libsystemd.so.0.6.0
+</span></code></pre>
+<p>To this monolithic library:</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>-rwxr-xr-x. 1 root root 556K May 22 14:09 /usr/lib64/libsystemd.so.0.15.0
+</span></code></pre>
+<p>&quot;Systemd is not monolithic&quot;.</p>
+
+    </div>
+</article>
+
+        </main>
+        
+        <footer>
+            
+            <div class="border"></div>
+            <div class="footer">
+                <small class="footer-left">
+                    Copyright &copy; William Brown
+                </small>
+                <small class="footer-right">
+                    Powered by <a href="https://www.getzola.org">Zola</a> | Theme <a href="https://github.com/barlog-m/oceanic-zen">Oceanic Zen</a>
+                </small>
+            </div>
+        
+        </footer>
+    
+        </div>
+    </body>
+</html>

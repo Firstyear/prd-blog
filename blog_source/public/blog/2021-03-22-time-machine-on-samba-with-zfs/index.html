@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+        <meta name="description" content="Firstyear&#x27;s blog">
+        
+
+        <title>Firstyear&#x27;s blog-a-log</title>
+
+        
+          <link rel="alternate" type="application/rss+xml" title="RSS" href="https://fy.blackhats.net.au/rss.xml">
+        
+
+        
+            <link rel="stylesheet" href="https://fy.blackhats.net.au/theme.css">
+        
+        
+    </head>
+    <body>
+        <div class="content">
+        
+        
+            <header>
+                <div class="header-left">
+                    <a href="https:&#x2F;&#x2F;fy.blackhats.net.au" class="logo">Firstyear&#x27;s blog-a-log</a>
+                </div>
+                <div class="header-right">
+                    <nav itemscope itemtype="http://schema.org/SiteNavigationElement">
+                      <ul>
+                        
+                        
+                            
+                            <li class="nav">
+                                <a itemprop="url" href="https://fy.blackhats.net.au/blog/">
+                                    <span itemprop="name">Blog</span>
+                                </a>
+                            </li>
+                        
+                            
+                            <li class="nav">
+                                <a itemprop="url" href="https://fy.blackhats.net.au/pages/">
+                                    <span itemprop="name">Pages</span>
+                                </a>
+                            </li>
+                        
+                        
+                        <li class="nav">
+                            <a itemprop="url" href="https://github.com/firstyear">
+                                <img class="icon" src="https:&#x2F;&#x2F;fy.blackhats.net.au/icons/github.svg" alt="Github">
+                            </a>
+                        </li>
+                        
+                        <li class="nav">
+                            <a itemprop="url" href="/rss.xml">
+                                <img class="icon" src="https:&#x2F;&#x2F;fy.blackhats.net.au/rss-logo.png" alt="rss">
+                            </a>
+                        </li>
+                      </ul>
+                    </nav>
+                </div>
+            </header>
+        
+        
+        <main>
+            
+<article itemscope itemtype="http://schema.org/BlogPosting">
+    <div itemprop="headline">
+        <h1>Time Machine on Samba with ZFS</h1>
+        <div class="border"></div>
+        <time datetime="2021-03-22" class="date" itemprop="datePublished">
+            22 Mar 2021
+        </time>
+    </div>
+    <div itemprop="articleBody">
+        <h1 id="time-machine-on-samba-with-zfs">Time Machine on Samba with ZFS</h1>
+<p>Time Machine is Apple's in-built backup system for MacOS. It's
+probably the best consumer backup option, which really achieves &quot;set
+and forget&quot; backups.</p>
+<p>It can backup to an external hard disk on a dock, an Apple Time Machine
+(wireless access point), or a custom location based on SMB shares.</p>
+<p>Since I have a fileserver at home, I use this as my Time Machine backup
+target. To make this work really smoothly there are a few setup steps.</p>
+<h2 id="macos-time-machine-performance">MacOS Time Machine Performance</h2>
+<p>By default timemachine operates as a low priority process. You can set a
+sysctl to improve the performance of this (especially helpful for a
+first backup!)</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>sysctl -w debug.lowpri_throttle_enabled=0
+</span></code></pre>
+<p>You will need a launchd script to make this setting survive a reboot.</p>
+<h2 id="zfs">ZFS</h2>
+<p>I'm using ZFS on my server, which is probably the best filesystem
+available. To make Time Machine work well on ZFS there are a number of
+tuning options that can help. As these backups write and read many small
+files, you should have a large amount of RAM for ARC (best) or a ZIL on
+nvme. RAID 10 will likely work better than RAIDZ here as you need better
+seek latency than write throughput due to the need to access many small
+files. Generally time machine is very &quot;IO demanding&quot;.</p>
+<p>For the ZFS properties on the filesystem I created it with the following
+options to [zfs create]{.title-ref}. Each once is set with [-o
+attribute=value]{.title-ref}</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>atime: off
+</span><span>dnodesize: auto
+</span><span>xattr: sa
+</span><span>logbias: throughput
+</span><span>recordsize: 1M
+</span><span>compression: zstd-10 | zle
+</span><span>refquota: 3T
+</span><span># optional - greatly improves write performance
+</span><span>sync: disabled
+</span><span># security
+</span><span>setuid: off
+</span><span>exec: off
+</span><span>devices: off
+</span></code></pre>
+<p>The important ones here are the compression setting. If you choose zle,
+you gain much faster write performance, but you dont get much in the way
+of compression. zstd-10 gives me about 1.3x compression, but at the loss
+of performance. Generally the decision is based on your pool and storage
+capacity.</p>
+<p>Also note the use of refquota instead of quota. This applies the quota
+to this filesystem only excluding snapshots - if you use quota, the
+space taken by snapshots it also applied to this filesystem, which may
+cause you to run out of space.</p>
+<p>You may optionally choose to disable sync. This is because Time Machine
+issues a sync after every single file write to the server, which can
+cause low performance with many small files. To mitigate the data loss
+risk here, I snapshot the backups filesystem hourly.</p>
+<p>If you want to encrypt at the ZFS level instead of through time machine
+you need to enable this as you create the filesystem.</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span># create a key file to unlock the zfs filesystem
+</span><span>openssl rand -hex -out /root/key 32
+</span><span>
+</span><span># Add the following settings during zfs create:
+</span><span>-o encryption=aes-128-gcm -o keyformat=hex -o keylocation=file:///root/key
+</span></code></pre>
+<p>If you add any subvolumes, you need to repeat the same encryption steps
+during the create of these subvolumes.</p>
+<p>For example a create may look like:</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>zfs create \
+</span><span>    -o encryption=aes-128-gcm -o keyformat=hex -o keylocation=file:///root/key \
+</span><span>    -o atime=off -o dnodesize=auto -o xattr=sa -o logbias=throughput \
+</span><span>    -o recordsize=1M -o compression=zle -o refquota=3T -o sync=disabled \
+</span><span>    -o setuid=off -o exec=off -o devices=off tank/backups
+</span></code></pre>
+<h2 id="smb-conf">smb.conf</h2>
+<p>In smb.conf you define the share that exposes the timemachine backup
+location. You need to set additional metadata on this so that macos will
+recognise it correctly.</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>[global]
+</span><span>min protocol = SMB2
+</span><span>ea support = yes
+</span><span>
+</span><span># This needs to be global else time machine ops can fail.
+</span><span>vfs objects = fruit streams_xattr
+</span><span>fruit:aapl = yes
+</span><span>fruit:metadata = stream
+</span><span>fruit:model = MacSamba
+</span><span>fruit:posix_rename = yes
+</span><span>fruit:veto_appledouble = no
+</span><span>fruit:nfs_aces = no
+</span><span>fruit:wipe_intentionally_left_blank_rfork = yes
+</span><span>fruit:delete_empty_adfiles = yes
+</span><span>spotlight = no
+</span><span>
+</span><span>[timemachine_a]
+</span><span>comment = Time Machine
+</span><span>fruit:time machine = yes
+</span><span>fruit:time machine max size = 1050G
+</span><span>path = /var/data/backup/timemachine_a
+</span><span>browseable = yes
+</span><span>write list = timemachine
+</span><span>create mask = 0600
+</span><span>directory mask = 0700
+</span><span># NOTE: Changing these will require a new initial backup cycle if you already have an existing
+</span><span># timemachine share.
+</span><span>case sensitive = true
+</span><span>default case = lower
+</span><span>preserve case = no
+</span><span>short preserve case = no
+</span></code></pre>
+<p>The fruit settings are required to help Time Machine understand that
+this share is usable for it. I have also added a custom timemachine user
+to smbpasswd, and created a matching posix account who should own these
+files.</p>
+<h2 id="macos">MacOS</h2>
+<p>You can now add this to MacOS via system preferences. If your ZFS volume
+is NOT encyrpted, you should add the timemachine volume via system
+preferences, as it is the only way to enable encryption of the time
+machine backup. For system preferences to &quot;see&quot; the samba share you
+may need to mount it manually via finder as the time machine user.</p>
+<p>If you are using ZFS encryption, you can add the time machine backup
+from the command line instead.</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>tmutil setdestination smb://timemachine:password@hostname/timemachine_a
+</span></code></pre>
+<p>If you intend to have multiple time machine targets, MacOS is capable of
+mirroring between multilple stripes alternately. You can append the
+second stripe with (note the -a). You could do this with other shares
+(offsite for example) or with a HDD on your desk.</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>tmutil setdestination -a smb://timemachine:password@hostname/timemachine_b
+</span></code></pre>
+
+    </div>
+</article>
+
+        </main>
+        
+        <footer>
+            
+            <div class="border"></div>
+            <div class="footer">
+                <small class="footer-left">
+                    Copyright &copy; William Brown
+                </small>
+                <small class="footer-right">
+                    Powered by <a href="https://www.getzola.org">Zola</a> | Theme <a href="https://github.com/barlog-m/oceanic-zen">Oceanic Zen</a>
+                </small>
+            </div>
+        
+        </footer>
+    
+        </div>
+    </body>
+</html>

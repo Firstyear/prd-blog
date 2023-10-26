@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+        <meta name="description" content="Firstyear&#x27;s blog">
+        
+
+        <title>Firstyear&#x27;s blog-a-log</title>
+
+        
+          <link rel="alternate" type="application/rss+xml" title="RSS" href="https://fy.blackhats.net.au/rss.xml">
+        
+
+        
+            <link rel="stylesheet" href="https://fy.blackhats.net.au/theme.css">
+        
+        
+    </head>
+    <body>
+        <div class="content">
+        
+        
+            <header>
+                <div class="header-left">
+                    <a href="https:&#x2F;&#x2F;fy.blackhats.net.au" class="logo">Firstyear&#x27;s blog-a-log</a>
+                </div>
+                <div class="header-right">
+                    <nav itemscope itemtype="http://schema.org/SiteNavigationElement">
+                      <ul>
+                        
+                        
+                            
+                            <li class="nav">
+                                <a itemprop="url" href="https://fy.blackhats.net.au/blog/">
+                                    <span itemprop="name">Blog</span>
+                                </a>
+                            </li>
+                        
+                            
+                            <li class="nav">
+                                <a itemprop="url" href="https://fy.blackhats.net.au/pages/">
+                                    <span itemprop="name">Pages</span>
+                                </a>
+                            </li>
+                        
+                        
+                        <li class="nav">
+                            <a itemprop="url" href="https://github.com/firstyear">
+                                <img class="icon" src="https:&#x2F;&#x2F;fy.blackhats.net.au/icons/github.svg" alt="Github">
+                            </a>
+                        </li>
+                        
+                        <li class="nav">
+                            <a itemprop="url" href="/rss.xml">
+                                <img class="icon" src="https:&#x2F;&#x2F;fy.blackhats.net.au/rss-logo.png" alt="rss">
+                            </a>
+                        </li>
+                      </ul>
+                    </nav>
+                </div>
+            </header>
+        
+        
+        <main>
+            
+<article itemscope itemtype="http://schema.org/BlogPosting">
+    <div itemprop="headline">
+        <h1>PPP on OpenBSD with Internode</h1>
+        <div class="border"></div>
+        <time datetime="2015-05-30" class="date" itemprop="datePublished">
+            30 May 2015
+        </time>
+    </div>
+    <div itemprop="articleBody">
+        <h1 id="ppp-on-openbsd-with-internode">PPP on OpenBSD with Internode</h1>
+<p>It's taken me some time to get this to work nicely.</p>
+<p>First, you'll need to install OpenBSD 56 or 57.</p>
+<p>Once done, you need to configure your ethernet interface facing your
+router that you would have setup in pppoe bridge mode.</p>
+<p>/etc/hostname.vio0 :</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>rdomain 0
+</span><span>inet 172.24.17.1 255.255.255.0 NONE
+</span><span>inet6 2001:db8:17::1 64
+</span><span>up
+</span></code></pre>
+<p>NOTE: You can ignore the rdomain statement, but I'll cover these is a
+later blog post.</p>
+<p>Now you need to configure the pppoe interface.</p>
+<p>/etc/hostname.pppoe0 :</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>!/bin/sleep 10
+</span><span>rdomain 0
+</span><span>inet 0.0.0.0 255.255.255.255 NONE pppoedev vio0 authproto chap authname &#39;USERNAME@internode.on.net&#39; authkey &#39;PASSWORD&#39;
+</span><span>dest 0.0.0.1
+</span><span>inet6 eui64
+</span><span>up
+</span><span>!/sbin/route -T 0 add default -ifp pppoe0 0.0.0.1
+</span><span>!if [ -f /tmp/dhcp6c ] ; then kill -9 `cat /tmp/dhcp6c`; fi
+</span><span>!/bin/sleep 5
+</span><span>!/usr/local/sbin/dhcp6c -c /etc/dhcp6c.conf -p /tmp/dhcp6c pppoe0
+</span><span>!/sbin/route -T 0 add -inet6 default -ifp pppoe0 fe80::
+</span></code></pre>
+<p>That's quite the interface config!</p>
+<p>You need the first sleep to make sure that vio0 is up before this
+interface starts. Horrible, but it works.</p>
+<p>Then you define the interface in the same rdomain, and inet6 eui64 is
+needed so that you can actually get a dhcp6 lease. Then you bring up the
+interface. Dest is needed to say that the remote router is the device
+connected at the other end of the tunnel. We manually add the default
+route for ipv4, and we start the dhcp6c client (After killing any
+existing ones). Finally, we add the ipv6 default route down the
+interface</p>
+<p>Now, the contents of dhcp6c.conf are below:</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span># tun0/pppoe0 is the PPPoE interface
+</span><span>interface pppoe0 {
+</span><span>  send ia-pd 0;
+</span><span>};
+</span><span>
+</span><span># em1 is the modem interface
+</span><span>interface vio0 {
+</span><span>  information-only;
+</span><span>};
+</span><span>
+</span><span>id-assoc pd {
+</span><span># em0 is the interface to the internal network
+</span><span>  prefix-interface vio0 {
+</span><span>    sla-id 23;
+</span><span>    sla-len 8;
+</span><span>  };
+</span><span>};
+</span></code></pre>
+<p>These are already configured to make the correct request to internode
+for a /56. If you only get a /64 you need to tweak sla-len.</p>
+<p>Most of this is well documented, but the real gotchas are in the
+hostname.pppoe0 script, especially around the addition of the default
+route and the addition of dhcp6c.</p>
+<p>If you are running PF, besides normal NAT setup etc, you'll need this
+for IPv6 to work:</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>interface_ext_r0=&quot;{pppoe0}&quot;
+</span><span>
+</span><span>pass in quick on $interface_ext_r0 inet6 proto udp from fe80::/64 port 547 to fe80::/64 port 546 keep state rtable 0
+</span></code></pre>
+
+    </div>
+</article>
+
+        </main>
+        
+        <footer>
+            
+            <div class="border"></div>
+            <div class="footer">
+                <small class="footer-left">
+                    Copyright &copy; William Brown
+                </small>
+                <small class="footer-right">
+                    Powered by <a href="https://www.getzola.org">Zola</a> | Theme <a href="https://github.com/barlog-m/oceanic-zen">Oceanic Zen</a>
+                </small>
+            </div>
+        
+        </footer>
+    
+        </div>
+    </body>
+</html>

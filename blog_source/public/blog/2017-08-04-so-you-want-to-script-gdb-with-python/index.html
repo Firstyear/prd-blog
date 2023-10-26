@@ -1,0 +1,398 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+        <meta name="description" content="Firstyear&#x27;s blog">
+        
+
+        <title>Firstyear&#x27;s blog-a-log</title>
+
+        
+          <link rel="alternate" type="application/rss+xml" title="RSS" href="https://fy.blackhats.net.au/rss.xml">
+        
+
+        
+            <link rel="stylesheet" href="https://fy.blackhats.net.au/theme.css">
+        
+        
+    </head>
+    <body>
+        <div class="content">
+        
+        
+            <header>
+                <div class="header-left">
+                    <a href="https:&#x2F;&#x2F;fy.blackhats.net.au" class="logo">Firstyear&#x27;s blog-a-log</a>
+                </div>
+                <div class="header-right">
+                    <nav itemscope itemtype="http://schema.org/SiteNavigationElement">
+                      <ul>
+                        
+                        
+                            
+                            <li class="nav">
+                                <a itemprop="url" href="https://fy.blackhats.net.au/blog/">
+                                    <span itemprop="name">Blog</span>
+                                </a>
+                            </li>
+                        
+                            
+                            <li class="nav">
+                                <a itemprop="url" href="https://fy.blackhats.net.au/pages/">
+                                    <span itemprop="name">Pages</span>
+                                </a>
+                            </li>
+                        
+                        
+                        <li class="nav">
+                            <a itemprop="url" href="https://github.com/firstyear">
+                                <img class="icon" src="https:&#x2F;&#x2F;fy.blackhats.net.au/icons/github.svg" alt="Github">
+                            </a>
+                        </li>
+                        
+                        <li class="nav">
+                            <a itemprop="url" href="/rss.xml">
+                                <img class="icon" src="https:&#x2F;&#x2F;fy.blackhats.net.au/rss-logo.png" alt="rss">
+                            </a>
+                        </li>
+                      </ul>
+                    </nav>
+                </div>
+            </header>
+        
+        
+        <main>
+            
+<article itemscope itemtype="http://schema.org/BlogPosting">
+    <div itemprop="headline">
+        <h1>So you want to script gdb with python ...</h1>
+        <div class="border"></div>
+        <time datetime="2017-08-04" class="date" itemprop="datePublished">
+            04 Aug 2017
+        </time>
+    </div>
+    <div itemprop="articleBody">
+        <h1 id="so-you-want-to-script-gdb-with-python">So you want to script gdb with python ...</h1>
+<p>Gdb provides a python scripting interface. However the documentation is
+highly technical and not at a level that is easily accessible.</p>
+<p>This post should read as a tutorial, to help you understand the
+interface and work toward creating your own python debuging tools to
+help make gdb usage somewhat &quot;less&quot; painful.</p>
+<h2 id="the-problem">The problem</h2>
+<p>I have created a problem program called &quot;naughty&quot;. You can find it
+<a href="../../../_static/gdb_py/naughty.c">here</a> .</p>
+<p>You can compile this with the following command:</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>gcc -g -lpthread -o naughty naughty.c
+</span></code></pre>
+<p>When you run this program, your screen should be filled with:</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>thread ...
+</span><span>thread ...
+</span><span>thread ...
+</span><span>thread ...
+</span><span>thread ...
+</span><span>thread ...
+</span></code></pre>
+<p>It looks like we have a bug! Now, we could easily see the issue if we
+looked at the C code, but that's not the point here - lets try to solve
+this with gdb.</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>gdb ./naughty
+</span><span>...
+</span><span>(gdb) run
+</span><span>...
+</span><span>[New Thread 0x7fffb9792700 (LWP 14467)]
+</span><span>...
+</span><span>thread ...
+</span></code></pre>
+<p>Uh oh! We have threads being created here. We need to find the problem
+thread. Lets look at all the threads backtraces then.</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>Thread 129 (Thread 0x7fffb3786700 (LWP 14616)):
+</span><span>#0  0x00007ffff7bc38eb in pthread_cond_wait@@GLIBC_2.3.2 () from /lib64/libpthread.so.0
+</span><span>#1  0x00000000004007bc in lazy_thread (arg=0x7fffffffdfb0) at naughty.c:19
+</span><span>#2  0x00007ffff7bbd3a9 in start_thread () from /lib64/libpthread.so.0
+</span><span>#3  0x00007ffff78e936f in clone () from /lib64/libc.so.6
+</span><span>
+</span><span>Thread 128 (Thread 0x7fffb3f87700 (LWP 14615)):
+</span><span>#0  0x00007ffff7bc38eb in pthread_cond_wait@@GLIBC_2.3.2 () from /lib64/libpthread.so.0
+</span><span>#1  0x00000000004007bc in lazy_thread (arg=0x7fffffffdfb0) at naughty.c:19
+</span><span>#2  0x00007ffff7bbd3a9 in start_thread () from /lib64/libpthread.so.0
+</span><span>#3  0x00007ffff78e936f in clone () from /lib64/libc.so.6
+</span><span>
+</span><span>Thread 127 (Thread 0x7fffb4788700 (LWP 14614)):
+</span><span>#0  0x00007ffff7bc38eb in pthread_cond_wait@@GLIBC_2.3.2 () from /lib64/libpthread.so.0
+</span><span>#1  0x00000000004007bc in lazy_thread (arg=0x7fffffffdfb0) at naughty.c:19
+</span><span>#2  0x00007ffff7bbd3a9 in start_thread () from /lib64/libpthread.so.0
+</span><span>#3  0x00007ffff78e936f in clone () from /lib64/libc.so.6
+</span><span>
+</span><span>...
+</span></code></pre>
+<p>We have 129 threads! Anyone of them could be the problem. We could just
+read these traces forever, but that's a waste of time. Let's try and
+script this with python to make our lives a bit easier.</p>
+<h2 id="python-in-gdb">Python in gdb</h2>
+<p>Python in gdb works by bringing in a copy of the python and injecting a
+special &quot;gdb&quot; module into the python run time. You can <em>only</em> access
+the gdb module from within python if you are using gdb. You can not have
+this work from a standard interpretter session.</p>
+<p>We can access a dynamic python runtime from within gdb by simply calling
+python.</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>(gdb) python
+</span><span>&gt;print(&quot;hello world&quot;)
+</span><span>&gt;hello world
+</span><span>(gdb)
+</span></code></pre>
+<p>The python code only runs when you press Control D.</p>
+<p>Another way to run your script is to import them as &quot;new gdb
+commands&quot;. This is the most useful way to use python for gdb, but it
+does require some boilerplate to start.</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>import gdb
+</span><span>
+</span><span>class SimpleCommand(gdb.Command):
+</span><span>    def __init__(self):
+</span><span>        # This registers our class as &quot;simple_command&quot;
+</span><span>        super(SimpleCommand, self).__init__(&quot;simple_command&quot;, gdb.COMMAND_DATA)
+</span><span>
+</span><span>    def invoke(self, arg, from_tty):
+</span><span>        # When we call &quot;simple_command&quot; from gdb, this is the method
+</span><span>        # that will be called.
+</span><span>        print(&quot;Hello from simple_command!&quot;)
+</span><span>
+</span><span># This registers our class to the gdb runtime at &quot;source&quot; time.
+</span><span>SimpleCommand()
+</span></code></pre>
+<p>We can run the command as follows:</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>(gdb) source debug_naughty.py
+</span><span>(gdb) simple_command
+</span><span>Hello from simple_command!
+</span><span>(gdb)
+</span></code></pre>
+<h2 id="solving-the-problem-with-python">Solving the problem with python</h2>
+<p>So we need a way to find the &quot;idle threads&quot;. We want to fold all the
+threads with the same frame signature into one, so that we can view
+anomalies.</p>
+<p>First, let's make a &quot;stackfold&quot; command, and get it to list the
+current program.</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>class StackFold(gdb.Command):
+</span><span>def __init__(self):
+</span><span>    super(StackFold, self).__init__(&quot;stackfold&quot;, gdb.COMMAND_DATA)
+</span><span>
+</span><span>def invoke(self, arg, from_tty):
+</span><span>    # An inferior is the &#39;currently running applications&#39;. In this case we only
+</span><span>    # have one.
+</span><span>    inferiors = gdb.inferiors()
+</span><span>    for inferior in inferiors:
+</span><span>        print(inferior)
+</span><span>        print(dir(inferior))
+</span><span>        print(help(inferior))
+</span><span>
+</span><span>StackFold()
+</span></code></pre>
+<p>To reload this in the gdb runtime, just run &quot;source debug_naughty.py&quot;
+again. Try running this: Note that we dumped a heap of output? Python
+has a neat trick that dir and help can both return strings for printing.
+This will help us to explore gdb's internals inside of our program.</p>
+<p>We can see from the inferiors that we have threads available for us to
+interact with:</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>class Inferior(builtins.object)
+</span><span> |  GDB inferior object
+</span><span>...
+</span><span> |  threads(...)
+</span><span> |      Return all the threads of this inferior.
+</span></code></pre>
+<p>Given we want to fold the stacks from all our threads, we probably need
+to look at this! So lets get one thread from this, and have a look at
+it's help.</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>inferiors = gdb.inferiors()
+</span><span>for inferior in inferiors:
+</span><span>    thread_iter = iter(inferior.threads())
+</span><span>    head_thread = next(thread_iter)
+</span><span>    print(help(head_thread))
+</span></code></pre>
+<p>Now we can run this by re-running &quot;source&quot; on our script, and calling
+stackfold again, we see help for our threads in the system.</p>
+<p>At this point it get's a little bit less obvious. Gdb's python
+integration relates closely to how a human would interact with gdb. In
+order to access the content of a thread, we need to change the gdb
+context to access the backtrace. If we were doing this by hand it would
+look like this:</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>(gdb) thread 121
+</span><span>[Switching to thread 121 (Thread 0x7fffb778e700 (LWP 14608))]
+</span><span>#0  0x00007ffff7bc38eb in pthread_cond_wait@@GLIBC_2.3.2 () from /lib64/libpthread.so.0
+</span><span>(gdb) bt
+</span><span>#0  0x00007ffff7bc38eb in pthread_cond_wait@@GLIBC_2.3.2 () from /lib64/libpthread.so.0
+</span><span>#1  0x00000000004007bc in lazy_thread (arg=0x7fffffffdfb0) at naughty.c:19
+</span><span>#2  0x00007ffff7bbd3a9 in start_thread () from /lib64/libpthread.so.0
+</span><span>#3  0x00007ffff78e936f in clone () from /lib64/libc.so.6
+</span></code></pre>
+<p>We need to emulate this behaviour with our python calls. We can swap to
+the thread's context with:</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>class InferiorThread(builtins.object)
+</span><span> |  GDB thread object
+</span><span>...
+</span><span> |  switch(...)
+</span><span> |      switch ()
+</span><span> |      Makes this the GDB selected thread.
+</span></code></pre>
+<p>Then once we are in the context, we need to take a different approach to
+explore the stack frames. We need to explore the &quot;gdb&quot; modules raw
+context.</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>inferiors = gdb.inferiors()
+</span><span>for inferior in inferiors:
+</span><span>    thread_iter = iter(inferior.threads())
+</span><span>    head_thread = next(thread_iter)
+</span><span>    # Move our gdb context to the selected thread here.
+</span><span>    head_thread.switch()
+</span><span>    print(help(gdb))
+</span></code></pre>
+<p>Now that we have selected our thread's context, we can start to explore
+here. gdb can do a lot within the selected context - as a result, the
+help output from this call is really large, but it's worth reading so
+you can understand what is possible to achieve. In our case we need to
+start to look at the stack frames.</p>
+<p>To look through the frames we need to tell gdb to rewind to the
+&quot;newest&quot; frame (ie, frame 0). We can then step down through
+progressively older frames until we exhaust. From this we can print a
+rudimentary trace:</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>head_thread.switch()
+</span><span>
+</span><span># Reset the gdb frame context to the &quot;latest&quot; frame.
+</span><span>gdb.newest_frame()
+</span><span># Now, work down the frames.
+</span><span>cur_frame = gdb.selected_frame()
+</span><span>while cur_frame is not None:
+</span><span>    print(cur_frame.name())
+</span><span>    # get the next frame down ....
+</span><span>    cur_frame = cur_frame.older()
+</span><span>
+</span><span>(gdb) stackfold 
+</span><span>pthread_cond_wait@@GLIBC_2.3.2
+</span><span>lazy_thread
+</span><span>start_thread
+</span><span>clone
+</span></code></pre>
+<p>Great! Now we just need some extra metadata from the thread to know what
+thread id it is so the user can go to the correct thread context. So
+lets display that too:</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>head_thread.switch()
+</span><span>
+</span><span># These are the OS pid references.
+</span><span>(tpid, lwpid, tid) = head_thread.ptid
+</span><span># This is the gdb thread number
+</span><span>gtid = head_thread.num
+</span><span>print(&quot;tpid %s, lwpid %s, tid %s, gtid %s&quot; % (tpid, lwpid, tid, gtid))
+</span><span># Reset the gdb frame context to the &quot;latest&quot; frame.
+</span><span>
+</span><span>(gdb) stackfold
+</span><span>tpid 14485, lwpid 14616, tid 0, gtid 129
+</span></code></pre>
+<p>At this point we have enough information to fold identical stacks.
+We'll iterate over every thread, and if we have seen the &quot;pattern&quot;
+before, we'll just add the gdb thread id to the list. If we haven't
+seen the pattern yet, we'll add it. The final command looks like:</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>def invoke(self, arg, from_tty):
+</span><span>    # An inferior is the &#39;currently running applications&#39;. In this case we only
+</span><span>    # have one.
+</span><span>    stack_maps = {}
+</span><span>    # This creates a dict where each element is keyed by backtrace.
+</span><span>    # Then each backtrace contains an array of &quot;frames&quot;
+</span><span>    #
+</span><span>    inferiors = gdb.inferiors()
+</span><span>    for inferior in inferiors:
+</span><span>        for thread in inferior.threads():
+</span><span>            # Change to our threads context
+</span><span>            thread.switch()
+</span><span>            # Get the thread IDS
+</span><span>            (tpid, lwpid, tid) = thread.ptid
+</span><span>            gtid = thread.num
+</span><span>            # Take a human readable copy of the backtrace, we&#39;ll need this for display later.
+</span><span>            o = gdb.execute(&#39;bt&#39;, to_string=True)
+</span><span>            # Build the backtrace for comparison
+</span><span>            backtrace = []
+</span><span>            gdb.newest_frame()
+</span><span>            cur_frame = gdb.selected_frame()
+</span><span>            while cur_frame is not None:
+</span><span>                backtrace.append(cur_frame.name())
+</span><span>                cur_frame = cur_frame.older()
+</span><span>            # Now we have a backtrace like [&#39;pthread_cond_wait@@GLIBC_2.3.2&#39;, &#39;lazy_thread&#39;, &#39;start_thread&#39;, &#39;clone&#39;]
+</span><span>            # dicts can&#39;t use lists as keys because they are non-hashable, so we turn this into a string.
+</span><span>            # Remember, C functions can&#39;t have spaces in them ...
+</span><span>            s_backtrace = &#39; &#39;.join(backtrace)
+</span><span>            # Let&#39;s see if it exists in the stack_maps
+</span><span>            if s_backtrace not in stack_maps:
+</span><span>                stack_maps[s_backtrace] = []
+</span><span>            # Now lets add this thread to the map.
+</span><span>            stack_maps[s_backtrace].append({&#39;gtid&#39;: gtid, &#39;tpid&#39; : tpid, &#39;bt&#39;: o} )
+</span><span>    # Now at this point we have a dict of traces, and each trace has a &quot;list&quot; of pids that match. Let&#39;s display them
+</span><span>    for smap in stack_maps:
+</span><span>        # Get our human readable form out.
+</span><span>        o = stack_maps[smap][0][&#39;bt&#39;]
+</span><span>        for t in stack_maps[smap]:
+</span><span>            # For each thread we recorded
+</span><span>            print(&quot;Thread %s (LWP %s))&quot; % (t[&#39;gtid&#39;], t[&#39;tpid&#39;]))
+</span><span>        print(o)
+</span></code></pre>
+<p>Here is the final output.</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>(gdb) stackfold
+</span><span>Thread 129 (LWP 14485))
+</span><span>Thread 128 (LWP 14485))
+</span><span>Thread 127 (LWP 14485))
+</span><span>...
+</span><span>Thread 10 (LWP 14485))
+</span><span>Thread 9 (LWP 14485))
+</span><span>Thread 8 (LWP 14485))
+</span><span>Thread 7 (LWP 14485))
+</span><span>Thread 6 (LWP 14485))
+</span><span>Thread 5 (LWP 14485))
+</span><span>Thread 4 (LWP 14485))
+</span><span>Thread 3 (LWP 14485))
+</span><span>#0  0x00007ffff7bc38eb in pthread_cond_wait@@GLIBC_2.3.2 () from /lib64/libpthread.so.0
+</span><span>#1  0x00000000004007bc in lazy_thread (arg=0x7fffffffdfb0) at naughty.c:19
+</span><span>#2  0x00007ffff7bbd3a9 in start_thread () from /lib64/libpthread.so.0
+</span><span>#3  0x00007ffff78e936f in clone () from /lib64/libc.so.6
+</span><span>
+</span><span>Thread 2 (LWP 14485))
+</span><span>#0  0x00007ffff78d835b in write () from /lib64/libc.so.6
+</span><span>#1  0x00007ffff78524fd in _IO_new_file_write () from /lib64/libc.so.6
+</span><span>#2  0x00007ffff7854271 in __GI__IO_do_write () from /lib64/libc.so.6
+</span><span>#3  0x00007ffff7854723 in __GI__IO_file_overflow () from /lib64/libc.so.6
+</span><span>#4  0x00007ffff7847fa2 in puts () from /lib64/libc.so.6
+</span><span>#5  0x00000000004007e9 in naughty_thread (arg=0x0) at naughty.c:27
+</span><span>#6  0x00007ffff7bbd3a9 in start_thread () from /lib64/libpthread.so.0
+</span><span>#7  0x00007ffff78e936f in clone () from /lib64/libc.so.6
+</span><span>
+</span><span>Thread 1 (LWP 14485))
+</span><span>#0  0x00007ffff7bbe90d in pthread_join () from /lib64/libpthread.so.0
+</span><span>#1  0x00000000004008d1 in main (argc=1, argv=0x7fffffffe508) at naughty.c:51
+</span></code></pre>
+<p>With our stackfold command we can easily see that threads 129 through 3
+have the same stack, and are idle. We can see that tread 1 is the main
+process waiting on the threads to join, and finally we can see that
+thread 2 is the culprit writing to our display.</p>
+<h2 id="my-solution">My solution</h2>
+<p>You can find my solution to this problem as a <a href="../../../_static/gdb_py/debug_naughty.py">reference implementation
+here</a> .</p>
+
+    </div>
+</article>
+
+        </main>
+        
+        <footer>
+            
+            <div class="border"></div>
+            <div class="footer">
+                <small class="footer-left">
+                    Copyright &copy; William Brown
+                </small>
+                <small class="footer-right">
+                    Powered by <a href="https://www.getzola.org">Zola</a> | Theme <a href="https://github.com/barlog-m/oceanic-zen">Oceanic Zen</a>
+                </small>
+            </div>
+        
+        </footer>
+    
+        </div>
+    </body>
+</html>

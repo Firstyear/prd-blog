@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+        <meta name="description" content="Firstyear&#x27;s blog">
+        
+
+        <title>Firstyear&#x27;s blog-a-log</title>
+
+        
+          <link rel="alternate" type="application/rss+xml" title="RSS" href="https://fy.blackhats.net.au/rss.xml">
+        
+
+        
+            <link rel="stylesheet" href="https://fy.blackhats.net.au/theme.css">
+        
+        
+    </head>
+    <body>
+        <div class="content">
+        
+        
+            <header>
+                <div class="header-left">
+                    <a href="https:&#x2F;&#x2F;fy.blackhats.net.au" class="logo">Firstyear&#x27;s blog-a-log</a>
+                </div>
+                <div class="header-right">
+                    <nav itemscope itemtype="http://schema.org/SiteNavigationElement">
+                      <ul>
+                        
+                        
+                            
+                            <li class="nav">
+                                <a itemprop="url" href="https://fy.blackhats.net.au/blog/">
+                                    <span itemprop="name">Blog</span>
+                                </a>
+                            </li>
+                        
+                            
+                            <li class="nav">
+                                <a itemprop="url" href="https://fy.blackhats.net.au/pages/">
+                                    <span itemprop="name">Pages</span>
+                                </a>
+                            </li>
+                        
+                        
+                        <li class="nav">
+                            <a itemprop="url" href="https://github.com/firstyear">
+                                <img class="icon" src="https:&#x2F;&#x2F;fy.blackhats.net.au/icons/github.svg" alt="Github">
+                            </a>
+                        </li>
+                        
+                        <li class="nav">
+                            <a itemprop="url" href="/rss.xml">
+                                <img class="icon" src="https:&#x2F;&#x2F;fy.blackhats.net.au/rss-logo.png" alt="rss">
+                            </a>
+                        </li>
+                      </ul>
+                    </nav>
+                </div>
+            </header>
+        
+        
+        <main>
+            
+<article itemscope itemtype="http://schema.org/BlogPosting">
+    <div itemprop="headline">
+        <h1>Ovirt with ldap authentication source</h1>
+        <div class="border"></div>
+        <time datetime="2015-07-15" class="date" itemprop="datePublished">
+            15 Jul 2015
+        </time>
+    </div>
+    <div itemprop="articleBody">
+        <h1 id="ovirt-with-ldap-authentication-source">Ovirt with ldap authentication source</h1>
+<p>I want ovirt to auth to our work's ldap server, but the default engine
+domain system expects you to have kerberos. There is however a new AAA
+module that you can use.</p>
+<p>First, install it</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>yum install ovirt-engine-extension-aaa-ldap
+</span></code></pre>
+<p>So we have a look at the package listing to see what could be a good
+example:</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>rpm -ql ovirt-engine-extension-aaa-ldap
+</span><span>....
+</span><span>/usr/share/ovirt-engine-extension-aaa-ldap/examples/simple/
+</span></code></pre>
+<p>So we copy our example in place:</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>cp -r /usr/share/ovirt-engine-extension-aaa-ldap/examples/simple/* /etc/ovirt-engine/
+</span></code></pre>
+<p>Now we edit the values in /etc/ovirt-engine/aaa/profile1.properties to
+match our site, then restart the engine service.</p>
+<p>Finally, we need to login is as our admin user, then go to configure and
+assign our user a role. This should allow them to login.</p>
+<p>I'm seeing some issues with group permissions at the moment, but I
+suspect that is a schema mismatch issue.</p>
+<p>This was a really valuable resource.</p>
+<p><a href="https://access.redhat.com/documentation/en-US/Red_Hat_Enterprise_Virtualization/3.5/html/Administration_Guide/sect-Directory_Users.html">access.redhat.com</a>.</p>
+
+    </div>
+</article>
+
+        </main>
+        
+        <footer>
+            
+            <div class="border"></div>
+            <div class="footer">
+                <small class="footer-left">
+                    Copyright &copy; William Brown
+                </small>
+                <small class="footer-right">
+                    Powered by <a href="https://www.getzola.org">Zola</a> | Theme <a href="https://github.com/barlog-m/oceanic-zen">Oceanic Zen</a>
+                </small>
+            </div>
+        
+        </footer>
+    
+        </div>
+    </body>
+</html>

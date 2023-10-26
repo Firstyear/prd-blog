@@ -1,0 +1,362 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+        <meta name="description" content="Firstyear&#x27;s blog">
+        
+
+        <title>Firstyear&#x27;s blog-a-log</title>
+
+        
+          <link rel="alternate" type="application/rss+xml" title="RSS" href="https://fy.blackhats.net.au/rss.xml">
+        
+
+        
+            <link rel="stylesheet" href="https://fy.blackhats.net.au/theme.css">
+        
+        
+    </head>
+    <body>
+        <div class="content">
+        
+        
+            <header>
+                <div class="header-left">
+                    <a href="https:&#x2F;&#x2F;fy.blackhats.net.au" class="logo">Firstyear&#x27;s blog-a-log</a>
+                </div>
+                <div class="header-right">
+                    <nav itemscope itemtype="http://schema.org/SiteNavigationElement">
+                      <ul>
+                        
+                        
+                            
+                            <li class="nav">
+                                <a itemprop="url" href="https://fy.blackhats.net.au/blog/">
+                                    <span itemprop="name">Blog</span>
+                                </a>
+                            </li>
+                        
+                            
+                            <li class="nav">
+                                <a itemprop="url" href="https://fy.blackhats.net.au/pages/">
+                                    <span itemprop="name">Pages</span>
+                                </a>
+                            </li>
+                        
+                        
+                        <li class="nav">
+                            <a itemprop="url" href="https://github.com/firstyear">
+                                <img class="icon" src="https:&#x2F;&#x2F;fy.blackhats.net.au/icons/github.svg" alt="Github">
+                            </a>
+                        </li>
+                        
+                        <li class="nav">
+                            <a itemprop="url" href="/rss.xml">
+                                <img class="icon" src="https:&#x2F;&#x2F;fy.blackhats.net.au/rss-logo.png" alt="rss">
+                            </a>
+                        </li>
+                      </ul>
+                    </nav>
+                </div>
+            </header>
+        
+        
+        <main>
+            
+<article itemscope itemtype="http://schema.org/BlogPosting">
+    <div itemprop="headline">
+        <h1>StartTLS in LDAP</h1>
+        <div class="border"></div>
+        <time datetime="2021-08-12" class="date" itemprop="datePublished">
+            12 Aug 2021
+        </time>
+    </div>
+    <div itemprop="articleBody">
+        <h1 id="starttls-in-ldap">StartTLS in LDAP</h1>
+<p>LDAP as a protocol is a binary protocol which uses ASN.1 BER encoded
+structures to communicate between a client and server, to query
+directory information (ie users, groups, locations, etc).</p>
+<p>When this was created there was little consideration to security with
+regard to person-in-the-middle attacks (aka mitm: meddler in the middle,
+interception). As LDAP has become used not just as a directory service
+for accessing information, but now as an authentication and
+authorisation system it's important that the content of these
+communications is secure from tampering or observation.</p>
+<p>There have been a number of introduced methods to try and assist with
+this situation. These are:</p>
+<ul>
+<li>StartTLS</li>
+<li>SASL with encryption layers</li>
+<li>LDAPS (LDAP over TLS)</li>
+</ul>
+<p>Other protocols of a similar age also have used StartTLS such as SMTP
+and IMAP. However recent <a href="https://nostarttls.secvuln.info/">research</a>
+has (again) shown issues with correct StartTLS handling, and recommends
+using SMTPS or IMAPS.</p>
+<p>Today the same is true of LDAP - the only secure method of communication
+to an LDAP server is LDAPS. In this blog, I'll be exploring the issues
+that exist with StartTLS (I will not cover SASL or GSSAPI).</p>
+<h2 id="how-does-starttls-work">How does StartTLS work?</h2>
+<p>StartTLS works by starting a plaintext (unencrypted) connection to the
+LDAP server, and then by upgrading that connection to begin TLS within
+the existing connection.</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>┌───────────┐                            ┌───────────┐
+</span><span>│           │                            │           │
+</span><span>│           │─────────open tcp 389──────▶│           │
+</span><span>│           │◀────────────ok─────────────│           │
+</span><span>│           │                            │           │
+</span><span>│           │                            │           │
+</span><span>│           │────────ldap starttls──────▶│           │
+</span><span>│           │◀──────────success──────────│           │
+</span><span>│           │                            │           │
+</span><span>│  Client   │                            │  Server   │
+</span><span>│           │──────tls client hello─────▶│           │
+</span><span>│           │◀─────tls server hello──────│           │
+</span><span>│           │────────tls key xchg───────▶│           │
+</span><span>│           │◀────────tls finish─────────│           │
+</span><span>│           │                            │           │
+</span><span>│           │──────TLS(ldap bind)───────▶│           │
+</span><span>│           │                            │           │
+</span><span>│           │                            │           │
+</span><span>└───────────┘                            └───────────┘
+</span></code></pre>
+<p>As we can see in LDAP StartTLS we establish a valid plaintext tcp
+connection, and then we send and LDAP message containing a StartTLS
+extended operation. If successful, we begin a TLS handshake over the
+connection, and when complete, our traffic is now encrypted.</p>
+<p>This is contrast to LDAPS where TLS must be successfully established
+before the first LDAP message is exchanged.</p>
+<p>It's a good time to note that this is inefficent as it takes an extra
+round-trip to establish StartTLS like this contrast to LDAPS which
+increases latency for all communications. LDAP clients tend to open and
+close many connections, so this adds up quickly.</p>
+<h2 id="security-issues">Security Issues</h2>
+<h3 id="client-misconfiguration">Client Misconfiguration</h3>
+<p>LDAP servers at the start of a connection will only accept two LDAP
+messages. Bind (authenticate) and StartTLS. Since StartTLS starts with a
+plaintext connection, if a client is misconfigured it is trivial for it
+to operate without StartTLS.</p>
+<p>For example, consider the following commands.</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span># ldapwhoami -H ldap://172.17.0.3:389 -x -D &#39;cn=Directory Manager&#39; -W
+</span><span>Enter LDAP Password:
+</span><span>dn: cn=directory manager
+</span><span># ldapwhoami -H ldap://172.17.0.3:389 -x -Z -D &#39;cn=Directory Manager&#39; -W
+</span><span>Enter LDAP Password:
+</span><span>dn: cn=directory manager
+</span></code></pre>
+<p>Notice that in both, the command succeeds and we authenticate. However,
+only in the second command are we using StartTLS. This means we
+trivially leaked our password. Forcing LDAPS to be the only protocol
+prevents this as every byte of the connection is always encrypted.</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span># ldapwhoami -H ldaps://172.17.0.3:636 -x -D &#39;cn=Directory Manager&#39; -W
+</span><span>Enter LDAP Password:
+</span><span>dn: cn=directory manager
+</span></code></pre>
+<p>Simply put this means that if you forget to add the command line flag
+for StartTLS, forget the checkbox in an admin console, or any other kind
+of possible human error (which happen!), then LDAP will silently
+continue without enforcing that StartTLS is present.</p>
+<p>For a system to be secure we must prevent human error from being a
+factor by removing elements of risk in our systems.</p>
+<h3 id="minssf">MinSSF</h3>
+<p>A response to the above is to enforce MinSSF, or &quot;Minimum Security
+Strength Factor&quot;. This is an option on both OpenLDAP and 389-ds and is
+related to the integration of SASL. It represents that the bind method
+used must have &quot;X number of bits&quot; of security (however X is very
+arbitrary and not really representative of true security).</p>
+<p>In the context of StartTLS or TLS, the provided SSF becomes the number
+of bits in the symmetric encryption used in the connection. Generally
+this is 128 due to the use of AES128.</p>
+<p>Let us assume we have configured MinSSF=128 and we attempt to bind to
+our server.</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>┌───────────┐                            ┌───────────┐
+</span><span>│           │                            │           │
+</span><span>│           │─────────open tcp 389──────▶│           │
+</span><span>│           │◀────────────ok─────────────│           │
+</span><span>│  Client   │                            │  Server   │
+</span><span>│           │                            │           │
+</span><span>│           │──────────ldap bind────────▶│           │
+</span><span>│           │◀───────error - minssf──────│           │
+</span><span>│           │                            │           │
+</span><span>└───────────┘                            └───────────┘
+</span></code></pre>
+<p>The issue here is the minssf isn't enforced until the bind message is
+sent. If we look at the LDAP rfc we see:</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>BindRequest ::= [APPLICATION 0] SEQUENCE {
+</span><span>     version                 INTEGER (1 ..  127),
+</span><span>     name                    LDAPDN,
+</span><span>     authentication          AuthenticationChoice }
+</span><span>
+</span><span>AuthenticationChoice ::= CHOICE {
+</span><span>     simple                  [0] OCTET STRING,
+</span><span>                             -- 1 and 2 reserved
+</span><span>     sasl                    [3] SaslCredentials,
+</span><span>     ...  }
+</span><span>
+</span><span>SaslCredentials ::= SEQUENCE {
+</span><span>     mechanism               LDAPString,
+</span><span>     credentials             OCTET STRING OPTIONAL }
+</span></code></pre>
+<p>Which means that in a simple bind (password) in the very first message
+we send our plaintext password. MinSSF only tells us <em>after</em> we already
+made the mistake, so this is not a suitable defence.</p>
+<h3 id="starttls-can-be-disregarded">StartTLS can be disregarded</h3>
+<p>An interesting aspect of how StartTLS works with LDAP is that it's
+possible to prevent it from being installed successfully. If we look at
+the <a href="https://datatracker.ietf.org/doc/html/rfc4511#section-4.14.2">RFC</a>:</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>If the server is otherwise unwilling or unable to perform this
+</span><span>operation, the server is to return an appropriate result code
+</span><span>indicating the nature of the problem.  For example, if the TLS
+</span><span>subsystem is not presently available, the server may indicate this by
+</span><span>returning with the resultCode set to unavailable.  In cases where a
+</span><span>non-success result code is returned, the LDAP session is left without
+</span><span>a TLS layer.
+</span></code></pre>
+<p>What this means is it is up to the client and how they respond to this
+error to enforce a correct behaviour. An example of a client that
+disregards this error may proceed such as:</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>┌───────────┐                            ┌───────────┐
+</span><span>│           │                            │           │
+</span><span>│           │─────────open tcp 389──────▶│           │
+</span><span>│           │◀────────────ok─────────────│           │
+</span><span>│           │                            │           │
+</span><span>│  Client   │                            │  Server   │
+</span><span>│           │────────ldap starttls──────▶│           │
+</span><span>│           │◀───────starttls error──────│           │
+</span><span>│           │                            │           │
+</span><span>│           │─────────ldap bind─────────▶│           │
+</span><span>│           │                            │           │
+</span><span>└───────────┘                            └───────────┘
+</span></code></pre>
+<p>In this example, the ldap bind proceeds even though TLS is not active,
+again leaking our password in plaintext. A classic example of this is
+OpenLDAP's own cli tools which in almost all examples of StartTLS
+online use the option '-Z' to enable this.</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span># ldapwhoami -Z -H ldap://127.0.0.1:12345 -D &#39;cn=Directory Manager&#39; -w password
+</span><span>ldap_start_tls: Protocol error (2)
+</span><span>dn: cn=Directory Manager
+</span></code></pre>
+<p>The quirk is that '-Z' here only means to <em>try</em> StartTLS. If you want
+to fail when it's not available you need '-ZZ'. This is a pretty easy
+mistake for any administrator to make when typing a command. There is no
+way to configure in ldap.conf that you always want StartTLS enforced
+either leaving it again to human error. Given the primary users of the
+ldap cli are directory admins, this makes it a high value credential
+open to potential human input error.</p>
+<p>Within client applications a similar risk exists that the developers
+need to correctly enforce this behaviour. Thankfully for us, the all
+client applications that I tested handle this correctly:</p>
+<ul>
+<li>SSSD</li>
+<li>nslcd</li>
+<li>ldapvi</li>
+<li>python-ldap</li>
+</ul>
+<p>However, I am sure there are many others that should be tested to ensure
+that they correctly handle errors during StartTLS.</p>
+<h3 id="referral-injection">Referral Injection</h3>
+<p>Referral's are a feature of LDAP that allow responses to include extra
+locations where a client may look for the data they requested, or to
+extend the data they requested. Due to the design of LDAP and it's
+response codes, referrals are valid in all response messages.</p>
+<p>LDAP StartTLS does allow a referral as a valid response for the client
+to then follow - this may be due to the requested server being
+undermaintenance or similar.</p>
+<p>Depending on the client implementation, this may allow an mitm to
+proceed. There are two possible scenarioes.</p>
+<p>Assuming the client <em>does</em> do certificate validation, but is poorly
+coded, the following may occur:</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>┌───────────┐                            ┌───────────┐
+</span><span>│           │                            │           │
+</span><span>│           │─────────open tcp 389──────▶│           │
+</span><span>│           │◀────────────ok─────────────│           │
+</span><span>│           │                            │  Server   │
+</span><span>│           │                            │           │
+</span><span>│           │────────ldap starttls──────▶│           │
+</span><span>│           │◀──────────referral─────────│           │
+</span><span>│           │                            │           │
+</span><span>│           │                            └───────────┘
+</span><span>│  Client   │
+</span><span>│           │                            ┌───────────┐
+</span><span>│           │─────────ldap bind─────────▶│           │
+</span><span>│           │                            │           │
+</span><span>│           │                            │           │
+</span><span>│           │                            │ Malicious │
+</span><span>│           │                            │  Server   │
+</span><span>│           │                            │           │
+</span><span>│           │                            │           │
+</span><span>│           │                            │           │
+</span><span>└───────────┘                            └───────────┘
+</span></code></pre>
+<p>In this example our server sent a referral as a response to the StartTLS
+extended operation, which the client then followed - however the client
+did <em>not</em> attempt to install StartTLS again when contacting the
+malicious server. This would allow a bypass of certification validation
+by simply never letting TLS begin at all. Thankfully the clients I
+tested did not exhibt this behaviour, but it is possible.</p>
+<p>If the client has configured certificate validation to never
+(tls_reqcert = never, which is a surprisingly common setting ...) then
+the following is possible.</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>┌───────────┐                            ┌───────────┐
+</span><span>│           │                            │           │
+</span><span>│           │─────────open tcp 389──────▶│           │
+</span><span>│           │◀────────────ok─────────────│           │
+</span><span>│           │                            │  Server   │
+</span><span>│           │                            │           │
+</span><span>│           │────────ldap starttls──────▶│           │
+</span><span>│           │◀──────────referral─────────│           │
+</span><span>│           │                            │           │
+</span><span>│           │                            └───────────┘
+</span><span>│  Client   │
+</span><span>│           │                            ┌───────────┐
+</span><span>│           │────────ldap starttls──────▶│           │
+</span><span>│           │◀──────────success──────────│           │
+</span><span>│           │                            │           │
+</span><span>│           │◀──────TLS installed───────▶│ Malicious │
+</span><span>│           │                            │  Server   │
+</span><span>│           │───────TLS(ldap bind)──────▶│           │
+</span><span>│           │                            │           │
+</span><span>│           │                            │           │
+</span><span>└───────────┘                            └───────────┘
+</span></code></pre>
+<p>In this example the client follows the referral and then attempts to
+install StartTLS again. The malicious server may present any certificate
+it wishes and can then intercept traffic.</p>
+<p>In my testing I found that this affected both SSSD and nslcd, however
+both of these when redirected to the malicous server would attempt to
+install StartTLS over an existing StartTLS channel, which caused the
+server to return an error condition. Potentially a modified malicious
+server in this case would be able to install two layers of TLS, or a
+response that would successfully trick these clients to divulging
+further information. I have not yet spent time to research this further.</p>
+<h2 id="conclusion">Conclusion</h2>
+<p>While not as significant as the results found on &quot;No Start TLS&quot;, LDAP
+still is potentially exposed to risks related to StartTLS usage. To
+mitigate these LDAP server providers should disable plaintext LDAP ports
+and exclusively use LDAPS, with tls_reqcert set to &quot;demand&quot;.</p>
+
+    </div>
+</article>
+
+        </main>
+        
+        <footer>
+            
+            <div class="border"></div>
+            <div class="footer">
+                <small class="footer-left">
+                    Copyright &copy; William Brown
+                </small>
+                <small class="footer-right">
+                    Powered by <a href="https://www.getzola.org">Zola</a> | Theme <a href="https://github.com/barlog-m/oceanic-zen">Oceanic Zen</a>
+                </small>
+            </div>
+        
+        </footer>
+    
+        </div>
+    </body>
+</html>

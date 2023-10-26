@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+        <meta name="description" content="Firstyear&#x27;s blog">
+        
+
+        <title>Firstyear&#x27;s blog-a-log</title>
+
+        
+          <link rel="alternate" type="application/rss+xml" title="RSS" href="https://fy.blackhats.net.au/rss.xml">
+        
+
+        
+            <link rel="stylesheet" href="https://fy.blackhats.net.au/theme.css">
+        
+        
+    </head>
+    <body>
+        <div class="content">
+        
+        
+            <header>
+                <div class="header-left">
+                    <a href="https:&#x2F;&#x2F;fy.blackhats.net.au" class="logo">Firstyear&#x27;s blog-a-log</a>
+                </div>
+                <div class="header-right">
+                    <nav itemscope itemtype="http://schema.org/SiteNavigationElement">
+                      <ul>
+                        
+                        
+                            
+                            <li class="nav">
+                                <a itemprop="url" href="https://fy.blackhats.net.au/blog/">
+                                    <span itemprop="name">Blog</span>
+                                </a>
+                            </li>
+                        
+                            
+                            <li class="nav">
+                                <a itemprop="url" href="https://fy.blackhats.net.au/pages/">
+                                    <span itemprop="name">Pages</span>
+                                </a>
+                            </li>
+                        
+                        
+                        <li class="nav">
+                            <a itemprop="url" href="https://github.com/firstyear">
+                                <img class="icon" src="https:&#x2F;&#x2F;fy.blackhats.net.au/icons/github.svg" alt="Github">
+                            </a>
+                        </li>
+                        
+                        <li class="nav">
+                            <a itemprop="url" href="/rss.xml">
+                                <img class="icon" src="https:&#x2F;&#x2F;fy.blackhats.net.au/rss-logo.png" alt="rss">
+                            </a>
+                        </li>
+                      </ul>
+                    </nav>
+                </div>
+            </header>
+        
+        
+        <main>
+            
+<article itemscope itemtype="http://schema.org/BlogPosting">
+    <div itemprop="headline">
+        <h1>Useful USG pro 4 commands and hints</h1>
+        <div class="border"></div>
+        <time datetime="2019-01-02" class="date" itemprop="datePublished">
+            02 Jan 2019
+        </time>
+    </div>
+    <div itemprop="articleBody">
+        <h1 id="useful-usg-pro-4-commands-and-hints">Useful USG pro 4 commands and hints</h1>
+<p>I've recently changed from a FreeBSD vm as my router to a Ubiquiti PRO
+USG4. It's a solid device, with many great features, and I'm really
+impressed at how it &quot;just works&quot; in many cases. So far my only
+disappointment is lack of documentation about the CLI, especially for
+debugging and auditing what is occuring in the system, and for
+troubleshooting steps. This post will aggregate some of my knowledge
+about the topic.</p>
+<h2 id="current-config">Current config</h2>
+<p>Show the current config with:</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>mca-ctrl -t dump-cfg
+</span></code></pre>
+<p>You can show system status with the &quot;show&quot; command. Pressing ? will
+cause the current compeletion options to be displayed. For example:</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span># show &lt;?&gt;
+</span><span>arp              date             dhcpv6-pd        hardware
+</span></code></pre>
+<h2 id="dns">DNS</h2>
+<p>The following commands show the DNS statistics, the DNS configuration,
+and allow changing the cache-size. The cache-size is measured in number
+of records cached, rather than KB/MB. To make this permanent, you need
+to apply the change to config.json in your controllers sites folder.</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>show dns forwarding statistics
+</span><span>show system name-server
+</span><span>set service dns forwarding cache-size 10000
+</span><span>clear dns forwarding cache
+</span></code></pre>
+<h2 id="logging">Logging</h2>
+<p>You can see and aggregate of system logs with</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>show log
+</span></code></pre>
+<p>Note that when you set firewall rules to &quot;log on block&quot; they go to
+dmesg, not syslog, so as a result you need to check dmesg for these.</p>
+<p>It's a great idea to forward your logs in the controller to a syslog
+server as this allows you to aggregate and see all the events occuring
+in a single time series (great when I was diagnosing an issue recently).</p>
+<h2 id="interfaces">Interfaces</h2>
+<p>To show the system interfaces</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>show interfaces
+</span></code></pre>
+<p>To restart your pppoe dhcp6c:</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>release dhcpv6-pd interface pppoe0
+</span><span>renew dhcpv6-pd interface pppoe0
+</span></code></pre>
+<p>There is a current issue where the firmware will start dhcp6c on eth2
+and pppoe0, but the session on eth2 blocks the pppoe0 client. As a
+result, you need to release on eth2, then renew of pppoe0</p>
+<p>If you are using a dynamic prefix rather than static, you may need to
+reset your dhcp6c duid.</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>delete dhcpv6-pd duid
+</span></code></pre>
+<p>To restart an interface with the vyatta tools:</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>disconnect interface pppoe
+</span><span>connect interface pppoe
+</span></code></pre>
+<h2 id="openvpn">OpenVPN</h2>
+<p>I have setup customised OpenVPN tunnels. To show these:</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>show interfaces openvpn detail
+</span></code></pre>
+<p>These are configured in config.json with:</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span># Section: config.json - interfaces - openvpn
+</span><span>    &quot;vtun0&quot;: {
+</span><span>            &quot;encryption&quot;: &quot;aes256&quot;,
+</span><span>            # This assigns the interface to the firewall zone relevant.
+</span><span>            &quot;firewall&quot;: {
+</span><span>                    &quot;in&quot;: {
+</span><span>                            &quot;ipv6-name&quot;: &quot;LANv6_IN&quot;,
+</span><span>                            &quot;name&quot;: &quot;LAN_IN&quot;
+</span><span>                    },
+</span><span>                    &quot;local&quot;: {
+</span><span>                            &quot;ipv6-name&quot;: &quot;LANv6_LOCAL&quot;,
+</span><span>                            &quot;name&quot;: &quot;LAN_LOCAL&quot;
+</span><span>                    },
+</span><span>                    &quot;out&quot;: {
+</span><span>                            &quot;ipv6-name&quot;: &quot;LANv6_OUT&quot;,
+</span><span>                            &quot;name&quot;: &quot;LAN_OUT&quot;
+</span><span>                    }
+</span><span>            },
+</span><span>            &quot;mode&quot;: &quot;server&quot;,
+</span><span>            # By default, ubnt adds a number of parameters to the CLI, which
+</span><span>            # you can see with ps | grep openvpn
+</span><span>            &quot;openvpn-option&quot;: [
+</span><span>                    # If you are making site to site tunnels, you need the ccd
+</span><span>                    # directory, with hostname for the file name and
+</span><span>                    # definitions such as:
+</span><span>                    # iroute 172.20.0.0 255.255.0.0
+</span><span>                    &quot;--client-config-dir /config/auth/openvpn/ccd&quot;,
+</span><span>                    &quot;--keepalive 10 60&quot;,
+</span><span>                    &quot;--user nobody&quot;,
+</span><span>                    &quot;--group nogroup&quot;,
+</span><span>                    &quot;--proto udp&quot;,
+</span><span>                    &quot;--port 1195&quot;
+</span><span>            ],
+</span><span>            &quot;server&quot;: {
+</span><span>                    &quot;push-route&quot;: [
+</span><span>                            &quot;172.24.0.0/17&quot;
+</span><span>                    ],
+</span><span>                    &quot;subnet&quot;: &quot;172.24.251.0/24&quot;
+</span><span>            },
+</span><span>            &quot;tls&quot;: {
+</span><span>                    &quot;ca-cert-file&quot;: &quot;/config/auth/openvpn/vps/vps-ca.crt&quot;,
+</span><span>                    &quot;cert-file&quot;: &quot;/config/auth/openvpn/vps/vps-server.crt&quot;,
+</span><span>                    &quot;dh-file&quot;: &quot;/config/auth/openvpn/dh2048.pem&quot;,
+</span><span>                    &quot;key-file&quot;: &quot;/config/auth/openvpn/vps/vps-server.key&quot;
+</span><span>            }
+</span><span>    },
+</span></code></pre>
+<h2 id="netflow">Netflow</h2>
+<p>Net flows allow a set of connection tracking data to be sent to a remote
+host for aggregation and analysis. Sadly this process was mostly
+undocumented, bar some useful forum commentors. Here is the process that
+I came up with. This is how you configure it live:</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>set system flow-accounting interface eth3.11
+</span><span>set system flow-accounting netflow server 172.24.10.22 port 6500
+</span><span>set system flow-accounting netflow version 5
+</span><span>set system flow-accounting netflow sampling-rate 1
+</span><span>set system flow-accounting netflow timeout max-active-life 1
+</span><span>commit
+</span></code></pre>
+<p>To make this persistent:</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>&quot;system&quot;: {
+</span><span>            &quot;flow-accounting&quot;: {
+</span><span>                    &quot;interface&quot;: [
+</span><span>                            &quot;eth3.11&quot;,
+</span><span>                            &quot;eth3.12&quot;
+</span><span>                    ],
+</span><span>                    &quot;netflow&quot;: {
+</span><span>                            &quot;sampling-rate&quot;: &quot;1&quot;,
+</span><span>                            &quot;version&quot;: &quot;5&quot;,
+</span><span>                            &quot;server&quot;: {
+</span><span>                                    &quot;172.24.10.22&quot;: {
+</span><span>                                            &quot;port&quot;: &quot;6500&quot;
+</span><span>                                    }
+</span><span>                            },
+</span><span>                            &quot;timeout&quot;: {
+</span><span>                                    &quot;max-active-life&quot;: &quot;1&quot;
+</span><span>                            }
+</span><span>                    }
+</span><span>            }
+</span><span>    },
+</span></code></pre>
+<p>To show the current state of your flows:</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>show flow-accounting
+</span></code></pre>
+
+    </div>
+</article>
+
+        </main>
+        
+        <footer>
+            
+            <div class="border"></div>
+            <div class="footer">
+                <small class="footer-left">
+                    Copyright &copy; William Brown
+                </small>
+                <small class="footer-right">
+                    Powered by <a href="https://www.getzola.org">Zola</a> | Theme <a href="https://github.com/barlog-m/oceanic-zen">Oceanic Zen</a>
+                </small>
+            </div>
+        
+        </footer>
+    
+        </div>
+    </body>
+</html>

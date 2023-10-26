@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+        <meta name="description" content="Firstyear&#x27;s blog">
+        
+
+        <title>Firstyear&#x27;s blog-a-log</title>
+
+        
+          <link rel="alternate" type="application/rss+xml" title="RSS" href="https://fy.blackhats.net.au/rss.xml">
+        
+
+        
+            <link rel="stylesheet" href="https://fy.blackhats.net.au/theme.css">
+        
+        
+    </head>
+    <body>
+        <div class="content">
+        
+        
+            <header>
+                <div class="header-left">
+                    <a href="https:&#x2F;&#x2F;fy.blackhats.net.au" class="logo">Firstyear&#x27;s blog-a-log</a>
+                </div>
+                <div class="header-right">
+                    <nav itemscope itemtype="http://schema.org/SiteNavigationElement">
+                      <ul>
+                        
+                        
+                            
+                            <li class="nav">
+                                <a itemprop="url" href="https://fy.blackhats.net.au/blog/">
+                                    <span itemprop="name">Blog</span>
+                                </a>
+                            </li>
+                        
+                            
+                            <li class="nav">
+                                <a itemprop="url" href="https://fy.blackhats.net.au/pages/">
+                                    <span itemprop="name">Pages</span>
+                                </a>
+                            </li>
+                        
+                        
+                        <li class="nav">
+                            <a itemprop="url" href="https://github.com/firstyear">
+                                <img class="icon" src="https:&#x2F;&#x2F;fy.blackhats.net.au/icons/github.svg" alt="Github">
+                            </a>
+                        </li>
+                        
+                        <li class="nav">
+                            <a itemprop="url" href="/rss.xml">
+                                <img class="icon" src="https:&#x2F;&#x2F;fy.blackhats.net.au/rss-logo.png" alt="rss">
+                            </a>
+                        </li>
+                      </ul>
+                    </nav>
+                </div>
+            </header>
+        
+        
+        <main>
+            
+<article itemscope itemtype="http://schema.org/BlogPosting">
+    <div itemprop="headline">
+        <h1>LDAP Guide Part 3: Filters</h1>
+        <div class="border"></div>
+        <time datetime="2016-07-06" class="date" itemprop="datePublished">
+            06 Jul 2016
+        </time>
+    </div>
+    <div itemprop="articleBody">
+        <h1 id="ldap-guide-part-3-filters">LDAP Guide Part 3: Filters</h1>
+<p>In part 2 we discussed how to use searchbases to control what objects
+were returned from a search by their organisation in the LDAP Tree. We
+also touched on a simple filter to limit the result by a single search
+item.</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>&#39;(cn=HR Managers)&#39;
+</span></code></pre>
+<p>If we change this to a different part of the tree, we'll get back too
+many entries:</p>
+<p><em>REMEMBER</em>: All examples in this page work and can be &quot;copy-pasted&quot; so
+you can try these searches for yourself!</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>ldapsearch -H ldap://exampleldap.blackhats.net.au:3389 -x -s sub -b &#39;ou=People,dc=example,dc=com&#39;
+</span></code></pre>
+<p>If this database has thousands of users, we wouldn't be able to scale
+or handle this. We need to be able to use filters to effectively search
+for objects.</p>
+<h2 id="simple-filters">Simple Filters</h2>
+<p>As mentioned before filters are of the format:</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>(attribute operator value)
+</span><span>(condition (...) )
+</span></code></pre>
+<p>These filters are rooted in <a href="https://en.wikipedia.org/wiki/Set_(mathematics)">set
+mathematics</a> which may
+be good as an additional reference.</p>
+<p>Filters apply to objects attribute values - not the DN. Remember though,
+the RDN <em>must</em> be an attribute of the object, so you can filter on this.
+It's a good idea to look at an object to understand what you could
+filter on:</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span># test0002, People, example.com
+</span><span>dn: uid=test0002,ou=People,dc=example,dc=com
+</span><span>objectClass: top
+</span><span>objectClass: person
+</span><span>objectClass: organizationalPerson
+</span><span>objectClass: inetOrgPerson
+</span><span>objectClass: posixAccount
+</span><span>objectClass: shadowAccount
+</span><span>cn: guest0002
+</span><span>sn: guest0002
+</span><span>uid: guest0002
+</span><span>uid: test0002
+</span><span>givenName: givenname0002
+</span><span>description: description0002
+</span><span>mail: uid0002
+</span><span>uidNumber: 2
+</span><span>gidNumber: 2
+</span><span>shadowMin: 0
+</span><span>shadowMax: 99999
+</span><span>shadowInactive: 30
+</span><span>shadowWarning: 7
+</span><span>homeDirectory: /home/uid0002
+</span><span>shadowLastChange: 17427
+</span></code></pre>
+<h2 id="equality-filters">Equality Filters</h2>
+<p>An equality filter requests all objects where attribute is equal to
+value. IE:</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>&#39;(uid=test0009)&#39;
+</span><span>ldapsearch -H ldap://exampleldap.blackhats.net.au:3389 -x -s sub -b &#39;ou=People,dc=example,dc=com&#39; &#39;(uid=test0009)&#39;
+</span></code></pre>
+<h2 id="presence-filter">Presence Filter</h2>
+<p>A presence filter requests all objects where the attribute is present
+and has a valid value, but we do not care what the value is.</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>&#39;(uid=*)&#39;
+</span><span>ldapsearch -H ldap://exampleldap.blackhats.net.au:3389 -x -s sub -b &#39;ou=People,dc=example,dc=com&#39; &#39;(uid=*)&#39;
+</span></code></pre>
+<h2 id="range-filters">Range Filters</h2>
+<p>A range filter requests all objects whose attribute values are greater
+than or less than a value.</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>&#39;(uid&gt;=test0005)&#39;
+</span><span>ldapsearch -H ldap://exampleldap.blackhats.net.au:3389 -x -s sub -b &#39;ou=People,dc=example,dc=com&#39; &#39;(uid&gt;=test0005)&#39;
+</span><span>
+</span><span>&#39;(uid&lt;=test0005)&#39;
+</span><span>ldapsearch -H ldap://exampleldap.blackhats.net.au:3389 -x -s sub -b &#39;ou=People,dc=example,dc=com&#39; &#39;(uid&lt;=test0005)&#39;
+</span></code></pre>
+<h2 id="substring-filters">Substring filters</h2>
+<p>This requests a partial match of an attribute value on the object. You
+can use the '*' operator multiple times.</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>&#39;(uid=*005)&#39;
+</span><span>ldapsearch -H ldap://exampleldap.blackhats.net.au:3389 -x -s sub -b &#39;ou=People,dc=example,dc=com&#39; &#39;(uid=*005)&#39;
+</span><span>&#39;(uid=*st000*)&#39;
+</span><span>ldapsearch -H ldap://exampleldap.blackhats.net.au:3389 -x -s sub -b &#39;ou=People,dc=example,dc=com&#39; &#39;(uid=*st000*)&#39;
+</span></code></pre>
+<p>NOTE: You should always have at least 3 characters in your substring
+filter, else indexes may not operate efficently. IE this filter may not
+work efficently:</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>&#39;(uid=*05)&#39;
+</span></code></pre>
+<h2 id="and-filters">AND filters</h2>
+<p>Using the filters above we can begin to construct more complex queries.
+AND requires that for an object to match, all child filter elements must
+match. This is the &quot;intersection&quot; operation.</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>&#39;(&amp;(uid=test0006)(uid=guest0006))&#39;
+</span><span>ldapsearch -H ldap://exampleldap.blackhats.net.au:3389 -x -s sub -b &#39;ou=People,dc=example,dc=com&#39; &#39;(&amp;(uid=test0006)(uid=guest0006))&#39;
+</span></code></pre>
+<p>Because the object has both uid=test0006 and uid=guest0006, this returns
+the object uid=test0006,ou=People,dc=example,dc=com. However, if we
+changed this condition:</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>&#39;(&amp;(uid=test0006)(uid=guest0007))&#39;
+</span><span>ldapsearch -H ldap://exampleldap.blackhats.net.au:3389 -x -s sub -b &#39;ou=People,dc=example,dc=com&#39; &#39;(&amp;(uid=test0006)(uid=guest0007))&#39;
+</span></code></pre>
+<p>No objects match both predicates, so we have an empty result set.</p>
+<h2 id="or-filters">OR filters</h2>
+<p>OR filters will return the aggregate of all child filters. This is the
+union operation. Provided an object satisfies one condition of the OR,
+it will be part of the returned set.</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>&#39;(|(uid=test0006)(uid=guest0007))&#39;
+</span><span>ldapsearch -H ldap://exampleldap.blackhats.net.au:3389 -x -s sub -b &#39;ou=People,dc=example,dc=com&#39; &#39;(|(uid=test0006)(uid=guest0007))&#39;
+</span></code></pre>
+<p>If an object is matched twice in the OR filter, we only return it once.</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>&#39;(|(uid=test0008)(uid=guest0008))&#39;
+</span><span>ldapsearch -H ldap://exampleldap.blackhats.net.au:3389 -x -s sub -b &#39;ou=People,dc=example,dc=com&#39; &#39;(|(uid=test0008)(uid=guest0008))&#39;
+</span></code></pre>
+<h2 id="not-filters">NOT filters</h2>
+<p>A NOT filter acts to invert the result of the inner set. NOT is the
+equivalent of a negating AND. For example:</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>&#39;(!(uid=test0010))&#39;
+</span><span>ldapsearch -H ldap://exampleldap.blackhats.net.au:3389 -x -s sub -b &#39;ou=People,dc=example,dc=com&#39; &#39;(!(uid=test0010))&#39;
+</span></code></pre>
+<p>You can't list multiple parameters to a not condition however:</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>&#39;(!(uid=test0010)(uid=test0009))&#39;
+</span><span>ldapsearch -H ldap://exampleldap.blackhats.net.au:3389 -x -s sub -b &#39;ou=People,dc=example,dc=com&#39; &#39;(!(uid=test0010)(uid=test0009))&#39;
+</span><span>...
+</span><span>ldap_search_ext: Bad search filter (-7)
+</span></code></pre>
+<p>To combine NOT's you need to use this in conjunction with AND and OR.</p>
+<h2 id="complex-filters">Complex filters</h2>
+<p>Because AND OR and NOT are filters in their own right, you can nest
+these to produce more complex directed queries.</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>&#39;(&amp;(objectClass=person)(objectClass=posixAccount)(|(uid=test000*))(!(uid=test0001)))&#39;
+</span><span>ldapsearch -H ldap://exampleldap.blackhats.net.au:3389 -x -s sub -b &#39;ou=People,dc=example,dc=com&#39; &#39;(&amp;(objectClass=person)(objectClass=posixAccount)(|(uid=test000*))(!(uid=test0001)))&#39; uid
+</span></code></pre>
+<p>I find it useful to break this down to see what is happening</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>(&amp;
+</span><span>    (objectClass=person)
+</span><span>    (objectClass=posixAccount)
+</span><span>    (|
+</span><span>        (uid=test000*)
+</span><span>    )
+</span><span>    (!(uid=test0001))
+</span><span>)
+</span></code></pre>
+<p>This query expresses &quot;All person whose name starts with test000* and
+not test0001&quot;. Once broken down over multiple lines like this it's
+easy to see which filters belong to which logic components, and how they
+will interact.</p>
+<h2 id="conclusion">Conclusion</h2>
+<p>While search bases can help you to direct a query, filters are how
+searches are efficently expressed over databases of millions of objects.
+Being able to use them effectively will help your client applications be
+much faster.</p>
+
+    </div>
+</article>
+
+        </main>
+        
+        <footer>
+            
+            <div class="border"></div>
+            <div class="footer">
+                <small class="footer-left">
+                    Copyright &copy; William Brown
+                </small>
+                <small class="footer-right">
+                    Powered by <a href="https://www.getzola.org">Zola</a> | Theme <a href="https://github.com/barlog-m/oceanic-zen">Oceanic Zen</a>
+                </small>
+            </div>
+        
+        </footer>
+    
+        </div>
+    </body>
+</html>

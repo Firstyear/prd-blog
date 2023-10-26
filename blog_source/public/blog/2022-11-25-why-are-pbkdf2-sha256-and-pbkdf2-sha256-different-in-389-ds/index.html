@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+        <meta name="description" content="Firstyear&#x27;s blog">
+        
+
+        <title>Firstyear&#x27;s blog-a-log</title>
+
+        
+          <link rel="alternate" type="application/rss+xml" title="RSS" href="https://fy.blackhats.net.au/rss.xml">
+        
+
+        
+            <link rel="stylesheet" href="https://fy.blackhats.net.au/theme.css">
+        
+        
+    </head>
+    <body>
+        <div class="content">
+        
+        
+            <header>
+                <div class="header-left">
+                    <a href="https:&#x2F;&#x2F;fy.blackhats.net.au" class="logo">Firstyear&#x27;s blog-a-log</a>
+                </div>
+                <div class="header-right">
+                    <nav itemscope itemtype="http://schema.org/SiteNavigationElement">
+                      <ul>
+                        
+                        
+                            
+                            <li class="nav">
+                                <a itemprop="url" href="https://fy.blackhats.net.au/blog/">
+                                    <span itemprop="name">Blog</span>
+                                </a>
+                            </li>
+                        
+                            
+                            <li class="nav">
+                                <a itemprop="url" href="https://fy.blackhats.net.au/pages/">
+                                    <span itemprop="name">Pages</span>
+                                </a>
+                            </li>
+                        
+                        
+                        <li class="nav">
+                            <a itemprop="url" href="https://github.com/firstyear">
+                                <img class="icon" src="https:&#x2F;&#x2F;fy.blackhats.net.au/icons/github.svg" alt="Github">
+                            </a>
+                        </li>
+                        
+                        <li class="nav">
+                            <a itemprop="url" href="/rss.xml">
+                                <img class="icon" src="https:&#x2F;&#x2F;fy.blackhats.net.au/rss-logo.png" alt="rss">
+                            </a>
+                        </li>
+                      </ul>
+                    </nav>
+                </div>
+            </header>
+        
+        
+        <main>
+            
+<article itemscope itemtype="http://schema.org/BlogPosting">
+    <div itemprop="headline">
+        <h1>Why are PBKDF2-SHA256 and PBKDF2_SHA256 different in 389-ds?</h1>
+        <div class="border"></div>
+        <time datetime="2022-11-25" class="date" itemprop="datePublished">
+            25 Nov 2022
+        </time>
+    </div>
+    <div itemprop="articleBody">
+        <h1 id="why-are-pbkdf2-sha256-and-pbkdf2-sha256-different-in-389-ds">Why are PBKDF2-SHA256 and PBKDF2_SHA256 different in 389-ds?</h1>
+<p>In a mailing list discussion recently it came up about what password
+hash format should you use in 389-ds. Confusingly we have two PBKDF2
+SHA256 implementations, which has a bit of history.</p>
+<h2 id="too-lazy-didn-t-read">Too Lazy, Didn't Read</h2>
+<p>Use PBKDF2-SHA256. (hyphen, not underscore).</p>
+<h2 id="what-s-pbkdf2-anyway">What's PBKDF2 anyway?</h2>
+<p>Passwords are a shared-knowledge secret, so knowledge of the password
+allows you to authenticate as the person. When we store that secret, we
+don't want it stored in a form where a person can steal and use it.
+This is why we don't store passwords cleartext - A rogue admin or a
+database breach would leak your passwords (and people do love to re-use
+their passwords over many websites ...)</p>
+<p>Because of this authentication experts recommend <em>hashing</em> your
+password. A one-way hash function given an input, will always produce
+the same output, but given the hash output, you can not derive the
+input.</p>
+<p>However, this also isn't the full story. Simply hashing your password
+isn't enough because people have found many other attacks. These
+include things like rainbow tables which are a compressed and
+precomputed &quot;lookup&quot; of hash outputs to their inputs. You can also
+bruteforce dictionaries of common passwords to see if they match. All of
+these processes for an attacker use their CPU to generate these tables
+or bruteforce the passwords.</p>
+<p>Most hashes though are designed to be <em>fast</em> and in many cases your CPU
+has hardware to accelerate and speed these up. All this does is mean
+that if you use a <em>verification hash</em> for storing passwords then an
+attacker just can attack your stored passwords even faster.</p>
+<p>To combat this, what authentication experts truly recommend is <em>key
+derivation functions</em>. A key derivation function is similar to a hash
+where an input always yields the same output, but a KDF also intends to
+be resource consuming. This can be ram or cpu time for example. The
+intent is that an attacker bruteforcing your KDF hashed passwords should
+have to expend a large amount of CPU time and resources, while also
+producing far fewer results.</p>
+<h2 id="how-is-this-related-to-vs">How is this related to - vs _?</h2>
+<p>In 389-ds when I implemented PBKDF2_SHA256 I specifically chose to use
+the '_' (underscore) to not conflict to '-' which is the OpenLDAP
+PBKDF2 scheme. We have differences in how we store our PBKDF2_SHA256 in
+the userPassword value so they aren't compatible. At the time since I
+was writing the module in C it was easier to use our own internal format
+than to attempt C String manipulation which is a common source of
+vulnerabilities. I opted to use a binary array with fixed lengths and
+offsets so that we could do bound checks rather than attempting to split
+a string with delimiters (and yes, I accounted for endianness in the
+design).</p>
+<p>The issue however is that after we implemented this we ran into a
+problem with NSS (the cryptographic library) that 389-ds uses. NSS
+PBKDF2 implementation is flawed, and is 4 times slower (I think, I
+can't find the original report from RedHat Bugzilla) than OpenSSL for
+the same result. This means that for 389-ds to compute a password hash
+in say ... 1 second, OpenSSL can do the same in 0.25 seconds. Since we
+have response time objectives we wish to meet, this forced 389-ds to use
+fewer PBKDF2 rounds, well below the NIST SP800-63b recommendations.</p>
+<p>For a long time we accepted this because it was still a significant
+improvement over our previous salted sha256 single round implementation,
+and we hoped the NSS developers would resolve the issue. However, they
+did not fix it and did not accept it was a security issue.</p>
+<p>Since then, we've added support for Rust into 389-ds and had a growing
+interest to migrate from OpenLDAP to 389-ds. To support this, I added
+support for OpenLDAP formatted password hashes to be directly imported
+to 389-ds with a Rust plugin called pwdchan that is now part of 389-ds
+by default. In this plugin we used the OpenSSL cryptographic provider
+which does not have the same limitations as NSS, meaning we can increase
+the number of PBKDF2 rounds to the NIST SP800-63b recommendations
+without sacrificing large amounts of (wasted) CPU time.</p>
+<h2 id="conclusion">Conclusion</h2>
+<p>Use PBKDF2-SHA256.</p>
+<ul>
+<li>It's written in Rust.</li>
+<li>It meets NIST SP800-63b recommendations.</li>
+</ul>
+
+    </div>
+</article>
+
+        </main>
+        
+        <footer>
+            
+            <div class="border"></div>
+            <div class="footer">
+                <small class="footer-left">
+                    Copyright &copy; William Brown
+                </small>
+                <small class="footer-right">
+                    Powered by <a href="https://www.getzola.org">Zola</a> | Theme <a href="https://github.com/barlog-m/oceanic-zen">Oceanic Zen</a>
+                </small>
+            </div>
+        
+        </footer>
+    
+        </div>
+    </body>
+</html>

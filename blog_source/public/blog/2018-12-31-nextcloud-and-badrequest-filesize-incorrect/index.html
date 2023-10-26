@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+        <meta name="description" content="Firstyear&#x27;s blog">
+        
+
+        <title>Firstyear&#x27;s blog-a-log</title>
+
+        
+          <link rel="alternate" type="application/rss+xml" title="RSS" href="https://fy.blackhats.net.au/rss.xml">
+        
+
+        
+            <link rel="stylesheet" href="https://fy.blackhats.net.au/theme.css">
+        
+        
+    </head>
+    <body>
+        <div class="content">
+        
+        
+            <header>
+                <div class="header-left">
+                    <a href="https:&#x2F;&#x2F;fy.blackhats.net.au" class="logo">Firstyear&#x27;s blog-a-log</a>
+                </div>
+                <div class="header-right">
+                    <nav itemscope itemtype="http://schema.org/SiteNavigationElement">
+                      <ul>
+                        
+                        
+                            
+                            <li class="nav">
+                                <a itemprop="url" href="https://fy.blackhats.net.au/blog/">
+                                    <span itemprop="name">Blog</span>
+                                </a>
+                            </li>
+                        
+                            
+                            <li class="nav">
+                                <a itemprop="url" href="https://fy.blackhats.net.au/pages/">
+                                    <span itemprop="name">Pages</span>
+                                </a>
+                            </li>
+                        
+                        
+                        <li class="nav">
+                            <a itemprop="url" href="https://github.com/firstyear">
+                                <img class="icon" src="https:&#x2F;&#x2F;fy.blackhats.net.au/icons/github.svg" alt="Github">
+                            </a>
+                        </li>
+                        
+                        <li class="nav">
+                            <a itemprop="url" href="/rss.xml">
+                                <img class="icon" src="https:&#x2F;&#x2F;fy.blackhats.net.au/rss-logo.png" alt="rss">
+                            </a>
+                        </li>
+                      </ul>
+                    </nav>
+                </div>
+            </header>
+        
+        
+        <main>
+            
+<article itemscope itemtype="http://schema.org/BlogPosting">
+    <div itemprop="headline">
+        <h1>Nextcloud and badrequest filesize incorrect</h1>
+        <div class="border"></div>
+        <time datetime="2018-12-31" class="date" itemprop="datePublished">
+            31 Dec 2018
+        </time>
+    </div>
+    <div itemprop="articleBody">
+        <h1 id="nextcloud-and-badrequest-filesize-incorrect">Nextcloud and badrequest filesize incorrect</h1>
+<p>My friend came to my house and was trying to share some large files with
+my nextcloud instance. Part way through the upload an error occurred.</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>&quot;Exception&quot;:&quot;Sabre\\DAV\\Exception\\BadRequest&quot;,&quot;Message&quot;:&quot;expected filesize 1768906752 got 1768554496&quot;
+</span></code></pre>
+<p>It turns out this error can be caused by many sources. It could be
+timeouts, bad requests, network packet loss, incorrect nextcloud
+configuration or more.</p>
+<p>We tried uploading larger files (by a factor of 10 times) and they
+worked. This eliminated timeouts as a cause, and probably network loss.
+Being on ethernet direct to the server generally also helps to eliminate
+packet loss as a cause compared to say internet.</p>
+<p>We also knew that the server must not have been misconfigured because a
+larger file did upload, so no file or resource limits were being hit.</p>
+<p>This also indicated that the client was likely doing the right thing
+because larger and smaller files would upload correctly. The symptom now
+only affected a single file.</p>
+<p>At this point I realised, what if the client and server were both
+victims to a lower level issue? I asked my friend to ls the file and
+read me the number of bytes long. It was 1768906752, as expected in
+nextcloud.</p>
+<p>Then I asked him to cat that file into a new file, and to tell me the
+length of the new file. Cat encountered an error, but ls on the new file
+indeed showed a size of 1768554496. That means filesystem corruption!
+What could have lead to this?</p>
+<p>HFS+</p>
+<p>Apple's legacy filesystem (and the reason I stopped using macs) is well
+known for silently eating files and corrupting content. Here we had yet
+another case of that damage occuring, and triggering errors elsewhere.</p>
+<p>Bisecting these issues and eliminating possibilities through a
+scientific method is always the best way to resolve the cause, and it
+may come from surprising places!</p>
+
+    </div>
+</article>
+
+        </main>
+        
+        <footer>
+            
+            <div class="border"></div>
+            <div class="footer">
+                <small class="footer-left">
+                    Copyright &copy; William Brown
+                </small>
+                <small class="footer-right">
+                    Powered by <a href="https://www.getzola.org">Zola</a> | Theme <a href="https://github.com/barlog-m/oceanic-zen">Oceanic Zen</a>
+                </small>
+            </div>
+        
+        </footer>
+    
+        </div>
+    </body>
+</html>

@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+        <meta name="description" content="Firstyear&#x27;s blog">
+        
+
+        <title>Firstyear&#x27;s blog-a-log</title>
+
+        
+          <link rel="alternate" type="application/rss+xml" title="RSS" href="https://fy.blackhats.net.au/rss.xml">
+        
+
+        
+            <link rel="stylesheet" href="https://fy.blackhats.net.au/theme.css">
+        
+        
+    </head>
+    <body>
+        <div class="content">
+        
+        
+            <header>
+                <div class="header-left">
+                    <a href="https:&#x2F;&#x2F;fy.blackhats.net.au" class="logo">Firstyear&#x27;s blog-a-log</a>
+                </div>
+                <div class="header-right">
+                    <nav itemscope itemtype="http://schema.org/SiteNavigationElement">
+                      <ul>
+                        
+                        
+                            
+                            <li class="nav">
+                                <a itemprop="url" href="https://fy.blackhats.net.au/blog/">
+                                    <span itemprop="name">Blog</span>
+                                </a>
+                            </li>
+                        
+                            
+                            <li class="nav">
+                                <a itemprop="url" href="https://fy.blackhats.net.au/pages/">
+                                    <span itemprop="name">Pages</span>
+                                </a>
+                            </li>
+                        
+                        
+                        <li class="nav">
+                            <a itemprop="url" href="https://github.com/firstyear">
+                                <img class="icon" src="https:&#x2F;&#x2F;fy.blackhats.net.au/icons/github.svg" alt="Github">
+                            </a>
+                        </li>
+                        
+                        <li class="nav">
+                            <a itemprop="url" href="/rss.xml">
+                                <img class="icon" src="https:&#x2F;&#x2F;fy.blackhats.net.au/rss-logo.png" alt="rss">
+                            </a>
+                        </li>
+                      </ul>
+                    </nav>
+                </div>
+            </header>
+        
+        
+        <main>
+            
+<article itemscope itemtype="http://schema.org/BlogPosting">
+    <div itemprop="headline">
+        <h1>Compiler Bootstrapping - Can We Trust Rust?</h1>
+        <div class="border"></div>
+        <time datetime="2021-05-12" class="date" itemprop="datePublished">
+            12 May 2021
+        </time>
+    </div>
+    <div itemprop="articleBody">
+        <h1 id="compiler-bootstrapping-can-we-trust-rust">Compiler Bootstrapping - Can We Trust Rust?</h1>
+<p>Recently I have been doing a lot of work for SUSE with how we package
+the Rust compiler. This process has been really interesting and
+challenging, but like anything it's certainly provided a lot of time
+for thought while <a href="https://xkcd.com/303/">waiting</a> for my packages to
+build.</p>
+<p>The Rust package in OpenSUSE has two methods of building the compiler
+internally in it's spec file.</p>
+<ul>
+<li>
+<ol>
+<li>Use our previously packaged version of rustc from packages</li>
+</ol>
+</li>
+<li>
+<ol start="2">
+<li>Bootstrap using the signed and prebuilt binaries provided by the
+rust project</li>
+</ol>
+</li>
+</ul>
+<h2 id="bootstrapping">Bootstrapping</h2>
+<p>There are many advocates of bootstrapping and then self sustaining a
+chain of compilers within a distribution. The roots of this come from
+Ken Thompsons Turing Award speech known as <a href="https://www.ece.cmu.edu/~ganger/712.fall02/papers/p761-thompson.pdf">Reflections on trusting
+trust</a>
+. This details the process in which a compiler can be backdoored, to
+produce future backdoored compilers. This has been replicated by Manish
+G. detailed in their <a href="https://manishearth.github.io/blog/2016/12/02/reflections-on-rusting-trust/">blog, Reflections on Rusting
+Trust</a>
+where they successfully create a self-hosting backdoored rust compiler.</p>
+<p>The process can be visualised as:</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>┌──────────────┐              ┌──────────────┐                             
+</span><span>│  Backdoored  │              │   Trusted    │                             
+</span><span>│   Sources    │──────┐       │   Sources    │──────┐                      
+</span><span>│              │      │       │              │      │                      
+</span><span>└──────────────┘      │       └──────────────┘      │                      
+</span><span>                      │                             │                      
+</span><span>┌──────────────┐      │       ┌──────────────┐      │      ┌──────────────┐
+</span><span>│   Trusted    │      ▼       │  Backdoored  │      ▼      │  Backdoored  │
+</span><span>│ Interpreter  │──Produces───▶│    Binary    ├──Produces──▶│    Binary    │
+</span><span>│              │              │              │             │              │
+</span><span>└──────────────┘              └──────────────┘             └──────────────┘
+</span></code></pre>
+<p>We can see that in this attack, even with a set of trusted compiler
+sources, we can continue to produce a chain of backdoored binaries.</p>
+<p>This has led to many people, and even groups such as
+<a href="https://www.bootstrappable.org/">Bootstrappable</a> promoting work to be
+able to produce trusted chains from trusted sources, so that we can
+assert a level of trust in our produced compiler binaries.</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>┌──────────────┐              ┌──────────────┐                             
+</span><span>│   Trusted    │              │   Trusted    │                             
+</span><span>│   Sources    │──────┐       │   Sources    │──────┐                      
+</span><span>│              │      │       │              │      │                      
+</span><span>└──────────────┘      │       └──────────────┘      │                      
+</span><span>                      │                             │                      
+</span><span>┌──────────────┐      │       ┌──────────────┐      │      ┌──────────────┐
+</span><span>│   Trusted    │      ▼       │              │      ▼      │              │
+</span><span>│ Interpreter  │──Produces───▶│Trusted Binary├──Produces──▶│Trusted Binary│
+</span><span>│              │              │              │             │              │
+</span><span>└──────────────┘              └──────────────┘             └──────────────┘
+</span></code></pre>
+<p>This process would continue forever to the right, where each trusted
+binary is the result of trusted sources. This then ties into topics like
+<a href="https://reproducible-builds.org/">reproducible builds</a> which assert
+that you can separately rebuild the sources and attain the same binary,
+showing the process can not have been tampered with.</p>
+<h2 id="but-does-it-really-work-like-that">But does it really work like that?</h2>
+<p>Outside of thought exercises, there is little evidence of these attacks
+being carried out in reality.</p>
+<p>Last year in 2020 we saw supply chain attacks such as the <a href="https://en.wikipedia.org/wiki/SolarWinds#2019%E2%80%932020_supply_chain_attacks">Solarwinds
+supply chain
+attacks</a>
+which was reported by
+<a href="https://www.fireeye.com/blog/products-and-services/2020/12/global-intrusion-campaign-leverages-software-supply-chain-compromise.html">Fireeye</a>
+as <em>&quot;Inserting malicious code into legitimate software updates for the
+Orion software that allow an attacker remote access into the victim's
+environment&quot;</em>. What's really interesting here was that no compiler was
+compromised in the process like our theoretical attack, but code was
+simply inserted and then subsequently was released.</p>
+<p>Tavis Ormandy in his blog <a href="https://blog.cmpxchg8b.com/2020/07/you-dont-need-reproducible-builds.html">You don't need reproducible
+builds</a>
+covers supply chain security, and examines why reproducible builds are
+not effective in the promises and claims they present. Importantly,
+Tavis discusses how trivial it is to insert &quot;bugdoors&quot;, or pieces of
+code that are malicious and will not be found, and can potentially be
+waved off as human error.</p>
+<p>Today, we don't even need bugdoors, with Microsoft Security Response
+Centre reporting that <a href="https://msrc-blog.microsoft.com/2019/07/16/a-proactive-approach-to-more-secure-code/">70% of vulnerabilities are memory safety
+issues</a>.</p>
+<p>No amount of reproducible builds or compiler bootstrapping chain can
+shield us from the reality that attackers today will target the softest
+area, and today that is security issues in our languages, and insecure
+configuration of supply chain infrastructure.</p>
+<p>We don't need backdoored compilers when we know that a security
+critical piece of software written in C is still exposed to the network.</p>
+<h2 id="but-lets-assume">But lets assume ...</h2>
+<p>Okay, so lets assume that backdoored compilers are a real risk for a
+moment. We need to establish a few things first to create our secure
+bootstrapping environment, and these requirements generally are
+extremely difficult to meet.</p>
+<p>We will need:</p>
+<ul>
+<li>Trusted Interpreter</li>
+<li>Trusted Sources</li>
+</ul>
+<p>This is the foundation, having these two trusted entities that we can
+use to begin the process. But what is &quot;trusted&quot;? How can we define
+that these items are truly trusted?</p>
+<p>One method could be to check the cryptographic signatures of the
+released source code, to validate that it is &quot;what was released&quot;, but
+this does not mean that the source code is free from backdoors/bugdoors
+which are the very thing we are attempting to shield ourselves from.</p>
+<p>What would be truly required here is a detailed and complete audit of
+all of the source code to these compilers, which would be a monumental
+task in and of itself. So today instead, we do not perform source code
+audits, and we <em>blindly trust</em> the providers of the source code as
+legitimate and having provided us tamper-free source code. We assert
+that blind trust through the validation of those cryptographic
+signatures. We blindly trust that they have vetted every commit and line
+of code, and they have not had their own source code supply chain
+compromised in some way to provide us this &quot;trusted source&quot;. This
+gives us a relationship with the producers of that source, that they are
+trustworthy and have performed vetting of code and their members with
+privileges, that they will &quot;do the right thing&quot;™.</p>
+<p>The second challenge is asserting trust in the interpreter. Where did
+this binary come from? How was it built? Were it's sources trusted? As
+one can imagine, this becomes a very deep rabbit hole when we want to
+chase it, but in reality the approach taken by todays linux
+distributions is that &quot;well we haven't been compromised to this point,
+so I guess this one is okay&quot; and we yolo build with it. We then create
+a root of trust in that one point in time, which then creates our
+bootstrapping chain of trust for future builds of subsequent trusted
+sources.</p>
+<h2 id="so-what-about-rust">So what about Rust?</h2>
+<p>Rust is interesting compared to something like C (clang/gcc), as the
+rust project not only provides signed sources, they also provide signed
+static binaries of their compiler. This is because unlike clang/gcc
+which have very long release lifecycles, rust is released every six
+weeks and to build version N of the compiler, requires version N or
+N - 1. This allows people who have missed a version to easily skip ahead
+without needing to build every intermediate version of the compiler.</p>
+<p>A frequent complaint is the difficulty to package rust because any time
+releases are missed, you must compile every intermediate version to
+adhere to the bootstrappable guidelines and principles to created a more
+&quot;trusted&quot; compiler.</p>
+<p>But just like any other humans, in order to save time, when we miss a
+version, we can use the rust language's provided signed binaries to
+reset the chain, allowing us to miss versions of rust, or to re-package
+older versions in some cases.</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>                        ┌──────────────┐             ┌──────────────┐              
+</span><span>                 │      │   Trusted    │             │   Trusted    │              
+</span><span>             Missed     │   Sources    │──────┐      │   Sources    │──────┐       
+</span><span>             Version!   │              │      │      │              │      │       
+</span><span>                 │      └──────────────┘      │      └──────────────┘      │       
+</span><span>                 │                            │                            │        
+</span><span>┌──────────────┐ │      ┌──────────────┐      │      ┌──────────────┐      │       
+</span><span>│              │ │      │Trusted Binary│      ▼      │              │      ▼       
+</span><span>│Trusted Binary│ │      │ (from rust)  ├──Produces──▶│Trusted Binary│──Produces───▶ ...
+</span><span>│              │ │      │              │             │              │              
+</span><span>└──────────────┘ │      └──────────────┘             └──────────────┘              
+</span></code></pre>
+<p>This process here is interesting because:</p>
+<ul>
+<li>Using the signed binary from rust-lang is actually <em>faster</em> since we
+can skip one compiler rebuild cycle due to being the same version as
+the sources</li>
+<li>It shows that the &quot;bootstrappable&quot; trust chain, does not actually
+matter since we frequently move our trust root to the released
+binary from rust, rather than building all intermediates</li>
+</ul>
+<p>Given this process, we must ask, what value do we have from trying to
+adhere to the bootstrappable principles with rust? We already root our
+trust in the rust project, meaning that because we blindly trust the
+sources <em>and</em> the static compiler, why would our resultant compiler be
+any more &quot;trustworthy&quot; just because we were the ones who compiled it?</p>
+<p>Beyond this the binaries that are issued by the rust project are used by
+thousands of people every day through tools like rustup. In reality,
+these have been proven time and time again that they are trusted to be
+able to run on mass deployments, and that the rust project has the
+ability and capability to respond to issues in their source code as well
+as the binaries they provide. They certainly have earned the trust of
+many people through this!</p>
+<p>So why do we keep assuming both that we are somehow more trustworthy
+than the rust project, but simultaneously they are fully trusted in the
+artefacts they provide to us?</p>
+<h2 id="contradictions">Contradictions</h2>
+<p>It is this contradiction that has made me rethink the process that we
+take to packaging rust in SUSE. I think we should bootstrap from
+upstream rust every release because the rust project are in a far better
+position to perform audits and respond to trust threats than part time
+package maintainers that are commonly part of Linux distributions.</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>│ ┌──────────────┐                              │ ┌──────────────┐                             
+</span><span>│ │   Trusted    │                              │ │   Trusted    │                             
+</span><span>│ │   Sources    │──────┐                       │ │   Sources    │──────┐                      
+</span><span>│ │              │      │                       │ │              │      │                      
+</span><span>│ └──────────────┘      │                       │ └──────────────┘      │                      
+</span><span>│                       │                       │                       │                      
+</span><span>│ ┌──────────────┐      │      ┌──────────────┐ │ ┌──────────────┐      │      ┌──────────────┐
+</span><span>│ │Trusted Binary│      ▼      │              │ │ │Trusted Binary│      ▼      │              │
+</span><span>│ │ (from rust)  ├──Produces──▶│Trusted Binary│ │ │ (from rust)  ├──Produces──▶│Trusted Binary│
+</span><span>│ │              │             │              │ │ │              │             │              │
+</span><span>│ └──────────────┘             └──────────────┘ │ └──────────────┘             └──────────────┘
+</span></code></pre>
+<p>We already fully trust the sources they release, and we already fully
+trust their binary compiler releases. We can simplify our build process
+(and speed it up!) by acknowledging this trust relationship exists,
+rather than trying to continue to convince ourselves that we are somehow
+&quot;more trusted&quot; than the rust project.</p>
+<p>Also we must consider the reality of threats in the wild. Does all of
+this work and discussions of who is more trusted really pay off and
+defend us in reality? Or are we focused on these topics because they are
+something that we can control and have opinions over, rather than
+acknowledging the true complexity and dirtiness of security threats as
+they truly exist today?</p>
+
+    </div>
+</article>
+
+        </main>
+        
+        <footer>
+            
+            <div class="border"></div>
+            <div class="footer">
+                <small class="footer-left">
+                    Copyright &copy; William Brown
+                </small>
+                <small class="footer-right">
+                    Powered by <a href="https://www.getzola.org">Zola</a> | Theme <a href="https://github.com/barlog-m/oceanic-zen">Oceanic Zen</a>
+                </small>
+            </div>
+        
+        </footer>
+    
+        </div>
+    </body>
+</html>

@@ -1,0 +1,909 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+        <meta name="description" content="Firstyear&#x27;s blog">
+        
+
+        <title>Firstyear&#x27;s blog-a-log</title>
+
+        
+          <link rel="alternate" type="application/rss+xml" title="RSS" href="https://fy.blackhats.net.au/rss.xml">
+        
+
+        
+            <link rel="stylesheet" href="https://fy.blackhats.net.au/theme.css">
+        
+        
+    </head>
+    <body>
+        <div class="content">
+        
+        
+            <header>
+                <div class="header-left">
+                    <a href="https:&#x2F;&#x2F;fy.blackhats.net.au" class="logo">Firstyear&#x27;s blog-a-log</a>
+                </div>
+                <div class="header-right">
+                    <nav itemscope itemtype="http://schema.org/SiteNavigationElement">
+                      <ul>
+                        
+                        
+                            
+                            <li class="nav">
+                                <a itemprop="url" href="https://fy.blackhats.net.au/blog/">
+                                    <span itemprop="name">Blog</span>
+                                </a>
+                            </li>
+                        
+                            
+                            <li class="nav">
+                                <a itemprop="url" href="https://fy.blackhats.net.au/pages/">
+                                    <span itemprop="name">Pages</span>
+                                </a>
+                            </li>
+                        
+                        
+                        <li class="nav">
+                            <a itemprop="url" href="https://github.com/firstyear">
+                                <img class="icon" src="https:&#x2F;&#x2F;fy.blackhats.net.au/icons/github.svg" alt="Github">
+                            </a>
+                        </li>
+                        
+                        <li class="nav">
+                            <a itemprop="url" href="/rss.xml">
+                                <img class="icon" src="https:&#x2F;&#x2F;fy.blackhats.net.au/rss-logo.png" alt="rss">
+                            </a>
+                        </li>
+                      </ul>
+                    </nav>
+                </div>
+            </header>
+        
+        
+        <main>
+            
+<article itemscope itemtype="http://schema.org/BlogPosting">
+    <div itemprop="headline">
+        <h1>How a Search Query is Processed in Kanidm</h1>
+        <div class="border"></div>
+        <time datetime="2020-09-01" class="date" itemprop="datePublished">
+            01 Sep 2020
+        </time>
+    </div>
+    <div itemprop="articleBody">
+        <h1 id="how-a-search-query-is-processed-in-kanidm">How a Search Query is Processed in Kanidm</h1>
+<p>Databases from postgres to sqlite, mongodb, and even LDAP all need to
+take a query and turn that into a meaningful result set. This process
+can often seem like magic, especially when you consider an LDAP server
+is able to process thousands of parallel queries, with a database
+spanning millions of entries and still can return results in less than a
+millisecond. Even more impressive is that every one of these databases
+can be expected to return the correct result, every time. This level of
+performance, correctness and precision is an astounding feat of
+engineering, but is rooted in a simple set of design patterns.</p>
+<h2 id="disclaimer">Disclaimer</h2>
+<p>This will be a very long post. You may want to set aside some time for
+it :)</p>
+<p>This post will discuss how <a href="https://github.com/kanidm/kanidm">Kanidm</a>
+processes queries. This means that some implementation specifics are
+specific to the Kanidm project. However conceptually this is very close
+to the operation of LDAP servers (389-ds, samba 4, openldap) and
+MongoDB, and certainly there are still many overlaps and similarities to
+SQLite and Postgres. At the least, I hope it gives you some foundation
+to research the specifics behaviours you chosen database.</p>
+<p>This post does NOT discuss how creation or modification paths operate.
+That is likely worthy of a post of it's own. Saying this, search relies
+heavily on correct function of the write paths, and they are always
+intertwined.</p>
+<p>The referenced code and links relate to commit
+<a href="https://github.com/kanidm/kanidm/tree/dbfe87e675beac7fd931a445fd80cf439c2c6e61">dbfe87e</a>
+from 2020-08-24. The project may have changed since this point, so it's
+best if you can look at the latest commits in the tree if possible.</p>
+<h2 id="introduction">Introduction</h2>
+<p>Kanidm uses a structured document store model, similar to LDAP or
+MongoDB. You can consider entries to be like a JSON document. For
+example,</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>{
+</span><span>    &quot;class&quot;: [
+</span><span>        &quot;object&quot;,
+</span><span>        &quot;memberof&quot;,
+</span><span>        &quot;account&quot;,
+</span><span>        &quot;posixaccount&quot;
+</span><span>    ],
+</span><span>    &quot;displayname&quot;: [
+</span><span>        &quot;William&quot;
+</span><span>    ],
+</span><span>    &quot;gidnumber&quot;: [
+</span><span>        &quot;1000&quot;
+</span><span>    ],
+</span><span>    &quot;loginshell&quot;: [
+</span><span>        &quot;/bin/zsh&quot;
+</span><span>    ],
+</span><span>    &quot;name&quot;: [
+</span><span>        &quot;william&quot;
+</span><span>    ],
+</span><span>    &quot;uuid&quot;: [
+</span><span>        &quot;5e01622e-740a-4bea-b694-e952653252b4&quot;
+</span><span>    ],
+</span><span>    &quot;memberof&quot;: [
+</span><span>        &quot;admins&quot;,
+</span><span>        &quot;users&quot;,
+</span><span>        &quot;radius&quot;
+</span><span>    ],
+</span><span>    &quot;ssh_publickey&quot;: [
+</span><span>        {
+</span><span>            &quot;tag&quot;: &quot;laptop&quot;,
+</span><span>            &quot;key&quot;: &quot;....&quot;
+</span><span>        }
+</span><span>    ]
+</span><span>}
+</span></code></pre>
+<p>Something of note here is that an entry has many attributes, and those
+attributes can consist of one or more values. values themself can be
+structured such as the ssh_publickey value which has a tag and the
+public key, or the uuid which enforces uuid syntax.</p>
+<h2 id="filters-queries">Filters / Queries</h2>
+<p>During a search we want to find entries that match specific attribute
+value assertions or attribute assertions. We also want to be able to use
+logic to provide complex conditions or logic in how we perform the
+search. We could consider the search in terms of SQL such as:</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>select from entries where name = william and class = account;
+</span></code></pre>
+<p>Or in LDAP syntax</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>(&amp;(objectClass=account)(name=william))
+</span></code></pre>
+<p>In Kanidm JSON (which admitedly, is a bit rough, we don't expect people
+to use this much!)</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>{ &quot;and&quot;: [{&quot;eq&quot;: [&quot;class&quot;, &quot;account&quot;]}, {&quot;eq&quot;: [&quot;name&quot;: &quot;william&quot;]} ]}
+</span></code></pre>
+<p>Regardless of how we structure these, they are the same query. We want
+to find entries where the property of class=account and name=william
+hold true. There are many other types of logic we could apply
+(especially true for sql), but in Kanidm we support the following
+<a href="https://github.com/kanidm/kanidm/blob/dbfe87e675beac7fd931a445fd80cf439c2c6e61/kanidm_proto/src/v1.rs#L305">proto(col)
+filters</a></p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>pub enum Filter {
+</span><span>    Eq(String, String),
+</span><span>    Sub(String, String),
+</span><span>    Pres(String),
+</span><span>    Or(Vec&lt;Filter&gt;),
+</span><span>    And(Vec&lt;Filter&gt;),
+</span><span>    AndNot(Box&lt;Filter&gt;),
+</span><span>    SelfUUID,
+</span><span>}
+</span></code></pre>
+<p>These represent:</p>
+<ul>
+<li>Eq(uality) - an attribute of name, has at least one value matching
+the term</li>
+<li>Sub(string) - an attribute of name, has at least one value matching
+the substring term</li>
+<li>Pres(ence) - an attribute of name, regardless of value exists on the
+entry</li>
+<li>Or - One or more of the nested conditions must evaluate to true</li>
+<li>And - All nested conditions must be true, or the and returns false</li>
+<li>AndNot - Within an And query, the inner term must not be true
+relative to the related and term</li>
+<li>SelfUUID - A dynamic Eq(uality) where the authenticated user's UUID
+is added. Essentially, this substitutes to &quot;eq (uuid, selfuuid)&quot;</li>
+</ul>
+<p>Comparing to the previous example entry, we can see that [{ &quot;and&quot;:
+[{&quot;eq&quot;: [&quot;class&quot;, &quot;account&quot;]}, {&quot;eq&quot;: [&quot;name&quot;:
+&quot;william&quot;]} ]}]{.title-ref} would be true, where [{ &quot;eq&quot;:
+[&quot;name&quot;: &quot;claire&quot;]}]{.title-ref} would be false as no matching
+name attribute-value exists on the entry.</p>
+<h2 id="recieving-the-query">Recieving the Query</h2>
+<p>There are multiple ways that a query could find it's way into Kanidm.
+It may be submitted from the raw search api, it could be generated from
+a REST endpoint request, it may be translated via the LDAP
+compatability. The most important part is that it is then recieved by a
+worker thread in the query server. For this discussion we'll assume we
+recieved a raw search via the front end.</p>
+<p><a href="https://github.com/kanidm/kanidm/blob/dbfe87e675beac7fd931a445fd80cf439c2c6e61/kanidmd/src/lib/actors/v1_read.rs#L245">handle_search</a>
+is the entry point of a worker thread to process a search operation. The
+first thing we do is begin a read transaction over the various elements
+of the database we need.</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>fn handle(&amp;mut self, msg: SearchMessage, _: &amp;mut Self::Context) -&gt; Self::Result {
+</span><span>let mut audit = AuditScope::new(&quot;search&quot;, msg.eventid, self.log_level);
+</span><span>let res = lperf_op_segment!(&amp;mut audit, &quot;actors::v1_read::handle&lt;SearchMessage&gt;&quot;, || {
+</span><span>    // Begin a read
+</span><span>    let qs_read = self.qs.read();
+</span></code></pre>
+<p>The call to
+<a href="https://github.com/kanidm/kanidm/blob/dbfe87e675beac7fd931a445fd80cf439c2c6e61/kanidmd/src/lib/server.rs#L732">qs.read</a>
+takes three transactions - the backend, the schema cache and the access
+control cache.</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>pub fn read(&amp;self) -&gt; QueryServerReadTransaction {
+</span><span>    QueryServerReadTransaction {
+</span><span>        be_txn: self.be.read(),
+</span><span>        schema: self.schema.read(),
+</span><span>        accesscontrols: self.accesscontrols.read(),
+</span><span>    }
+</span><span>}
+</span></code></pre>
+<p>The <a href="https://github.com/kanidm/kanidm/blob/dbfe87e675beac7fd931a445fd80cf439c2c6e61/kanidmd/src/lib/be/mod.rs#L1348">backend
+read</a>
+takes two transactions internally - the database layers, and the
+indexing metadata cache.</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>pub fn read(&amp;self) -&gt; BackendReadTransaction {
+</span><span>    BackendReadTransaction {
+</span><span>        idlayer: UnsafeCell::new(self.idlayer.read()),
+</span><span>        idxmeta: self.idxmeta.read(),
+</span><span>    }
+</span><span>}
+</span></code></pre>
+<p>Once complete, we can now transform the submitted request, into an
+internal event. By structuring all requests as event, we standarise all
+operations to a subset of operations, and we ensure that that all
+resources required are available in the event. The <a href="https://github.com/kanidm/kanidm/blob/dbfe87e675beac7fd931a445fd80cf439c2c6e61/kanidmd/src/lib/event.rs#L255">search
+event</a>
+as processed stores an event origin aka the identiy of the event origin.
+The search query is stored in the [filter]{.title-ref} attribute, and
+the original query is stored in the [filter_orig]{.title-ref}. There is
+a reason for this duplication.</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>pub fn from_message(
+</span><span>    audit: &amp;mut AuditScope,
+</span><span>    msg: SearchMessage,
+</span><span>    qs: &amp;QueryServerReadTransaction,
+</span><span>) -&gt; Result&lt;Self, OperationError&gt; {
+</span><span>    let event = Event::from_ro_uat(audit, qs, msg.uat.as_ref())?;
+</span><span>    let f = Filter::from_ro(audit, &amp;event, &amp;msg.req.filter, qs)?;
+</span><span>    // We do need to do this twice to account for the ignore_hidden
+</span><span>    // changes.
+</span><span>    let filter = f
+</span><span>        .clone()
+</span><span>        .into_ignore_hidden()
+</span><span>        .validate(qs.get_schema())
+</span><span>        .map_err(OperationError::SchemaViolation)?;
+</span><span>    let filter_orig = f
+</span><span>        .validate(qs.get_schema())
+</span><span>        .map_err(OperationError::SchemaViolation)?;
+</span><span>    Ok(SearchEvent {
+</span><span>        event,
+</span><span>        filter,
+</span><span>        filter_orig,
+</span><span>        // We can&#39;t get this from the SearchMessage because it&#39;s annoying with the
+</span><span>        // current macro design.
+</span><span>        attrs: None,
+</span><span>    })
+</span><span>}
+</span></code></pre>
+<p>As [filter]{.title-ref} is processed it is transformed by the server to
+change it's semantics. This is due to the call to
+<a href="https://github.com/kanidm/kanidm/blob/dbfe87e675beac7fd931a445fd80cf439c2c6e61/kanidmd/src/lib/filter.rs#L504">into_ignore_hidden</a>.
+This function adds a wrapping layer to the outside of the query that
+hides certain classes of entries from view unless explicitly requested.
+In the case of kanidm this transformation is to add:</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>{ &quot;and&quot;: [
+</span><span>    { &quot;andnot&quot; : { &quot;or&quot; [
+</span><span>        {&quot;eq&quot;: [&quot;class&quot;, &quot;tombstone&quot;]},
+</span><span>        {&quot;eq&quot;: [&quot;class&quot;, &quot;recycled&quot;]}
+</span><span>    }]},
+</span><span>    &lt;original query&gt;
+</span><span>]}
+</span></code></pre>
+<p>This prevents the display of deleted (recycle bin) entries, and the
+display of tombstones - marker entries representing that an entry with
+this UUID once existed in this location. These tombstones are part of
+the (future) eventually consistent replication machinery to allow
+deletes to be processed.</p>
+<p>This is why [filter_orig]{.title-ref} is stored. We require a copy of
+the &quot;query as intended by the caller&quot; for the purpose of checking
+access controls later. A user may not have access to the attribute
+&quot;class&quot; which would mean that the addition of the
+[into_ignore_hidden]{.title-ref} could cause them to not have any
+results at all. We should not penalise the user for something they
+didn't ask for!</p>
+<p>After the query is transformed, we now
+<a href="https://github.com/kanidm/kanidm/blob/dbfe87e675beac7fd931a445fd80cf439c2c6e61/kanidmd/src/lib/event.rs#L277">validate</a>
+it's content. This validation ensures that queries contain only
+attributes that truly exist in schema, and that their representation in
+the query is sound. This prevents a number of security issues related to
+denial of service or possible information disclosures. The query has
+every attribute-value
+<a href="https://github.com/kanidm/kanidm/blob/dbfe87e675beac7fd931a445fd80cf439c2c6e61/kanidmd/src/lib/filter.rs#L545">compared</a>
+to the schema to ensure that they exist and are correct syntax types.</p>
+<h2 id="start-processing-the-query">Start Processing the Query</h2>
+<p>Now that the search event has been created and we know that is is valid
+within a set of rules, we can submit it to the
+<a href="https://github.com/kanidm/kanidm/blob/dbfe87e675beac7fd931a445fd80cf439c2c6e61/kanidmd/src/lib/actors/v1_read.rs#L265">search_ext(ernal)</a>
+interface of the query server. Because everything we need is contained
+in the search event we are able to process the query from this point.
+Search external is a wrapper to the internal search, where
+<a href="https://github.com/kanidm/kanidm/blob/dbfe87e675beac7fd931a445fd80cf439c2c6e61/kanidmd/src/lib/server.rs#L90">search_ext</a>
+is able to wrap and apply access controls to the results from the
+operation.</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>fn search_ext(
+</span><span>    &amp;self,
+</span><span>    au: &amp;mut AuditScope,
+</span><span>    se: &amp;SearchEvent,
+</span><span>) -&gt; Result&lt;Vec&lt;Entry&lt;EntryReduced, EntryCommitted&gt;&gt;, OperationError&gt; {
+</span><span>    lperf_segment!(au, &quot;server::search_ext&quot;, || {
+</span><span>        /*
+</span><span>         * This just wraps search, but it&#39;s for the external interface
+</span><span>         * so as a result it also reduces the entry set&#39;s attributes at
+</span><span>         * the end.
+</span><span>         */
+</span><span>        let entries = self.search(au, se)?;
+</span><span>
+</span><span>        let access = self.get_accesscontrols();
+</span><span>        access
+</span><span>            .search_filter_entry_attributes(au, se, entries)
+</span><span>            .map_err(|e| {
+</span><span>                // Log and fail if something went wrong.
+</span><span>                ladmin_error!(au, &quot;Failed to filter entry attributes {:?}&quot;, e);
+</span><span>                e
+</span><span>            })
+</span><span>        // This now returns the reduced vec.
+</span><span>    })
+</span><span>}
+</span></code></pre>
+<p>The <a href="https://github.com/kanidm/kanidm/blob/dbfe87e675beac7fd931a445fd80cf439c2c6e61/kanidmd/src/lib/server.rs#L90">internal
+search</a>
+function is now called, and we begin to prepare for the backend to
+handle the query.</p>
+<p>We have a final transformation we must apply to the query that we intend
+to pass to the backend. We must attach metadata to the query elements so
+that we can perform informed optimisation of the query.</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>let be_txn = self.get_be_txn();
+</span><span>let idxmeta = be_txn.get_idxmeta_ref();
+</span><span>// Now resolve all references and indexes.
+</span><span>let vfr = lperf_trace_segment!(au, &quot;server::search&lt;filter_resolve&gt;&quot;, || {
+</span><span>    se.filter.resolve(&amp;se.event, Some(idxmeta))
+</span><span>})
+</span></code></pre>
+<p>This is done by retreiving indexing metadata from the backend, which
+defines which attributes and types of indexes exist. This indexing
+metadata is passed to the filter to <a href="https://github.com/kanidm/kanidm/blob/dbfe87e675beac7fd931a445fd80cf439c2c6e61/kanidmd/src/lib/filter.rs#L504">be
+resolved</a>.
+In the case of tests we may not pass index metadata, which is why filter
+resolve accounts for the possibility of idxmeta being None. The filter
+elements are transformed, for example we change <a href="https://github.com/kanidm/kanidm/blob/dbfe87e675beac7fd931a445fd80cf439c2c6e61/kanidmd/src/lib/filter.rs#L973">eq to have a
+boolean</a>
+associated if the attribute is indexed. In our example this would change
+the query:</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>{ &quot;and&quot;: [
+</span><span>    { &quot;andnot&quot; : { &quot;or&quot; [
+</span><span>        {&quot;eq&quot;: [&quot;class&quot;, &quot;tombstone&quot;]},
+</span><span>        {&quot;eq&quot;: [&quot;class&quot;, &quot;recycled&quot;]}
+</span><span>    }]},
+</span><span>    { &quot;and&quot;: [
+</span><span>        {&quot;eq&quot;: [&quot;class&quot;, &quot;account&quot;]},
+</span><span>        {&quot;eq&quot;: [&quot;name&quot;: &quot;william&quot;]}
+</span><span>    ]}
+</span><span>]}
+</span></code></pre>
+<p>To</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>{ &quot;and&quot;: [
+</span><span>    { &quot;andnot&quot; : { &quot;or&quot; [
+</span><span>        {&quot;eq&quot;: [&quot;class&quot;, &quot;tombstone&quot;, true]},
+</span><span>        {&quot;eq&quot;: [&quot;class&quot;, &quot;recycled&quot;, true]}
+</span><span>    }]},
+</span><span>    { &quot;and&quot;: [
+</span><span>        {&quot;eq&quot;: [&quot;class&quot;, &quot;account&quot;, true]},
+</span><span>        {&quot;eq&quot;: [&quot;name&quot;: &quot;william&quot;, true]}
+</span><span>    ]}
+</span><span>]}
+</span></code></pre>
+<p>With this metadata associated to the query, we can now submit it to the
+backend for processing.</p>
+<h2 id="backend-processing">Backend Processing</h2>
+<p>We are now in a position where the backend can begin to do work to
+actually process the query. The first step of the <a href="https://github.com/kanidm/kanidm/blob/dbfe87e675beac7fd931a445fd80cf439c2c6e61/kanidmd/src/lib/be/mod.rs#L474">backend
+search</a>
+function is to perform the final optimisation of the filter.</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>fn search(
+</span><span>    &amp;self,
+</span><span>    au: &amp;mut AuditScope,
+</span><span>    erl: &amp;EventLimits,
+</span><span>    filt: &amp;Filter&lt;FilterValidResolved&gt;,
+</span><span>) -&gt; Result&lt;Vec&lt;Entry&lt;EntrySealed, EntryCommitted&gt;&gt;, OperationError&gt; {
+</span><span>    lperf_trace_segment!(au, &quot;be::search&quot;, || {
+</span><span>        // Do a final optimise of the filter
+</span><span>        let filt =
+</span><span>            lperf_trace_segment!(au, &quot;be::search&lt;filt::optimise&gt;&quot;, || { filt.optimise() });
+</span></code></pre>
+<p>Query optimisation is critical to make searches fast. In Kanidm it
+relies on a specific behaviour of the indexing application process. I
+will highlight that step shortly.</p>
+<p>For now, the way query optimisation works is by sorting and folding
+terms in the query. This is because there are a number of logical
+equivalences, but also that due to the associated metadata and
+experience we know that some terms may be better in different areas.
+Optimisation relies on a <a href="https://github.com/kanidm/kanidm/blob/dbfe87e675beac7fd931a445fd80cf439c2c6e61/kanidmd/src/lib/filter.rs#L1088">sorting
+function</a>
+that will rearrange terms as needed.</p>
+<p>An example is that a nested [and]{.title-ref} term, can be folded to the
+parent because logically an [and]{.title-ref} inside and
+[and]{.title-ref} is the same. Similar for [or]{.title-ref} inside
+[or]{.title-ref}.</p>
+<p>Within the [and]{.title-ref} term, we can then rearrange the terms,
+because the order of the terms does not matter in an [and]{.title-ref}
+or [or]{.title-ref}, only that the other logical elements hold true. We
+sort indexed equality terms first because we know that they are always
+going to resolve &quot;faster&quot; than the nested [andnot]{.title-ref} term.</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>{ &quot;and&quot;: [
+</span><span>    {&quot;eq&quot;: [&quot;class&quot;, &quot;account&quot;, true]},
+</span><span>    {&quot;eq&quot;: [&quot;name&quot;: &quot;william&quot;, true]},
+</span><span>    { &quot;andnot&quot; : { &quot;or&quot; [
+</span><span>        {&quot;eq&quot;: [&quot;class&quot;, &quot;tombstone&quot;, true]},
+</span><span>        {&quot;eq&quot;: [&quot;class&quot;, &quot;recycled&quot;, true]}
+</span><span>    }]}
+</span><span>]}
+</span></code></pre>
+<p>In the future, an improvement here is to put name before class, which
+will happen as part of the issue
+<a href="https://github.com/kanidm/kanidm/issues/238">#238</a> which allows us to
+work out which indexes are going to yield the best information content.
+So we can sort them first in the query.</p>
+<p>Finally, we are at the point where we can begin to actually load some
+data! 🎉</p>
+<p>The filter is submitted to
+<a href="https://github.com/kanidm/kanidm/blob/dbfe87e675beac7fd931a445fd80cf439c2c6e61/kanidmd/src/lib/be/mod.rs#L109">filter2idl</a>.
+To understand this function, we need to understand how indexes and
+entries are stored.</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>let (idl, fplan) = lperf_trace_segment!(au, &quot;be::search -&gt; filter2idl&quot;, || {
+</span><span>    self.filter2idl(au, filt.to_inner(), FILTER_SEARCH_TEST_THRESHOLD)
+</span><span>})?;
+</span></code></pre>
+<p>All databases at the lowest levels are built on collections of key-value
+stores. That keyvalue store may be a in memory tree or hashmap, or an on
+disk tree. Some common stores are BDB, LMDB, SLED. In Kanidm we use
+SQLite as a key-value store, through tables that only contain two
+columns. The intent is to swap to SLED in the future once it gains
+transactions over a collection of trees, and that trees can be
+created/removed in transactions.</p>
+<p>The primary storage of all entries is in the table
+<a href="https://github.com/kanidm/kanidm/blob/master/kanidmd/src/lib/be/idl_sqlite.rs#L1134">id2entry</a>
+which has an id column (the key) and stores serialised entries in the
+data column.</p>
+<p>Indexes are stored in a collection of their own tables, named in the
+scheme &quot;idx_&lt;type&gt;_&lt;attr&gt;&quot;. For example, &quot;idx_eq_name&quot; or
+&quot;idx_pres_class&quot;. These are stored as two columns, where the &quot;key&quot;
+column is a precomputed result of a value in the entry, and the
+&quot;value&quot; is a set of integer ID's related to the entries that contain
+the relevant match.</p>
+<p>As a bit more of a graphic example, you can imagine these as:</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>id2entry
+</span><span>| id | data                                    |
+</span><span>| 1  | { &quot;name&quot;: &quot;william&quot;, ... }
+</span><span>| 2  | { &quot;name&quot;: &quot;claire&quot;, ... }
+</span><span>
+</span><span>idx_eq_name
+</span><span>| key     |
+</span><span>| william | [1, ]
+</span><span>| claire  | [2, ]
+</span><span>
+</span><span>idm_eq_class
+</span><span>| account | [1, 2, ... ]
+</span></code></pre>
+<p>As these are key-value stores, they are able to be cached through an
+in-memory key value store to speed up the process. Initially, we'll
+assume these are not cache.</p>
+<h2 id="filter2idl">filter2idl</h2>
+<p>Back to [filter2idl]{.title-ref}. The query begins by processing the
+outer [and]{.title-ref} term. As the [and]{.title-ref} progresses inner
+elements are <a href="https://github.com/kanidm/kanidm/blob/dbfe87e675beac7fd931a445fd80cf439c2c6e61/kanidmd/src/lib/be/mod.rs#L229">iterated
+over</a>
+and then recursively sent to [filter2idl]{.title-ref}.</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>FilterResolved::And(l) =&gt; {
+</span><span>    // First, setup the two filter lists. We always apply AndNot after positive
+</span><span>    // and terms.
+</span><span>    let (f_andnot, f_rem): (Vec&lt;_&gt;, Vec&lt;_&gt;) = l.iter().partition(|f| f.is_andnot());
+</span><span>
+</span><span>    // We make this an iter, so everything comes off in order. if we used pop it means we
+</span><span>    // pull from the tail, which is the WORST item to start with!
+</span><span>    let mut f_rem_iter = f_rem.iter();
+</span><span>
+</span><span>    // Setup the initial result.
+</span><span>    let (mut cand_idl, fp) = match f_rem_iter.next() {
+</span><span>        Some(f) =&gt; self.filter2idl(au, f, thres)?,
+</span><span>        None =&gt; {
+</span><span>            lfilter_error!(au, &quot;WARNING: And filter was empty, or contains only AndNot, can not evaluate.&quot;);
+</span><span>            return Ok((IDL::Indexed(IDLBitRange::new()), FilterPlan::Invalid));
+</span><span>        }
+</span><span>    };
+</span><span>    ...
+</span></code></pre>
+<p>The first term we encounter is [{&quot;eq&quot;: [&quot;class&quot;, &quot;account&quot;,
+true]}]{.title-ref}. At this point [filter2idl]{.title-ref} is able to
+<a href="https://github.com/kanidm/kanidm/blob/dbfe87e675beac7fd931a445fd80cf439c2c6e61/kanidmd/src/lib/be/mod.rs#L123">request the id
+list</a>
+from the lower levels.</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>FilterResolved::Eq(attr, value, idx) =&gt; {
+</span><span>    if *idx {
+</span><span>        // Get the idx_key
+</span><span>        let idx_key = value.get_idx_eq_key();
+</span><span>        // Get the idl for this
+</span><span>        match self
+</span><span>            .get_idlayer()
+</span><span>            .get_idl(au, attr, &amp;IndexType::EQUALITY, &amp;idx_key)?
+</span><span>        {
+</span><span>            Some(idl) =&gt; (
+</span><span>                IDL::Indexed(idl),
+</span><span>                FilterPlan::EqIndexed(attr.to_string(), idx_key),
+</span><span>            ),
+</span><span>            None =&gt; (IDL::ALLIDS, FilterPlan::EqCorrupt(attr.to_string())),
+</span><span>        }
+</span><span>    } else {
+</span><span>        // Schema believes this is not indexed
+</span><span>        (IDL::ALLIDS, FilterPlan::EqUnindexed(attr.to_string()))
+</span><span>    }
+</span><span>}
+</span></code></pre>
+<p>The first level that is able to serve the request for the key to be
+resolved is the <a href="https://github.com/kanidm/kanidm/blob/dbfe87e675beac7fd931a445fd80cf439c2c6e61/kanidmd/src/lib/be/idl_arc_sqlite.rs#L178">ARCache
+layer</a>.
+This tries to lookup the combination of (&quot;class&quot;, &quot;account&quot;, eq) in
+the cache. If found it is returned to the caller. If not, it is
+requested from the <a href="https://github.com/kanidm/kanidm/blob/master/kanidmd/src/lib/be/idl_sqlite.rs#L220">sqlite
+layer</a>.</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>let cache_key = IdlCacheKey {
+</span><span>    a: $attr.to_string(),
+</span><span>    i: $itype.clone(),
+</span><span>    k: $idx_key.to_string(),
+</span><span>};
+</span><span>let cache_r = $self.idl_cache.get(&amp;cache_key);
+</span><span>// If hit, continue.
+</span><span>if let Some(ref data) = cache_r {
+</span><span>    ltrace!(
+</span><span>        $audit,
+</span><span>        &quot;Got cached idl for index {:?} {:?} -&gt; {}&quot;,
+</span><span>        $itype,
+</span><span>        $attr,
+</span><span>        data
+</span><span>    );
+</span><span>    return Ok(Some(data.as_ref().clone()));
+</span><span>}
+</span><span>// If miss, get from db *and* insert to the cache.
+</span><span>let db_r = $self.db.get_idl($audit, $attr, $itype, $idx_key)?;
+</span><span>if let Some(ref idl) = db_r {
+</span><span>    $self.idl_cache.insert(cache_key, Box::new(idl.clone()))
+</span><span>}
+</span></code></pre>
+<p>This sqlite layer performs the select from the
+&quot;idx_&lt;type&gt;_&lt;attr&gt;&quot; table, and then deserialises the stored id
+list (IDL).</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>let mut stmt = self.get_conn().prepare(query.as_str()).map_err(|e| {
+</span><span>    ladmin_error!(audit, &quot;SQLite Error {:?}&quot;, e);
+</span><span>    OperationError::SQLiteError
+</span><span>})?;
+</span><span>let idl_raw: Option&lt;Vec&lt;u8&gt;&gt; = stmt
+</span><span>    .query_row_named(&amp;[(&quot;:idx_key&quot;, &amp;idx_key)], |row| row.get(0))
+</span><span>    // We don&#39;t mind if it doesn&#39;t exist
+</span><span>    .optional()
+</span><span>    .map_err(|e| {
+</span><span>        ladmin_error!(audit, &quot;SQLite Error {:?}&quot;, e);
+</span><span>        OperationError::SQLiteError
+</span><span>    })?;
+</span><span>
+</span><span>let idl = match idl_raw {
+</span><span>    Some(d) =&gt; serde_cbor::from_slice(d.as_slice())
+</span><span>        .map_err(|_| OperationError::SerdeCborError)?,
+</span><span>    // We don&#39;t have this value, it must be empty (or we
+</span><span>    // have a corrupted index .....
+</span><span>    None =&gt; IDLBitRange::new(),
+</span><span>};
+</span></code></pre>
+<p>The IDL is returned and cached, then returned to the
+[filter2idl]{.title-ref} caller. At this point the IDL is the &quot;partial
+candidate set&quot;. It contains the ID numbers of entries that we know
+partially match this query at this point. Since the first term is
+[{&quot;eq&quot;: [&quot;class&quot;, &quot;account&quot;, true]}]{.title-ref} the current
+candidate set is [[1, 2, ...]]{.title-ref}.</p>
+<p>The
+<a href="https://github.com/kanidm/kanidm/blob/dbfe87e675beac7fd931a445fd80cf439c2c6e61/kanidmd/src/lib/be/mod.rs#L284">and</a>
+path in [filter2idl]{.title-ref} continues, and the next term
+encountered is [{&quot;eq&quot;: [&quot;name&quot;: &quot;william&quot;, true]}]{.title-ref}.
+This resolves into another IDL. The two IDL's are merged through an
+[and]{.title-ref} operation leaving only the ID numbers that were
+present in both.</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>(IDL::Indexed(ia), IDL::Indexed(ib)) =&gt; {
+</span><span>    let r = ia &amp; ib;
+</span><span>    ...
+</span></code></pre>
+<p>For this example this means in our example that the state of r(esult
+set) is the below;</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>res = ia &amp; ib;
+</span><span>res = [1, 2, ....] &amp; [1, ];
+</span><span>res == [1, ]
+</span></code></pre>
+<p>We know that only the entry with [ID == 1]{.title-ref} matches both
+[name = william]{.title-ref} and [class = account]{.title-ref}.</p>
+<p>We now perform a check called the &quot;filter threshold check&quot;. If the
+number of ID's in the IDL is less than a certain number, we can
+<em>shortcut</em> and return early even though we are not finished processing.</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>if r.len() &lt; thres &amp;&amp; f_rem_count &gt; 0 {
+</span><span>    // When below thres, we have to return partials to trigger the entry_no_match_filter check.
+</span><span>    let setplan = FilterPlan::AndPartialThreshold(plan);
+</span><span>    return Ok((IDL::PartialThreshold(r), setplan));
+</span><span>} else if r.is_empty() {
+</span><span>    // Regardless of the input state, if it&#39;s empty, this can never
+</span><span>    // be satisfied, so return we are indexed and complete.
+</span><span>    let setplan = FilterPlan::AndEmptyCand(plan);
+</span><span>    return Ok((IDL::Indexed(IDLBitRange::new()), setplan));
+</span><span>} else {
+</span><span>    IDL::Indexed(r)
+</span><span>}
+</span></code></pre>
+<p>This is because the IDL is now small, and continuing to load more
+indexes may cost more time and resources. The IDL can only ever shrink
+or stay the same from this point, never expand, so we know it must stay
+small.</p>
+<p>However, you may correctly have deduced that there are still two terms
+we must check. That is the terms contained within the
+[andnot]{.title-ref} of the query. I promise you, we will check them :)</p>
+<p>So at this point we now step out of [filter2idl]{.title-ref} and begin
+the process of post-processing the results we have.</p>
+<h2 id="resolving-the-partial-set">Resolving the Partial Set</h2>
+<p>We check the way that the <a href="https://github.com/kanidm/kanidm/blob/dbfe87e675beac7fd931a445fd80cf439c2c6e61/kanidmd/src/lib/be/mod.rs#L498">IDL is
+tagged</a>
+so that we understand what post processing is required, and check some
+security controls. If the search was unindexed aka [ALLIDS]{.title-ref},
+and if the account is not allowed to access fully unindexed searches,
+then we return a failure at this point. We also now check if the query
+was [Partial(ly)]{.title-ref} unindexed, and if it is, we assert limits
+over the number of entries we may load and test.</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>match &amp;idl {
+</span><span>    IDL::ALLIDS =&gt; {
+</span><span>        if !erl.unindexed_allow {
+</span><span>            ladmin_error!(au, &quot;filter (search) is fully unindexed, and not allowed by resource limits&quot;);
+</span><span>            return Err(OperationError::ResourceLimit);
+</span><span>        }
+</span><span>    }
+</span><span>    IDL::Partial(idl_br) =&gt; {
+</span><span>        if idl_br.len() &gt; erl.search_max_filter_test {
+</span><span>            ladmin_error!(au, &quot;filter (search) is partial indexed and greater than search_max_filter_test allowed by resource limits&quot;);
+</span><span>            return Err(OperationError::ResourceLimit);
+</span><span>        }
+</span><span>    }
+</span><span>    IDL::PartialThreshold(_) =&gt; {
+</span><span>        // Since we opted for this, this is not the fault
+</span><span>        // of the user and we should not penalise them by limiting on partial.
+</span><span>    }
+</span><span>    IDL::Indexed(idl_br) =&gt; {
+</span><span>        // We know this is resolved here, so we can attempt the limit
+</span><span>        // check. This has to fold the whole index, but you know, class=pres is
+</span><span>        // indexed ...
+</span><span>        if idl_br.len() &gt; erl.search_max_results {
+</span><span>            ladmin_error!(au, &quot;filter (search) is indexed and greater than search_max_results allowed by resource limits&quot;);
+</span><span>            return Err(OperationError::ResourceLimit);
+</span><span>        }
+</span><span>    }
+</span><span>};
+</span></code></pre>
+<p>We then load the related entries from the IDL we have. Initially, this
+is called through the entry cache of the ARCache.</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>let entries = self.get_idlayer().get_identry(au, &amp;idl).map_err(|e| {
+</span><span>    ladmin_error!(au, &quot;get_identry failed {:?}&quot;, e);
+</span><span>    e
+</span><span>})?;
+</span></code></pre>
+<p>As many entries as possible are <a href="https://github.com/kanidm/kanidm/blob/dbfe87e675beac7fd931a445fd80cf439c2c6e61/kanidmd/src/lib/be/idl_arc_sqlite.rs#L93">loaded from the
+ARCache</a>.
+The remaining ID's that were missed are stored in a secondary IDL set.
+The missed entry set is then submitted to <a href="https://github.com/kanidm/kanidm/blob/master/kanidmd/src/lib/be/idl_sqlite.rs#L99">the sqlite
+layer</a>
+where the entries are loaded and deserialised. An important part of the
+ARCache is to keep fully inflated entries in memory, to speed up the
+process of retrieving these. Real world use shows this can have orders
+of magnitude of impact on performance by just avoiding this
+deserialisation step, but also that we avoid IO to disk.</p>
+<p>The entry set is now able to be checked. If the IDL was
+[Indexed]{.title-ref} no extra work is required, and we can just return
+the values. But in all other cases we must apply the filter test. The
+filter test is where the terms of the filter are checked against each
+entry to determine if they match and are part of the set.</p>
+<p>This is where the partial threshold is important - that the act of
+processing the remaining indexes may be more expensive than applying the
+filter assertions to the subset of entries in memory. It's also why
+filter optimisation matters. If a query can be below the threshold
+sooner, than we can apply the filter test earlier and we reduce the
+number of indexes we must load and keep cached. This helps performance
+and cache behaviour.</p>
+<p>The <a href="https://github.com/kanidm/kanidm/blob/dbfe87e675beac7fd931a445fd80cf439c2c6e61/kanidmd/src/lib/entry.rs#L1663">filter
+test</a>
+applies the terms of the filter to the entry, using the same rules as
+the indexing process to ensure consistent results. This gives us a
+true/false result, which lets us know if the entry really does match and
+should become part of the final candidate set.</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>fn search(...) {
+</span><span>    ...
+</span><span>    IDL::Partial(_) =&gt; lperf_segment!(au, &quot;be::search&lt;entry::ftest::partial&gt;&quot;, || {
+</span><span>        entries
+</span><span>            .into_iter()
+</span><span>            .filter(|e| e.entry_match_no_index(&amp;filt))
+</span><span>            .collect()
+</span><span>    }),
+</span><span>    ...
+</span><span>}
+</span><span>
+</span><span>fn entry_match_no_index_inner(&amp;self, filter: &amp;FilterResolved) -&gt; bool {
+</span><span>    match filter {
+</span><span>        FilterResolved::Eq(attr, value, _) =&gt; self.attribute_equality(attr.as_str(), value),
+</span><span>        FilterResolved::Sub(attr, subvalue, _) =&gt; {
+</span><span>            self.attribute_substring(attr.as_str(), subvalue)
+</span><span>        }
+</span><span>        ...
+</span><span>    }
+</span><span>}
+</span></code></pre>
+<p>It is now at this point that we finally have the fully resolved set of
+entries, in memory as a result set from the backend. These are returned
+to the query server's [search]{.title-ref} function.</p>
+<h2 id="access-controls">Access Controls</h2>
+<p>Now the process of
+<a href="https://github.com/kanidm/kanidm/blob/dbfe87e675beac7fd931a445fd80cf439c2c6e61/kanidmd/src/lib/server.rs#L168">applying</a>
+access controls begins. There are two layers of access controls as
+applied in kanidm. The first is <em>which entries are you allowed to see</em>.
+The second is <em>within an entry, what attributes may you see</em>. There is a
+reason for this seperation. The seperation exists so that when an
+internal search is performed on behalf of the user, we retrieve the set
+of entries you can see, but the server internally then performs the
+operation on your behalf and itself has access to see all attributes. If
+you wish to see this in action, it's a critical part of how
+<a href="https://github.com/kanidm/kanidm/blob/dbfe87e675beac7fd931a445fd80cf439c2c6e61/kanidmd/src/lib/server.rs#L1290">modify</a>
+and
+<a href="https://github.com/kanidm/kanidm/blob/dbfe87e675beac7fd931a445fd80cf439c2c6e61/kanidmd/src/lib/server.rs#L988">delete</a>
+both function, where you can only change or delete within your visible
+entry scope.</p>
+<p>The first stage is
+<a href="https://github.com/kanidm/kanidm/blob/master/kanidmd/src/lib/access.rs#L376">search_filter_entries</a>.
+This is the function that checks what entries you <em>may</em> see. This checks
+that you have the rights to see specific attributes (ie can you see
+name?), which then affects, &quot;could you possibly have queried for
+this?&quot;.</p>
+<p>Imagine for example, that we search for &quot;password = X&quot; (which kanidm
+disallows but anyway ...). Even if you could not read password, the act
+of testing the equality, if an entry was returned you would know now
+about the value or association to a user since the equality condition
+held true. This is a security risk for information disclosure.</p>
+<p>The first stage of access controls is <a href="https://github.com/kanidm/kanidm/blob/master/kanidmd/src/lib/access.rs#L397">what rules apply to your
+authenticated
+user</a>.
+There may be thousands of access controls in the system, but only some
+may related to your account.</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>let related_acp: Vec&lt;&amp;AccessControlSearch&gt; =
+</span><span>    lperf_segment!(audit, &quot;access::search_filter_entries&lt;related_acp&gt;&quot;, || {
+</span><span>        search_state
+</span><span>            .iter()
+</span><span>            .filter(|acs| {
+</span><span>                let f_val = acs.acp.receiver.clone();
+</span><span>                match f_val.resolve(&amp;se.event, None) {
+</span><span>                    Ok(f_res) =&gt; rec_entry.entry_match_no_index(&amp;f_res),
+</span><span>                    Err(e) =&gt; {
+</span><span>                        ...
+</span><span>                    }
+</span><span>                }
+</span><span>            })
+</span><span>            .collect()
+</span><span>    });
+</span></code></pre>
+<p>The next stage is to determine <a href="https://github.com/kanidm/kanidm/blob/master/kanidmd/src/lib/access.rs#L440">what attributes did you request to
+filter
+on</a>.
+This is why [filter_orig]{.title-ref} is stored in the event. We must
+test against the filter as intended by the caller, not the filter as
+executed. This is because the filter as executed may have been
+transformed by the server, using terms the user does not have access to.</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>let requested_attrs: BTreeSet&lt;&amp;str&gt; = se.filter_orig.get_attr_set();
+</span></code></pre>
+<p>Then for each entry, the set of allowed attributes is determined. If the
+user related access control also holds rights oven the entry in the
+result set, the set of attributes it grants read access over is appended
+to the &quot;allowed&quot; set. This repeats until the set of related access
+controls is exhausted.</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>let allowed_entries: Vec&lt;Entry&lt;EntrySealed, EntryCommitted&gt;&gt; =
+</span><span>    entries
+</span><span>        .into_iter()
+</span><span>        .filter(|e| {
+</span><span>
+</span><span>            let allowed_attrs: BTreeSet&lt;&amp;str&gt; = related_acp.iter()
+</span><span>                .filter_map(|acs| {
+</span><span>                    ...
+</span><span>                    if e.entry_match_no_index(&amp;f_res) {
+</span><span>                        // add search_attrs to allowed.
+</span><span>                        Some(acs.attrs.iter().map(|s| s.as_str()))
+</span><span>                    } else {
+</span><span>                        None
+</span><span>                    }
+</span><span>                    ...
+</span><span>                })
+</span><span>                .collect();
+</span><span>
+</span><span>            let decision = requested_attrs.is_subset(&amp;allowed_attrs);
+</span><span>            lsecurity_access!(audit, &quot;search attr decision --&gt; {:?}&quot;, decision);
+</span><span>            decision
+</span><span>        })
+</span></code></pre>
+<p>This now has created a set of &quot;attributes this person can see&quot; on this
+entry based on all related rules. The requested attributes are compared
+to the attributes you may see, and if requested is a subset or equal,
+then the entry is allowed to be returned to the user.</p>
+<p>If there is even a single attribute in the query you do not have the
+rights to see, then the entry is disallowed from the result set. This is
+because if you can not see that attribute, you must not be able to apply
+a filter test to it.</p>
+<p>To give a worked example, consider the entry from before. We also have
+three access controls:</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>applies to: all users
+</span><span>over: pres class
+</span><span>read attr: class
+</span><span>
+</span><span>applies to: memberof admins
+</span><span>over: entries where class = account
+</span><span>read attr: name, displayname
+</span><span>
+</span><span>applies to: memberof radius_servers
+</span><span>over: entries where class = account
+</span><span>read attr: radius secret
+</span></code></pre>
+<p>Our current authenticated user (let's assume it's also
+&quot;name=william&quot;), would only have the first two rules apply. As we
+search through the candidate entries, the &quot;all users&quot; rule would match
+our entry, which means class is added to the allowed set. Then since
+william is memberof admins, they also have read to name, and
+displayname. Since the target entry is class=account then name and
+displayname are also added to the allowed set. But since william is
+<em>not</em> a member of radius_servers, we don't get to read radius secrets.</p>
+<p>At this point the entry set is reduced to the set of entries the user
+was <em>able</em> to have applied filter tests too, and is returned.</p>
+<p>The query server then unwinds to [search_ext]{.title-ref} where the
+second stage of access controls is now checked. This calls
+<a href="https://github.com/kanidm/kanidm/blob/master/kanidmd/src/lib/access.rs#L524">search_filter_entry_attributes</a>
+which is responsible for changing an entry in memory to remove content
+that the user may not see. A key difference is this line:</p>
+<p>Again, the set of related access controls is generated, and then applied
+to each entry to determine if they are in scope. This builds a set of
+&quot;attributes the user can see, per entry&quot;. This is then applied to the
+entry to reduction function, which removes any attribute <em>not</em> in the
+allowed set.</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>e.reduce_attributes(&amp;allowed_attrs)
+</span></code></pre>
+<p>A clear example is when you attempt to view yourself vs when you view
+another persons account as there are permissions over self that exist,
+which do not apply to others. You may view your own legalname field, but
+not the legalname of another person.</p>
+<p>The entry set is finally returned and turned into a JSON entry for
+transmission to the client. Hooray!</p>
+<h2 id="conclusion">Conclusion</h2>
+<p>There is a lot that goes into a query being processed in a database. But
+like all things in computing since it was created by a person, any other
+person must be able to understand it. It's always amazing that this
+whole process can be achieved in fractions of a second, in parallel, and
+so reliably.</p>
+<p>There is so much more involved in this process too. The way that a write
+operation is performed to extract correct index values, the way that the
+database reloads the access control cache based on changes, and even how
+the schema is loaded and constructed. Ontop of all this, a complete
+identity management stack is built that can allow authentication through
+wireless, machines, ssh keys and more.</p>
+<p>If you are interested more in databases and
+<a href="https://github.com/kanidm/kanidm">Kanidm</a> please get in contact!</p>
+
+    </div>
+</article>
+
+        </main>
+        
+        <footer>
+            
+            <div class="border"></div>
+            <div class="footer">
+                <small class="footer-left">
+                    Copyright &copy; William Brown
+                </small>
+                <small class="footer-right">
+                    Powered by <a href="https://www.getzola.org">Zola</a> | Theme <a href="https://github.com/barlog-m/oceanic-zen">Oceanic Zen</a>
+                </small>
+            </div>
+        
+        </footer>
+    
+        </div>
+    </body>
+</html>

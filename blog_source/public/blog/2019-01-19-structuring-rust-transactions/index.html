@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+        <meta name="description" content="Firstyear&#x27;s blog">
+        
+
+        <title>Firstyear&#x27;s blog-a-log</title>
+
+        
+          <link rel="alternate" type="application/rss+xml" title="RSS" href="https://fy.blackhats.net.au/rss.xml">
+        
+
+        
+            <link rel="stylesheet" href="https://fy.blackhats.net.au/theme.css">
+        
+        
+    </head>
+    <body>
+        <div class="content">
+        
+        
+            <header>
+                <div class="header-left">
+                    <a href="https:&#x2F;&#x2F;fy.blackhats.net.au" class="logo">Firstyear&#x27;s blog-a-log</a>
+                </div>
+                <div class="header-right">
+                    <nav itemscope itemtype="http://schema.org/SiteNavigationElement">
+                      <ul>
+                        
+                        
+                            
+                            <li class="nav">
+                                <a itemprop="url" href="https://fy.blackhats.net.au/blog/">
+                                    <span itemprop="name">Blog</span>
+                                </a>
+                            </li>
+                        
+                            
+                            <li class="nav">
+                                <a itemprop="url" href="https://fy.blackhats.net.au/pages/">
+                                    <span itemprop="name">Pages</span>
+                                </a>
+                            </li>
+                        
+                        
+                        <li class="nav">
+                            <a itemprop="url" href="https://github.com/firstyear">
+                                <img class="icon" src="https:&#x2F;&#x2F;fy.blackhats.net.au/icons/github.svg" alt="Github">
+                            </a>
+                        </li>
+                        
+                        <li class="nav">
+                            <a itemprop="url" href="/rss.xml">
+                                <img class="icon" src="https:&#x2F;&#x2F;fy.blackhats.net.au/rss-logo.png" alt="rss">
+                            </a>
+                        </li>
+                      </ul>
+                    </nav>
+                </div>
+            </header>
+        
+        
+        <main>
+            
+<article itemscope itemtype="http://schema.org/BlogPosting">
+    <div itemprop="headline">
+        <h1>Structuring Rust Transactions</h1>
+        <div class="border"></div>
+        <time datetime="2019-01-19" class="date" itemprop="datePublished">
+            19 Jan 2019
+        </time>
+    </div>
+    <div itemprop="articleBody">
+        <h1 id="structuring-rust-transactions">Structuring Rust Transactions</h1>
+<p>I've been working on a database-related project in Rust recently, which
+takes advantage of my <a href="https://crates.io/crates/concread">concurrently readable
+datastructures.</a> However I ran into a
+problem of how to structure Read/Write transaction structures that
+shared the reader code, and container multiple inner read/write types.</p>
+<h2 id="some-constraints">Some Constraints</h2>
+<p>To be clear, there are some constraints. A &quot;parent&quot; write, will only
+ever contain write transaction guards, and a read will only ever contain
+read transaction guards. This means we aren't going to hit any
+deadlocks in the code. Rust can't protect us from mis-ording locks. An
+additional requirement is that readers and a single write must be able
+to proceed simultaneously - but having a rwlock style writer or readers
+behaviour would still work here.</p>
+<h2 id="some-background">Some Background</h2>
+<p>To simplify this, imagine we have two concurrently readable
+datastructures. We'll call them db_a and db_b.</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>struct db_a { ... }
+</span><span>
+</span><span>struct db_b { ... }
+</span></code></pre>
+<p>Now, each of db_a and db_b has their own way to protect their inner
+content, but they'll return a DBWriteGuard or DBReadGuard when we call
+db_a.read()/write() respectively.</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>impl db_a {
+</span><span>    pub fn read(&amp;self) -&gt; DBReadGuard {
+</span><span>        ...
+</span><span>    }
+</span><span>
+</span><span>    pub fn write(&amp;self) -&gt; DBWriteGuard {
+</span><span>        ...
+</span><span>    }
+</span><span>}
+</span></code></pre>
+<p>Now we make a &quot;parent&quot; wrapper transaction such as:</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>struct server {
+</span><span>    a: db_a,
+</span><span>    b: db_b,
+</span><span>}
+</span><span>
+</span><span>struct server_read {
+</span><span>    a: DBReadGuard,
+</span><span>    b: DBReadGuard,
+</span><span>}
+</span><span>
+</span><span>struct server_write {
+</span><span>    a: DBWriteGuard,
+</span><span>    b: DBWriteGuard,
+</span><span>}
+</span><span>
+</span><span>impl server {
+</span><span>    pub fn read(&amp;self) -&gt; server_read {
+</span><span>        server_read {
+</span><span>            self.a.read(),
+</span><span>            self.b.read(),
+</span><span>        }
+</span><span>    }
+</span><span>
+</span><span>    pub fn write(&amp;self) -&gt; server_write {
+</span><span>        server_read {
+</span><span>            self.a.write(),
+</span><span>            self.b.write(),
+</span><span>        }
+</span><span>    }
+</span><span>}
+</span></code></pre>
+<h2 id="the-problem">The Problem</h2>
+<p>Now the problem is that on my server_read and server_write I want to
+implement a function for &quot;search&quot; that uses the same code. Search or a
+read or write should behave identically! I wanted to also avoid the use
+of macros as the can hide issues while stepping in a debugger like
+LLDB/GDB.</p>
+<p>Often the answer with rust is &quot;traits&quot;, to create an interface that
+types adhere to. Rust also allows default trait implementations, which
+sounds like it could be a solution here.</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>pub trait server_read_trait {
+</span><span>    fn search(&amp;self) -&gt; SomeResult {
+</span><span>        let result_a = self.a.search(...);
+</span><span>        let result_b = self.b.search(...);
+</span><span>        SomeResult(result_a, result_b)
+</span><span>    }
+</span><span>}
+</span></code></pre>
+<p>In this case, the issue is that &amp;self in a trait is not aware of the
+fields in the struct - traits don't define that fields <em>must</em> exist, so
+the compiler can't assume they exist at all.</p>
+<p>Second, the type of self.a/b is unknown to the trait - because in a read
+it's a &quot;a: DBReadGuard&quot;, and for a write it's &quot;a: DBWriteGuard&quot;.</p>
+<p>The first problem can be solved by using a get_field type in the trait.
+Rust will also compile this out as an inline, so the <em>correct</em> thing for
+the type system is also the <em>optimal</em> thing at run time. So we'll
+update this to:</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>pub trait server_read_trait {
+</span><span>    fn get_a(&amp;self) -&gt; ???;
+</span><span>
+</span><span>    fn get_b(&amp;self) -&gt; ???;
+</span><span>
+</span><span>    fn search(&amp;self) -&gt; SomeResult {
+</span><span>        let result_a = self.get_a().search(...); // note the change from self.a to self.get_a()
+</span><span>        let result_b = self.get_b().search(...);
+</span><span>        SomeResult(result_a, result_b)
+</span><span>    }
+</span><span>}
+</span><span>
+</span><span>impl server_read_trait for server_read {
+</span><span>    fn get_a(&amp;self) -&gt; &amp;DBReadGuard {
+</span><span>        &amp;self.a
+</span><span>    }
+</span><span>    // get_b is similar, so ommitted
+</span><span>}
+</span><span>
+</span><span>impl server_read_trait for server_write {
+</span><span>    fn get_a(&amp;self) -&gt; &amp;DBWriteGuard {
+</span><span>        &amp;self.a
+</span><span>    }
+</span><span>    // get_b is similar, so ommitted
+</span><span>}
+</span></code></pre>
+<p>So now we have the second problem remaining: for the server_write we
+have DBWriteGuard, and read we have a DBReadGuard. There was a much
+longer experimentation process, but eventually the answer was simpler
+than I was expecting. Rust allows traits to have Self types that enforce
+trait bounds rather than a concrete type.</p>
+<p>So provided that DBReadGuard and DBWriteGuard both implement
+&quot;DBReadTrait&quot;, then we can have the server_read_trait have a self type
+that enforces this. It looks something like:</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>pub trait DBReadTrait {
+</span><span>    fn search(&amp;self) -&gt; ...;
+</span><span>}
+</span><span>
+</span><span>impl DBReadTrait for DBReadGuard {
+</span><span>    fn search(&amp;self) -&gt; ... { ... }
+</span><span>}
+</span><span>
+</span><span>impl DBReadTrait for DBWriteGuard {
+</span><span>    fn search(&amp;self) -&gt; ... { ... }
+</span><span>}
+</span><span>
+</span><span>pub trait server_read_trait {
+</span><span>    type GuardType: DBReadTrait; // Say that GuardType must implement DBReadTrait
+</span><span>
+</span><span>    fn get_a(&amp;self) -&gt; &amp;Self::GuardType; // implementors must return that type implementing the trait.
+</span><span>
+</span><span>    fn get_b(&amp;self) -&gt; &amp;Self::GuardType;
+</span><span>
+</span><span>    fn search(&amp;self) -&gt; SomeResult {
+</span><span>        let result_a = self.get_a().search(...);
+</span><span>        let result_b = self.get_b().search(...);
+</span><span>        SomeResult(result_a, result_b)
+</span><span>    }
+</span><span>}
+</span><span>
+</span><span>impl server_read_trait for server_read {
+</span><span>    fn get_a(&amp;self) -&gt; &amp;DBReadGuard {
+</span><span>        &amp;self.a
+</span><span>    }
+</span><span>    // get_b is similar, so ommitted
+</span><span>}
+</span><span>
+</span><span>impl server_read_trait for server_write {
+</span><span>    fn get_a(&amp;self) -&gt; &amp;DBWriteGuard {
+</span><span>        &amp;self.a
+</span><span>    }
+</span><span>    // get_b is similar, so ommitted
+</span><span>}
+</span></code></pre>
+<p>This works! We now have a way to write a single &quot;search&quot; type for our
+server read and write types. In my case, the DBReadTrait also uses a
+similar technique to define a search type shared between the DBReadGuard
+and DBWriteGuard.</p>
+
+    </div>
+</article>
+
+        </main>
+        
+        <footer>
+            
+            <div class="border"></div>
+            <div class="footer">
+                <small class="footer-left">
+                    Copyright &copy; William Brown
+                </small>
+                <small class="footer-right">
+                    Powered by <a href="https://www.getzola.org">Zola</a> | Theme <a href="https://github.com/barlog-m/oceanic-zen">Oceanic Zen</a>
+                </small>
+            </div>
+        
+        </footer>
+    
+        </div>
+    </body>
+</html>

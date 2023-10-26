@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+        <meta name="description" content="Firstyear&#x27;s blog">
+        
+
+        <title>Firstyear&#x27;s blog-a-log</title>
+
+        
+          <link rel="alternate" type="application/rss+xml" title="RSS" href="https://fy.blackhats.net.au/rss.xml">
+        
+
+        
+            <link rel="stylesheet" href="https://fy.blackhats.net.au/theme.css">
+        
+        
+    </head>
+    <body>
+        <div class="content">
+        
+        
+            <header>
+                <div class="header-left">
+                    <a href="https:&#x2F;&#x2F;fy.blackhats.net.au" class="logo">Firstyear&#x27;s blog-a-log</a>
+                </div>
+                <div class="header-right">
+                    <nav itemscope itemtype="http://schema.org/SiteNavigationElement">
+                      <ul>
+                        
+                        
+                            
+                            <li class="nav">
+                                <a itemprop="url" href="https://fy.blackhats.net.au/blog/">
+                                    <span itemprop="name">Blog</span>
+                                </a>
+                            </li>
+                        
+                            
+                            <li class="nav">
+                                <a itemprop="url" href="https://fy.blackhats.net.au/pages/">
+                                    <span itemprop="name">Pages</span>
+                                </a>
+                            </li>
+                        
+                        
+                        <li class="nav">
+                            <a itemprop="url" href="https://github.com/firstyear">
+                                <img class="icon" src="https:&#x2F;&#x2F;fy.blackhats.net.au/icons/github.svg" alt="Github">
+                            </a>
+                        </li>
+                        
+                        <li class="nav">
+                            <a itemprop="url" href="/rss.xml">
+                                <img class="icon" src="https:&#x2F;&#x2F;fy.blackhats.net.au/rss-logo.png" alt="rss">
+                            </a>
+                        </li>
+                      </ul>
+                    </nav>
+                </div>
+            </header>
+        
+        
+        <main>
+            
+<article itemscope itemtype="http://schema.org/BlogPosting">
+    <div itemprop="headline">
+        <h1>Debugging 389ds tests</h1>
+        <div class="border"></div>
+        <time datetime="2015-08-03" class="date" itemprop="datePublished">
+            03 Aug 2015
+        </time>
+    </div>
+    <div itemprop="articleBody">
+        <h1 id="debugging-389ds-tests">Debugging 389ds tests</h1>
+<p>I've always found when writing tests for 389ds that's it's really
+handy to have the ldif of data and the logs from a unit test available.
+However, by default, these are stored.</p>
+<p>I discovered that if you add instance.backupFS() just before your
+instance.delete() you can keep a full dump of the data and logs from the
+instance.</p>
+<p>It can also be useful to call db2ldif before you run the backup so that
+you have a human readable copy of the data on hand as well.</p>
+<p>I've found the best pattern is:</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>def tearDown(self):
+</span><span>    if self.instance.exists():
+</span><span>        self.instance.db2ldif(bename=&#39;userRoot&#39;, suffixes=[DEFAULT_SUFFIX], excludeSuffixes=[], encrypt=False, \
+</span><span>            repl_data=False, outputfile=&#39;%s/ldif/%s.ldif&#39; % (self.instance.dbdir,INSTANCE_SERVERID ))
+</span><span>        self.instance.clearBackupFS()
+</span><span>        self.instance.backupFS()
+</span><span>        self.instance.delete()
+</span></code></pre>
+<p>This puts an ldif dump of the DB into the backup path, we then clear old
+backups for our test instance (else it won't over-write them), finally,
+we actually do the backup. You should see:</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>snip ...
+</span><span>DEBUG:lib389:backupFS add = /var/lib/dirsrv/slapd-effectiverightsds/ldif/effectiverightsds.ldif (/)
+</span><span>snip ...
+</span><span>INFO:lib389:backupFS: archive done : /tmp/slapd-effectiverightsds.bck/backup_08032015_092510.tar.gz
+</span></code></pre>
+<p>Then you can extract this in /tmp/slapd-instance, and examine your logs
+and the ldif of what was really in your ldap server at the time.</p>
+
+    </div>
+</article>
+
+        </main>
+        
+        <footer>
+            
+            <div class="border"></div>
+            <div class="footer">
+                <small class="footer-left">
+                    Copyright &copy; William Brown
+                </small>
+                <small class="footer-right">
+                    Powered by <a href="https://www.getzola.org">Zola</a> | Theme <a href="https://github.com/barlog-m/oceanic-zen">Oceanic Zen</a>
+                </small>
+            </div>
+        
+        </footer>
+    
+        </div>
+    </body>
+</html>

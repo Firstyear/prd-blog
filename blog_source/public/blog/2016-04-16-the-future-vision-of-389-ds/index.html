@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+        <meta name="description" content="Firstyear&#x27;s blog">
+        
+
+        <title>Firstyear&#x27;s blog-a-log</title>
+
+        
+          <link rel="alternate" type="application/rss+xml" title="RSS" href="https://fy.blackhats.net.au/rss.xml">
+        
+
+        
+            <link rel="stylesheet" href="https://fy.blackhats.net.au/theme.css">
+        
+        
+    </head>
+    <body>
+        <div class="content">
+        
+        
+            <header>
+                <div class="header-left">
+                    <a href="https:&#x2F;&#x2F;fy.blackhats.net.au" class="logo">Firstyear&#x27;s blog-a-log</a>
+                </div>
+                <div class="header-right">
+                    <nav itemscope itemtype="http://schema.org/SiteNavigationElement">
+                      <ul>
+                        
+                        
+                            
+                            <li class="nav">
+                                <a itemprop="url" href="https://fy.blackhats.net.au/blog/">
+                                    <span itemprop="name">Blog</span>
+                                </a>
+                            </li>
+                        
+                            
+                            <li class="nav">
+                                <a itemprop="url" href="https://fy.blackhats.net.au/pages/">
+                                    <span itemprop="name">Pages</span>
+                                </a>
+                            </li>
+                        
+                        
+                        <li class="nav">
+                            <a itemprop="url" href="https://github.com/firstyear">
+                                <img class="icon" src="https:&#x2F;&#x2F;fy.blackhats.net.au/icons/github.svg" alt="Github">
+                            </a>
+                        </li>
+                        
+                        <li class="nav">
+                            <a itemprop="url" href="/rss.xml">
+                                <img class="icon" src="https:&#x2F;&#x2F;fy.blackhats.net.au/rss-logo.png" alt="rss">
+                            </a>
+                        </li>
+                      </ul>
+                    </nav>
+                </div>
+            </header>
+        
+        
+        <main>
+            
+<article itemscope itemtype="http://schema.org/BlogPosting">
+    <div itemprop="headline">
+        <h1>The future vision of 389-ds</h1>
+        <div class="border"></div>
+        <time datetime="2016-04-16" class="date" itemprop="datePublished">
+            16 Apr 2016
+        </time>
+    </div>
+    <div itemprop="articleBody">
+        <h1 id="the-future-vision-of-389-ds">The future vision of 389-ds</h1>
+<p>Disclaimer: This is my vision and analysis of 389-ds and it's future.
+It is nothing about Red Hat's future plans or goals. Like all
+predictions, they may not even come true.</p>
+<p>As I have said before I'm part of the 389-ds core team. I really do
+have a passion for authentication and identity management: I'm sure
+some of my friends would like to tell me to shut up about it sometimes.</p>
+<p>389-ds, or rather, ns-slapd has a lot of history. Originally from the
+umich code base, it has moved through Netscape, SUN, Aol and, finally to
+Red Hat. It's quite something to find myself working on code that was
+written in 1996. In 1996 I was on a playground in Primary School, where
+my biggest life concerns was if I could see the next episode of [anime
+of choice] the next day at before school care. What I'm saying, is
+ns-slapd is old. Very old. There are many dark, untrodden paths in that
+code base.</p>
+<p>You would get your nice big iron machine from SUN, you would setup the
+ns-slapd instance once. You would then probably setup one other ns-slapd
+master, then you would run them in production for the next 4 to 5 years
+with minimal changes. Business policy would ask developers to integrate
+with the LDAP server. Everything was great.</p>
+<p>But it's not 1996 anymore. I have managed to complete schooling and
+acquire a degree in this time. ns-slapd has had many improvements, but
+the work flow and way that ns-slapd in managed really hasn't changed a
+lot.</p>
+<p>While ns-slapd has stayed roughly the same, the world has evolved. We
+now have latte sipping code hipsters, sitting in trendy Melbourne cafes
+programming in go and whatever js framework of this week. They deploy to
+AWS, to GCE. (But not Azure, that's not cool enough). These developers
+have a certain mindset and the benefits of centralised business
+authentication isn't one of them. They want to push things to cloud,
+but no system administrator would let a corporate LDAP be avaliable on
+the internet. CIO's are all drinking the &quot;cloud&quot; &quot;disruption&quot; kool
+aid. The future of many technologies is certainly in question.</p>
+<p>To me, there is no doubt that ns-slapd is still a great technology: Like
+the unix philosohpy, tools should do &quot;one thing&quot; and &quot;one thing
+well&quot;. When it comes to secure authentication, user identification, and
+authorisation, LDAP is still king. So why are people not deploying it in
+their new fancy containers and cloud disruption train that they are all
+aboard?</p>
+<p>ns-slapd is old. Our systems and installers, such as setup-ds.pl are
+really designed for the &quot;pet&quot; mentality of servers. They are hard to
+automate to replica groups, and they inist on having certain types of
+information avaliable before they can run. They also don't work with
+automation, and are unable to accept certain types of ldifs as part of
+the inf file that drives the install. You have to have at least a few
+years experience with ns-slapd before you could probably get this
+process &quot;right&quot;.</p>
+<p>Another, well, LDAP is ... well, hard. It's not json (which is
+apparently the only thing developers understand now). Developers also
+don't care about identifying users. That's just not <em>cool</em>. Why would
+we try and use some &quot;hard&quot; LDAP system, when I can just keep some json
+in a mongodb that tracks your password and groups you are in?</p>
+<p>So what can we do? Where do I see 389-ds going in the future?</p>
+<ul>
+<li>We need to modernise our tooling, and installers. It needs to be
+easier than ever to setup an LDAP instance. Our administration needs
+to move away from applying ldifs, into robust, command line tools.</li>
+<li>Setting up replication groups and masters needs to be simpler.
+Replication topologies should be &quot;self managing&quot; (to an extent).
+Ie I should say &quot;here is a new ldap server, join this replication
+group&quot;. The administration layer then determines all the needed
+replication agreements for robust and avaliable service.</li>
+<li>We need to get away from long lived static masters, and be able to
+have rapidly deployed, and destroyed, masters. With the changes
+above, this will lend itself to faster and easier deployment into
+containers and other such systems.</li>
+<li>During updates, we need to start to enable smarter choices by
+default: but still allow people to fix their systems on certain
+configurations to guarantee stability. For example, we add new
+options and improvements to DS all the time: but we cannot always
+enable them by default. This makes our system look dated, when
+really a few configurations would really modernise and help improve
+deployments. Having mechanisms to push the updates to clients who
+want it, and enable them by default on new installs will go a long
+way.</li>
+<li>Out of the box we need smarter settings: The <em>default</em> install
+should need almost <em>no changes</em> to be a strong, working LDAP system.
+It should not require massive changes or huge amounts of indepth
+knowledge to deploy. I'm the LDAP expert: You're the coffee
+sipping developer. You should be able to trust the defaults we give
+you, and know that they will be well engineered and carefully
+considered.</li>
+<li>Finally I think what is also going to be really important is Web
+Based authentication. We need to provide ways to setup and provision
+SAML and OAuth systems that &quot;just work&quot; with our LDAP. With
+improvements on the way like <a href="https://tools.ietf.org/html/draft-wibrown-ldapssotoken-00">this draft
+rfc</a> will
+even allow fail over between token systems, backed by the high
+security and performance guarantees of LDAP.</li>
+</ul>
+<p>This is my vision of the future for 389-ds: Simplification of setup.
+Polish of the configuration. Ability to automate and tools to empower
+administrators. Integration with what developers want.</p>
+<p>Lets see how much myself and the team can achieve by the end of 2016.</p>
+
+    </div>
+</article>
+
+        </main>
+        
+        <footer>
+            
+            <div class="border"></div>
+            <div class="footer">
+                <small class="footer-left">
+                    Copyright &copy; William Brown
+                </small>
+                <small class="footer-right">
+                    Powered by <a href="https://www.getzola.org">Zola</a> | Theme <a href="https://github.com/barlog-m/oceanic-zen">Oceanic Zen</a>
+                </small>
+            </div>
+        
+        </footer>
+    
+        </div>
+    </body>
+</html>

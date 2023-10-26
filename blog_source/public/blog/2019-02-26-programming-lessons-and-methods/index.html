@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+        <meta name="description" content="Firstyear&#x27;s blog">
+        
+
+        <title>Firstyear&#x27;s blog-a-log</title>
+
+        
+          <link rel="alternate" type="application/rss+xml" title="RSS" href="https://fy.blackhats.net.au/rss.xml">
+        
+
+        
+            <link rel="stylesheet" href="https://fy.blackhats.net.au/theme.css">
+        
+        
+    </head>
+    <body>
+        <div class="content">
+        
+        
+            <header>
+                <div class="header-left">
+                    <a href="https:&#x2F;&#x2F;fy.blackhats.net.au" class="logo">Firstyear&#x27;s blog-a-log</a>
+                </div>
+                <div class="header-right">
+                    <nav itemscope itemtype="http://schema.org/SiteNavigationElement">
+                      <ul>
+                        
+                        
+                            
+                            <li class="nav">
+                                <a itemprop="url" href="https://fy.blackhats.net.au/blog/">
+                                    <span itemprop="name">Blog</span>
+                                </a>
+                            </li>
+                        
+                            
+                            <li class="nav">
+                                <a itemprop="url" href="https://fy.blackhats.net.au/pages/">
+                                    <span itemprop="name">Pages</span>
+                                </a>
+                            </li>
+                        
+                        
+                        <li class="nav">
+                            <a itemprop="url" href="https://github.com/firstyear">
+                                <img class="icon" src="https:&#x2F;&#x2F;fy.blackhats.net.au/icons/github.svg" alt="Github">
+                            </a>
+                        </li>
+                        
+                        <li class="nav">
+                            <a itemprop="url" href="/rss.xml">
+                                <img class="icon" src="https:&#x2F;&#x2F;fy.blackhats.net.au/rss-logo.png" alt="rss">
+                            </a>
+                        </li>
+                      </ul>
+                    </nav>
+                </div>
+            </header>
+        
+        
+        <main>
+            
+<article itemscope itemtype="http://schema.org/BlogPosting">
+    <div itemprop="headline">
+        <h1>Programming Lessons and Methods</h1>
+        <div class="border"></div>
+        <time datetime="2019-02-26" class="date" itemprop="datePublished">
+            26 Feb 2019
+        </time>
+    </div>
+    <div itemprop="articleBody">
+        <h1 id="programming-lessons-and-methods">Programming Lessons and Methods</h1>
+<p>Everyone has their own lessons and methods that they use when they
+approaching programming. These are the lessons that I have learnt, which
+I think are the most important when it comes to design, testing and
+communication.</p>
+<h2 id="comments-and-design">Comments and Design</h2>
+<p>Programming is the art of writing human readable code, that a machine
+will eventually run. Your program needs to be reviewed, discussed and
+parsed by another human. That means you need to write your program in a
+way they can understand first.</p>
+<p>Rather than rushing into code, and hacking until it works, I find it's
+great to start with comments such as:</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>fn data_access(search: Search) -&gt; Type {
+</span><span>    // First check the search is valid
+</span><span>    //  * No double terms
+</span><span>    //  * All schema is valid
+</span><span>
+</span><span>    // Retrieve our data based on the search
+</span><span>
+</span><span>    // if debug, do an un-indexed assert the search matches
+</span><span>
+</span><span>    // Do any need transform
+</span><span>
+</span><span>    // Return the data
+</span><span>}
+</span></code></pre>
+<p>After that, I walk away, think about the issue, come back, maybe tweak
+these comments. When I eventually fill in the code inbetween, I leave
+all the comments in place. This really helps my future self understand
+what I was thinking, but it also helps other people understand too.</p>
+<h2 id="state-machines">State Machines</h2>
+<p>State machines are a way to design and reason about the states a program
+can be in. They allow exhaustive represenations of all possible outcomes
+of a function. A simple example is a microwave door.</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>/----\            /----- close ----\          /-----\
+</span><span>|     \          /                 v         v      |
+</span><span>|    -------------                ---------------   |
+</span><span>open   | Door Open |                | Door Closed |  close
+</span><span>|    -------------                ---------------   |
+</span><span>|    ^          ^                  /          \     |
+</span><span>\---/            \------ open ----/            \----/
+</span></code></pre>
+<p>When the door is open, opening it again does nothing. Only when the door
+is open, and we close the door (and event), does the door close (a
+transition). Once closed, the door can not be closed any more (event
+does nothing). It's when we open the door now, that a state change can
+occur.</p>
+<p>There is much more to state machines than this, but they allow us as
+humans to reason about our designs and model our programs to have all
+possible outcomes considered.</p>
+<h2 id="zero-one-and-infinite">Zero, One and Infinite</h2>
+<p>In mathematics there are only three numbers that matter. Zero, One and
+Infinite. It turns out the same is true in a computer too.</p>
+<p>When we are making a function, we can define limits in these terms. For
+example:</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>fn thing(argument: Type)
+</span></code></pre>
+<p>In this case, argument is &quot;One&quot; thing, and must be one thing.</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>fn thing(argument: Option&lt;Type&gt;)
+</span></code></pre>
+<p>Now we have argument as an option, so it's &quot;Zero&quot; or &quot;One&quot;.</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>fn thing(argument: Vec&lt;Type&gt;)
+</span></code></pre>
+<p>Now we have argument as vec (array), so it's &quot;Zero&quot; to &quot;Infinite&quot;.</p>
+<p>When we think about this, our functions have to handle these cases
+properly. We don't write functions that take a vec with only two items,
+we write a function with two arguments where each one must exist. It's
+hard to handle &quot;two&quot; - it's easy to handle two cases of &quot;one&quot;.</p>
+<p>It also is a good guide for how to handle data sets, assuming they could
+always be infinite in size (or at least any arbitrary size).</p>
+<p>You can then apply this to tests. In a test given a function of:</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>fn test_me(a: Option&lt;Type&gt;, b: Vec&lt;Type&gt;)
+</span></code></pre>
+<p>We know we need to test permutations of:</p>
+<ul>
+<li>a is &quot;Zero&quot; or &quot;One&quot; (Some, None)</li>
+<li>b is &quot;Zero&quot;, &quot;One&quot; or &quot;Infinite&quot; (.len() == 0, .len() == 1,
+.len() &gt; 0)</li>
+</ul>
+<p>Note: Most languages don't have an array type that is &quot;One to
+Infinite&quot;, IE non-empty. If you want this condition (at least one
+item), you have to assert it yourself ontop of the type system.</p>
+<h2 id="correct-simple-fast">Correct, Simple, Fast</h2>
+<p>Finally, we can put all these above tools together and apply a general
+philosophy. When writing a program, first make it correct, then simpify
+the program, then make it fast.</p>
+<p>If you don't do it in this order you will hit barriers - social and
+technical. For example, if you make something fast, simple, correct, you
+will likely have issues that can be fixed without making a decrease in
+performance. People don't like it when you introduce a patch that drops
+performance, so as a result correctness is now sacrificed. (Spectre
+anyone?)</p>
+<p>If you make something too simple, you may never be able to make it
+correctly handle all cases that exist in your application - likely
+facilitating a future rewrite to make it correct.</p>
+<p>If you do correct, fast, simple, then your program will be correct, and
+fast, but hard for a human to understand. Because programming is the art
+of communicating intent to a person sacrificing simplicity in favour of
+fast will make it hard to involve new people and educate and mentor them
+into development of your project.</p>
+<ul>
+<li>Correct: Does it behave correctly, handle all states and inputs
+correctly?</li>
+<li>Simple: Is it easy to comprehend and follow for a human reader?</li>
+<li>Fast: Is it performant?</li>
+</ul>
+
+    </div>
+</article>
+
+        </main>
+        
+        <footer>
+            
+            <div class="border"></div>
+            <div class="footer">
+                <small class="footer-left">
+                    Copyright &copy; William Brown
+                </small>
+                <small class="footer-right">
+                    Powered by <a href="https://www.getzola.org">Zola</a> | Theme <a href="https://github.com/barlog-m/oceanic-zen">Oceanic Zen</a>
+                </small>
+            </div>
+        
+        </footer>
+    
+        </div>
+    </body>
+</html>

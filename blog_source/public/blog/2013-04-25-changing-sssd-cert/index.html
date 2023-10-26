@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+        <meta name="description" content="Firstyear&#x27;s blog">
+        
+
+        <title>Firstyear&#x27;s blog-a-log</title>
+
+        
+          <link rel="alternate" type="application/rss+xml" title="RSS" href="https://fy.blackhats.net.au/rss.xml">
+        
+
+        
+            <link rel="stylesheet" href="https://fy.blackhats.net.au/theme.css">
+        
+        
+    </head>
+    <body>
+        <div class="content">
+        
+        
+            <header>
+                <div class="header-left">
+                    <a href="https:&#x2F;&#x2F;fy.blackhats.net.au" class="logo">Firstyear&#x27;s blog-a-log</a>
+                </div>
+                <div class="header-right">
+                    <nav itemscope itemtype="http://schema.org/SiteNavigationElement">
+                      <ul>
+                        
+                        
+                            
+                            <li class="nav">
+                                <a itemprop="url" href="https://fy.blackhats.net.au/blog/">
+                                    <span itemprop="name">Blog</span>
+                                </a>
+                            </li>
+                        
+                            
+                            <li class="nav">
+                                <a itemprop="url" href="https://fy.blackhats.net.au/pages/">
+                                    <span itemprop="name">Pages</span>
+                                </a>
+                            </li>
+                        
+                        
+                        <li class="nav">
+                            <a itemprop="url" href="https://github.com/firstyear">
+                                <img class="icon" src="https:&#x2F;&#x2F;fy.blackhats.net.au/icons/github.svg" alt="Github">
+                            </a>
+                        </li>
+                        
+                        <li class="nav">
+                            <a itemprop="url" href="/rss.xml">
+                                <img class="icon" src="https:&#x2F;&#x2F;fy.blackhats.net.au/rss-logo.png" alt="rss">
+                            </a>
+                        </li>
+                      </ul>
+                    </nav>
+                </div>
+            </header>
+        
+        
+        <main>
+            
+<article itemscope itemtype="http://schema.org/BlogPosting">
+    <div itemprop="headline">
+        <h1>Changing SSSD cert</h1>
+        <div class="border"></div>
+        <time datetime="2013-04-25" class="date" itemprop="datePublished">
+            25 Apr 2013
+        </time>
+    </div>
+    <div itemprop="articleBody">
+        <h1 id="changing-sssd-cert">Changing SSSD cert</h1>
+<p>After re-provisioning my Samba 4 domain, I found SSSD giving m a strange
+error: :</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>ldap_install_tls failed: [Connect error]
+</span><span> [TLS error -8054:You are attempting to import a cert with the same issuer/serial as an existing cert, but that is not the same cert.]
+</span></code></pre>
+<p>It seems SSSD caches the ca cert of your ldap service (even if you
+change the SSSD domain name). I couldn't find where to flush this, but
+changing some of the tls options will fix it.</p>
+<p>In SSSD.conf:</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>ldap_id_use_start_tls = True
+</span><span>ldap_tls_cacertdir = /usr/local/samba/private/tls
+</span><span>ldap_tls_reqcert = demand
+</span></code></pre>
+<p>Now to make the cacertdir work you need to run</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>cacertdir_rehash /usr/local/samba/private/tls
+</span></code></pre>
+<p>Your SSSD should now be working again.</p>
+
+    </div>
+</article>
+
+        </main>
+        
+        <footer>
+            
+            <div class="border"></div>
+            <div class="footer">
+                <small class="footer-left">
+                    Copyright &copy; William Brown
+                </small>
+                <small class="footer-right">
+                    Powered by <a href="https://www.getzola.org">Zola</a> | Theme <a href="https://github.com/barlog-m/oceanic-zen">Oceanic Zen</a>
+                </small>
+            </div>
+        
+        </footer>
+    
+        </div>
+    </body>
+</html>

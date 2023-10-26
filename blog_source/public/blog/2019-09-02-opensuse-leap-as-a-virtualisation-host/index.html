@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+        <meta name="description" content="Firstyear&#x27;s blog">
+        
+
+        <title>Firstyear&#x27;s blog-a-log</title>
+
+        
+          <link rel="alternate" type="application/rss+xml" title="RSS" href="https://fy.blackhats.net.au/rss.xml">
+        
+
+        
+            <link rel="stylesheet" href="https://fy.blackhats.net.au/theme.css">
+        
+        
+    </head>
+    <body>
+        <div class="content">
+        
+        
+            <header>
+                <div class="header-left">
+                    <a href="https:&#x2F;&#x2F;fy.blackhats.net.au" class="logo">Firstyear&#x27;s blog-a-log</a>
+                </div>
+                <div class="header-right">
+                    <nav itemscope itemtype="http://schema.org/SiteNavigationElement">
+                      <ul>
+                        
+                        
+                            
+                            <li class="nav">
+                                <a itemprop="url" href="https://fy.blackhats.net.au/blog/">
+                                    <span itemprop="name">Blog</span>
+                                </a>
+                            </li>
+                        
+                            
+                            <li class="nav">
+                                <a itemprop="url" href="https://fy.blackhats.net.au/pages/">
+                                    <span itemprop="name">Pages</span>
+                                </a>
+                            </li>
+                        
+                        
+                        <li class="nav">
+                            <a itemprop="url" href="https://github.com/firstyear">
+                                <img class="icon" src="https:&#x2F;&#x2F;fy.blackhats.net.au/icons/github.svg" alt="Github">
+                            </a>
+                        </li>
+                        
+                        <li class="nav">
+                            <a itemprop="url" href="/rss.xml">
+                                <img class="icon" src="https:&#x2F;&#x2F;fy.blackhats.net.au/rss-logo.png" alt="rss">
+                            </a>
+                        </li>
+                      </ul>
+                    </nav>
+                </div>
+            </header>
+        
+        
+        <main>
+            
+<article itemscope itemtype="http://schema.org/BlogPosting">
+    <div itemprop="headline">
+        <h1>OpenSUSE leap as a virtualisation host</h1>
+        <div class="border"></div>
+        <time datetime="2019-09-02" class="date" itemprop="datePublished">
+            02 Sep 2019
+        </time>
+    </div>
+    <div itemprop="articleBody">
+        <h1 id="opensuse-leap-as-a-virtualisation-host">OpenSUSE leap as a virtualisation host</h1>
+<p>I've been rebuilding my network to use SUSE from CentOS, and the final
+server was my hypervisor. Most of the reason for this is the change in
+my employment, so I feel it's right to dogfood for my workplace.</p>
+<h2 id="what-you-will-need">What you will need</h2>
+<ul>
+<li>Some computer parts (assembaly may be required)</li>
+<li>OpenSUSE LEAP 15.1 media (dd if=opensuse.iso of=/dev/a_usb_i_hope)</li>
+</ul>
+<h2 id="what-are-we-aiming-for">What are we aiming for?</h2>
+<p>My new machine has dual NVME and dual 8TB spinning disks. The intent is
+to have the OS on the NVME and to have a large part of the NVME act as
+LVM cache for the spinning disk. The host won't run any applications
+beside libvirt, and has to connect a number of vlans over a link
+aggregation.</p>
+<h2 id="useful-commands">Useful commands</h2>
+<p>Through out this document I'll assume some details about your devices
+and partitions. To find your own, and to always check and confirm what
+you are doing, some command will help:</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>lsblk  # Shows all block storage devices, and how (if) they are mounted.
+</span><span>lvs  # shows all active logical volumes
+</span><span>vgs  # shows all active volume groups
+</span><span>pvs  # shows all active physical volumes
+</span><span>dmidecode  # show hardware information
+</span><span>ls -al /dev/disk/by-&lt;ID TYPE&gt;/  # how to resolve disk path to a uuid etc.
+</span></code></pre>
+<p>I'm going to assume you have devices like:</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>/dev/nvme0  # the first nvme of your system that you install to.
+</span><span>/dev/nvme1  # the second nvme, used later
+</span><span>/dev/sda    # Two larger block storage devices.
+</span><span>/dev/sdb
+</span></code></pre>
+<h2 id="install">Install</h2>
+<p>Install and follow the prompts. Importantly when you install you install
+to a single NVME, and choose transactional server + lvm, then put btrfs
+on the /root in the lvm. You want to partition such that there is free
+space still in the NVME - I left about 400GB unpartitioned for this. In
+other words, the disk should be like:</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>[ /efi | pv + vg system               | pv (unused) ]
+</span><span>       | /root (btrfs), /boot, /home  |
+</span></code></pre>
+<p>Remember to leave about 1GB of freespace on the vg system to allow raid
+1 metadata later!</p>
+<p>Honestly, it may take you a try or two to get this right with YaST, and
+it was probably the trickiest part of the install.</p>
+<p>You should also select that network management is via networkmanager,
+not wicked. You may want to enable ssh here. I disabled the firewall
+personally because there are no applications and it interfers with the
+bridging for the vms.</p>
+<h2 id="packages">Packages</h2>
+<p>Because this is suse transactional we need to add packages and reboot
+each time. Here is what I used, but you may find you don't need
+everything here:</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>transactional-update pkg install libvirt libvirt-daemon libvirt-daemon-qemu \
+</span><span>  sssd sssd-ad sssd-ldap sssd-tools docker zsh ipcalc python3-docker rdiff-backup \
+</span><span>  vim rsync iotop tmux fwupdate fwupdate-efi bridge-utils qemu-kvm apcupsd
+</span></code></pre>
+<p>Reboot, and you are ready to partition.</p>
+<h2 id="partitioning-post-install">Partitioning - post install</h2>
+<p>First, copy your gpt from the first NVME to the second. You can do this
+by hand with:</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>gdisk /dev/nvme0
+</span><span>p
+</span><span>q
+</span><span>
+</span><span>gdisk /dev/nvme1
+</span><span>c
+</span><span>&lt;duplicate the parameters as required&gt;
+</span></code></pre>
+<p>Now we'll make your /efi at least a little redundant</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>mkfs.fat /dev/nvme1p0
+</span><span>ls -al /dev/disk/by-uuid/
+</span><span># In the above, look for your new /efi fs, IE CE0A-2C1D -&gt; ../../nvme1n1p1
+</span><span># Now add a line to /etc/fstab like:
+</span><span>UUID=CE0A-2C1D    /boot/efi2              vfat   defaults                      0  0
+</span></code></pre>
+<p>Now to really make this work, because it's transactional, you have to
+make a change to the /root, which is readonly! To do this run</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>transactional-update shell dup
+</span></code></pre>
+<p>This put's you in a shell at the end. Run:</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>mkdir /boot/efi2
+</span></code></pre>
+<p>Now reboot. After the reboot your second efi should be mounted. rsync
+/boot/efi/* to /boot/efi2/. I leave it to the reader to decide how to
+sync this periodically.</p>
+<p>Next you can setup the raid 1 mirror for /root and the system vg.</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>pvcreate /dev/nvme1p1
+</span><span>vgextend system /dev/nvme1p1
+</span></code></pre>
+<p>Now we have enough pvs to make a raid 1, so we convert all our volumes:</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>lvconvert --type raid1 --mirrors 1 system/home
+</span><span>lvconvert --type raid1 --mirrors 1 system/root
+</span><span>lvconvert --type raid1 --mirrors 1 system/boot
+</span></code></pre>
+<p>If this fails with &quot;not enough space to alloc metadata&quot;, it's because
+you didn't leave space on the vg during install. Honestly, I made this
+mistake twice due to confusion about things leading to two reinstalls
+...</p>
+<h2 id="getting-ready-to-cache">Getting ready to cache</h2>
+<p>Now lets get ready to cache some data. We'll make pvs and vgs for data:</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>pvcreate /dev/nvme0p2
+</span><span>pvcreate /dev/nvme1p2
+</span><span>pvcreate /dev/sda1
+</span><span>pvcreate /dev/sda2
+</span><span>vgcreate data /dev/nvme0p2 /dev/nvme1p2 /dev/sda1 /dev/sdb2
+</span></code></pre>
+<p>Create the larger volume</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>lvcreate --type raid1 --mirrors 1 -L7.5T -n libvirt_t2 data /dev/sda1 /dev/sdb1
+</span></code></pre>
+<p>Prepare the caches</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>lvcreate --type raid1 --mirrors 1 -L 4G -n libvirt_t2_meta data
+</span><span>lvcreate --type raid1 --mirrors 1 -L 400G -n libvirt_t2_cache data
+</span><span>lvconvert --type cache-pool --poolmetadata data/libvirt_t2_meta data/libvirt_t2_cache
+</span></code></pre>
+<p>Now put the caches in front of the disks. It's important for you to
+check you have the correct cachemode at this point, because you can't
+change it without removing and re-adding the cache. I choose writeback
+because my nvme devices are in a raid 1 mirror, and it helps to
+accelerate writes. You may err to use the default where the SSD's are
+read cache only.</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>lvconvert --type cache --cachemode writeback --cachepool data/libvirt_t2_cache data/libvirt_t2
+</span><span>mkfs.xfs /dev/mapper/data-libvirt_t2
+</span></code></pre>
+<p>You can monitor the amount of &quot;cached&quot; data in the data column of lvs.</p>
+<p>Now you can add this to /etc/fstab as any other xfs drive. I mounted it
+to /var/lib/libvirt/images.</p>
+<h2 id="network-manager">Network Manager</h2>
+<p>Now, I have to assemble the network bridges. Network Manager has some
+specific steps to follow to achieve this. I have:</p>
+<ul>
+<li>two intel gigabit ports</li>
+<li>the ports are link aggregated by 802.3ad</li>
+<li>there are multiple vlans ontop of the link agg</li>
+<li>bridges must be built on top of the vlans</li>
+</ul>
+<p>This requires a specific set of steps to layer this, because network
+manager sees the bridge and the lagg as seperate things that require the
+vlan to tie them together.</p>
+<p>Configure the link agg, and add our two ethernet phys</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>nmcli conn add type bond con-name bond0 ifname bond0 mode 802.3ad ipv4.method disabled ipv6.method ignore
+</span><span>nmcli connection add type ethernet con-name bond0-eth1 ifname eth1 master bond0 slave-type bond
+</span><span>nmcli connection add type ethernet con-name bond0-eth2 ifname eth2 master bond0 slave-type bond
+</span></code></pre>
+<p>Add a bridge for a vlan:</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>nmcli connection add type bridge con-name net_18 ifname net_18 ipv4.method disabled ipv6.method ignore
+</span></code></pre>
+<p>Now tie together a vlan on the bond, to the bridge we created.</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>nmcli connection add type vlan con-name bond0.18 ifname bond0.18 dev bond0 id 18 master net_18 slave-type bridge
+</span></code></pre>
+<p>You will need to repeat these last two commands as required for the
+vlans you have.</p>
+<h2 id="house-keeping">House Keeping</h2>
+<p>Finally you need to do some house keeping. Transactional server will
+automatically reboot and update so you need to be ready for this. You
+may disable this with:</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>systemctl disable transactional-update.timer
+</span></code></pre>
+<p>You likely want to edit:</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>/etc/sysconfig/libvirt-guests
+</span></code></pre>
+<p>To be able to handle guest shutdown policy due to a UPS failure or a
+reboot.</p>
+<p>Now you can enable and start libvirt:</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>systemctl enable libvirtd
+</span><span>systemctl start libvirtd
+</span></code></pre>
+<p>Finally you can build and import virtualmachines.</p>
+
+    </div>
+</article>
+
+        </main>
+        
+        <footer>
+            
+            <div class="border"></div>
+            <div class="footer">
+                <small class="footer-left">
+                    Copyright &copy; William Brown
+                </small>
+                <small class="footer-right">
+                    Powered by <a href="https://www.getzola.org">Zola</a> | Theme <a href="https://github.com/barlog-m/oceanic-zen">Oceanic Zen</a>
+                </small>
+            </div>
+        
+        </footer>
+    
+        </div>
+    </body>
+</html>

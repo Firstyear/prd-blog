@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+        <meta name="description" content="Firstyear&#x27;s blog">
+        
+
+        <title>Firstyear&#x27;s blog-a-log</title>
+
+        
+          <link rel="alternate" type="application/rss+xml" title="RSS" href="https://fy.blackhats.net.au/rss.xml">
+        
+
+        
+            <link rel="stylesheet" href="https://fy.blackhats.net.au/theme.css">
+        
+        
+    </head>
+    <body>
+        <div class="content">
+        
+        
+            <header>
+                <div class="header-left">
+                    <a href="https:&#x2F;&#x2F;fy.blackhats.net.au" class="logo">Firstyear&#x27;s blog-a-log</a>
+                </div>
+                <div class="header-right">
+                    <nav itemscope itemtype="http://schema.org/SiteNavigationElement">
+                      <ul>
+                        
+                        
+                            
+                            <li class="nav">
+                                <a itemprop="url" href="https://fy.blackhats.net.au/blog/">
+                                    <span itemprop="name">Blog</span>
+                                </a>
+                            </li>
+                        
+                            
+                            <li class="nav">
+                                <a itemprop="url" href="https://fy.blackhats.net.au/pages/">
+                                    <span itemprop="name">Pages</span>
+                                </a>
+                            </li>
+                        
+                        
+                        <li class="nav">
+                            <a itemprop="url" href="https://github.com/firstyear">
+                                <img class="icon" src="https:&#x2F;&#x2F;fy.blackhats.net.au/icons/github.svg" alt="Github">
+                            </a>
+                        </li>
+                        
+                        <li class="nav">
+                            <a itemprop="url" href="/rss.xml">
+                                <img class="icon" src="https:&#x2F;&#x2F;fy.blackhats.net.au/rss-logo.png" alt="rss">
+                            </a>
+                        </li>
+                      </ul>
+                    </nav>
+                </div>
+            </header>
+        
+        
+        <main>
+            
+<article itemscope itemtype="http://schema.org/BlogPosting">
+    <div itemprop="headline">
+        <h1>Running your own mailserver: Mailbox rollover</h1>
+        <div class="border"></div>
+        <time datetime="2016-01-15" class="date" itemprop="datePublished">
+            15 Jan 2016
+        </time>
+    </div>
+    <div itemprop="articleBody">
+        <h1 id="running-your-own-mailserver-mailbox-rollover">Running your own mailserver: Mailbox rollover</h1>
+<p>UPDATE 2019: Don't run your own! Use fastmail instead :D!</p>
+<p>I go to a lot of effort to run my own email server. I don't like
+google, and I want to keep them away from my messages. While it incurs
+both financial, and administrative cost, sometimes the benefits are
+fantastic.</p>
+<p>I like to sort my mail to folders based on server side filters (which
+are fantastic, server side filtering is the way to go). I also like to
+keep my mailboxes in yearly fashion, so they don't grow tooo large. I
+keep every email I ever receive, and it's saved my arse a few times.</p>
+<p>Rolling over year to year for most people would be a pain: You need to
+move all the emails from one folder (mailbox) to another, which incurs a
+huge time / download / effort cost.</p>
+<p>Running your own mailserver though, you don't have this issue. It takes
+a few seconds to complete a year rollover. You can even script it like I
+did.</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>#!/bin/bash
+</span><span>
+</span><span>export MAILUSER=&#39;email address here&#39;
+</span><span>export LASTYEAR=&#39;2015&#39;
+</span><span>export THISYEAR=&#39;2016&#39;
+</span><span>
+</span><span># Stop postfix first. this way server side filters aren&#39;t being used and mails routed while we fiddle around.
+</span><span>systemctl stop postfix
+</span><span>
+</span><span># Now we can fiddle with mailboxes
+</span><span>
+</span><span># First, we want to make the new archive.
+</span><span>
+</span><span>doveadm mailbox create -u ${MAILUSER} archive.${THISYEAR}
+</span><span>
+</span><span># Create a list of mailboxes.
+</span><span>
+</span><span>export MAILBOXES=`doveadm mailbox list -u ${MAILUSER} &#39;INBOX.*&#39; | awk -F &#39;.&#39; &#39;{print $2}&#39;`
+</span><span>echo $MAILBOXES
+</span><span>
+</span><span># Now move the directories to archive.
+</span><span># Create the new equivalents
+</span><span>
+</span><span>for MAILBOX in ${MAILBOXES}
+</span><span>do
+</span><span>    doveadm mailbox rename -u ${MAILUSER} INBOX.${MAILBOX} archive.${LASTYEAR}.${MAILBOX}
+</span><span>    doveadm mailbox subscribe -u ${MAILUSER} archive.${LASTYEAR}.${MAILBOX}
+</span><span>    doveadm mailbox create -u ${MAILUSER} INBOX.${MAILBOX}
+</span><span>done
+</span><span>
+</span><span>doveadm mailbox list -u ${MAILUSER}
+</span><span>
+</span><span># Start postfix back up
+</span><span>
+</span><span>systemctl start postfix
+</span></code></pre>
+<p>Now I have clean, shiny mailboxes, all my filters still work, and my
+previous year's emails are tucked away for safe keeping and posterity.</p>
+<p>The only catch with my script is you need to run it on January 1st, else
+you get 2016 mails in the 2015 archive. You also still need to move the
+inbox contents from 2015 manually to the archive. But it's not nearly
+the same hassle as moving thousands of mailing list messages around.</p>
+
+    </div>
+</article>
+
+        </main>
+        
+        <footer>
+            
+            <div class="border"></div>
+            <div class="footer">
+                <small class="footer-left">
+                    Copyright &copy; William Brown
+                </small>
+                <small class="footer-right">
+                    Powered by <a href="https://www.getzola.org">Zola</a> | Theme <a href="https://github.com/barlog-m/oceanic-zen">Oceanic Zen</a>
+                </small>
+            </div>
+        
+        </footer>
+    
+        </div>
+    </body>
+</html>

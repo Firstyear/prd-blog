@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+        <meta name="description" content="Firstyear&#x27;s blog">
+        
+
+        <title>Firstyear&#x27;s blog-a-log</title>
+
+        
+          <link rel="alternate" type="application/rss+xml" title="RSS" href="https://fy.blackhats.net.au/rss.xml">
+        
+
+        
+            <link rel="stylesheet" href="https://fy.blackhats.net.au/theme.css">
+        
+        
+    </head>
+    <body>
+        <div class="content">
+        
+        
+            <header>
+                <div class="header-left">
+                    <a href="https:&#x2F;&#x2F;fy.blackhats.net.au" class="logo">Firstyear&#x27;s blog-a-log</a>
+                </div>
+                <div class="header-right">
+                    <nav itemscope itemtype="http://schema.org/SiteNavigationElement">
+                      <ul>
+                        
+                        
+                            
+                            <li class="nav">
+                                <a itemprop="url" href="https://fy.blackhats.net.au/blog/">
+                                    <span itemprop="name">Blog</span>
+                                </a>
+                            </li>
+                        
+                            
+                            <li class="nav">
+                                <a itemprop="url" href="https://fy.blackhats.net.au/pages/">
+                                    <span itemprop="name">Pages</span>
+                                </a>
+                            </li>
+                        
+                        
+                        <li class="nav">
+                            <a itemprop="url" href="https://github.com/firstyear">
+                                <img class="icon" src="https:&#x2F;&#x2F;fy.blackhats.net.au/icons/github.svg" alt="Github">
+                            </a>
+                        </li>
+                        
+                        <li class="nav">
+                            <a itemprop="url" href="/rss.xml">
+                                <img class="icon" src="https:&#x2F;&#x2F;fy.blackhats.net.au/rss-logo.png" alt="rss">
+                            </a>
+                        </li>
+                      </ul>
+                    </nav>
+                </div>
+            </header>
+        
+        
+        <main>
+            
+<article itemscope itemtype="http://schema.org/BlogPosting">
+    <div itemprop="headline">
+        <h1>389 ds aci linting tool</h1>
+        <div class="border"></div>
+        <time datetime="2016-04-01" class="date" itemprop="datePublished">
+            01 Apr 2016
+        </time>
+    </div>
+    <div itemprop="articleBody">
+        <h1 id="389-ds-aci-linting-tool">389 ds aci linting tool</h1>
+<p>In the past I have discussed aci's and their management in directory
+server.</p>
+<p>It's a very complex topic, and there are issues that can arise.</p>
+<p>I have now created an aci linting tool which can connect to a directory
+server and detect common mistakes in acis, along with explinations of
+how to correct them.</p>
+<p>This will be in a release of lib389 in the future. For now, it's under
+review and hopefully will be accepted soon!</p>
+<p>Here is sample output below.</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>-------------------------------------------------------------------------------
+</span><span>Directory Server Aci Lint Error: DSALE0001
+</span><span>Severity: HIGH
+</span><span>
+</span><span>Affected Acis:
+</span><span>(targetattr!=&quot;userPassword&quot;)(version 3.0; acl &quot;Enable anonymous access&quot;; allow (read, search, compare) userdn=&quot;ldap:///anyone&quot;;)
+</span><span>(targetattr !=&quot;cn || sn || uid&quot;)(targetfilter =&quot;(ou=Accounting)&quot;)(version 3.0;acl &quot;Accounting Managers Group Permissions&quot;;allow (write)(groupdn = &quot;ldap:///cn=Accounting Managers,ou=groups,dc=example,dc=com&quot;);)
+</span><span>(targetattr !=&quot;cn || sn || uid&quot;)(targetfilter =&quot;(ou=Human Resources)&quot;)(version 3.0;acl &quot;HR Group Permissions&quot;;allow (write)(groupdn = &quot;ldap:///cn=HR Managers,ou=groups,dc=example,dc=com&quot;);)
+</span><span>(targetattr !=&quot;cn ||sn || uid&quot;)(targetfilter =&quot;(ou=Product Testing)&quot;)(version 3.0;acl &quot;QA Group Permissions&quot;;allow (write)(groupdn = &quot;ldap:///cn=QA Managers,ou=groups,dc=example,dc=com&quot;);)
+</span><span>(targetattr !=&quot;cn || sn || uid&quot;)(targetfilter =&quot;(ou=Product Development)&quot;)(version 3.0;acl &quot;Engineering Group Permissions&quot;;allow (write)(groupdn = &quot;ldap:///cn=PD Managers,ou=groups,dc=example,dc=com&quot;);)
+</span><span>
+</span><span>Details: 
+</span><span>An aci of the form &quot;(targetAttr!=&quot;attr&quot;)&quot; exists on your system. This aci
+</span><span>will internally be expanded to mean &quot;all possible attributes including system,
+</span><span>excluding the listed attributes&quot;.
+</span><span>
+</span><span>This may allow access to a bound user or anonymous to read more data about
+</span><span>directory internals, including aci state or user limits. In the case of write 
+</span><span>acis it may allow a dn to set their own resource limits, unlock passwords or
+</span><span>their own aci.
+</span><span>
+</span><span>The ability to change the aci on the object may lead to privilege escalation in
+</span><span>some cases.
+</span><span>
+</span><span>
+</span><span>Advice: 
+</span><span>Convert the aci to the form &quot;(targetAttr=&quot;x || y || z&quot;)&quot;.
+</span><span>
+</span><span>-------------------------------------------------------------------------------
+</span><span>Directory Server Aci Lint Error: DSALE0002
+</span><span>Severity: HIGH
+</span><span>
+</span><span>Affected Acis:
+</span><span>ou=People,dc=example,dc=com (targetattr !=&quot;cn || sn || uid&quot;)(targetfilter =&quot;(ou=Accounting)&quot;)(version 3.0;acl &quot;Accounting Managers Group Permissions&quot;;allow (write)(groupdn = &quot;ldap:///cn=Accounting Managers,ou=groups,dc=example,dc=com&quot;);)
+</span><span>|- ou=People,dc=example,dc=com (targetattr !=&quot;cn || sn || uid&quot;)(targetfilter =&quot;(ou=Human Resources)&quot;)(version 3.0;acl &quot;HR Group Permissions&quot;;allow (write)(groupdn = &quot;ldap:///cn=HR Managers,ou=groups,dc=example,dc=com&quot;);)
+</span><span>|- ou=People,dc=example,dc=com (targetattr !=&quot;cn ||sn || uid&quot;)(targetfilter =&quot;(ou=Product Testing)&quot;)(version 3.0;acl &quot;QA Group Permissions&quot;;allow (write)(groupdn = &quot;ldap:///cn=QA Managers,ou=groups,dc=example,dc=com&quot;);)
+</span><span>|- ou=People,dc=example,dc=com (targetattr !=&quot;cn || sn || uid&quot;)(targetfilter =&quot;(ou=Product Development)&quot;)(version 3.0;acl &quot;Engineering Group Permissions&quot;;allow (write)(groupdn = &quot;ldap:///cn=PD Managers,ou=groups,dc=example,dc=com&quot;);)
+</span><span>
+</span><span>ou=People,dc=example,dc=com (targetattr !=&quot;cn || sn || uid&quot;)(targetfilter =&quot;(ou=Human Resources)&quot;)(version 3.0;acl &quot;HR Group Permissions&quot;;allow (write)(groupdn = &quot;ldap:///cn=HR Managers,ou=groups,dc=example,dc=com&quot;);)
+</span><span>|- ou=People,dc=example,dc=com (targetattr !=&quot;cn || sn || uid&quot;)(targetfilter =&quot;(ou=Accounting)&quot;)(version 3.0;acl &quot;Accounting Managers Group Permissions&quot;;allow (write)(groupdn = &quot;ldap:///cn=Accounting Managers,ou=groups,dc=example,dc=com&quot;);)
+</span><span>|- ou=People,dc=example,dc=com (targetattr !=&quot;cn ||sn || uid&quot;)(targetfilter =&quot;(ou=Product Testing)&quot;)(version 3.0;acl &quot;QA Group Permissions&quot;;allow (write)(groupdn = &quot;ldap:///cn=QA Managers,ou=groups,dc=example,dc=com&quot;);)
+</span><span>|- ou=People,dc=example,dc=com (targetattr !=&quot;cn || sn || uid&quot;)(targetfilter =&quot;(ou=Product Development)&quot;)(version 3.0;acl &quot;Engineering Group Permissions&quot;;allow (write)(groupdn = &quot;ldap:///cn=PD Managers,ou=groups,dc=example,dc=com&quot;);)
+</span><span>
+</span><span>ou=People,dc=example,dc=com (targetattr !=&quot;cn ||sn || uid&quot;)(targetfilter =&quot;(ou=Product Testing)&quot;)(version 3.0;acl &quot;QA Group Permissions&quot;;allow (write)(groupdn = &quot;ldap:///cn=QA Managers,ou=groups,dc=example,dc=com&quot;);)
+</span><span>|- ou=People,dc=example,dc=com (targetattr !=&quot;cn || sn || uid&quot;)(targetfilter =&quot;(ou=Accounting)&quot;)(version 3.0;acl &quot;Accounting Managers Group Permissions&quot;;allow (write)(groupdn = &quot;ldap:///cn=Accounting Managers,ou=groups,dc=example,dc=com&quot;);)
+</span><span>|- ou=People,dc=example,dc=com (targetattr !=&quot;cn || sn || uid&quot;)(targetfilter =&quot;(ou=Human Resources)&quot;)(version 3.0;acl &quot;HR Group Permissions&quot;;allow (write)(groupdn = &quot;ldap:///cn=HR Managers,ou=groups,dc=example,dc=com&quot;);)
+</span><span>|- ou=People,dc=example,dc=com (targetattr !=&quot;cn || sn || uid&quot;)(targetfilter =&quot;(ou=Product Development)&quot;)(version 3.0;acl &quot;Engineering Group Permissions&quot;;allow (write)(groupdn = &quot;ldap:///cn=PD Managers,ou=groups,dc=example,dc=com&quot;);)
+</span><span>
+</span><span>ou=People,dc=example,dc=com (targetattr !=&quot;cn || sn || uid&quot;)(targetfilter =&quot;(ou=Product Development)&quot;)(version 3.0;acl &quot;Engineering Group Permissions&quot;;allow (write)(groupdn = &quot;ldap:///cn=PD Managers,ou=groups,dc=example,dc=com&quot;);)
+</span><span>|- ou=People,dc=example,dc=com (targetattr !=&quot;cn || sn || uid&quot;)(targetfilter =&quot;(ou=Accounting)&quot;)(version 3.0;acl &quot;Accounting Managers Group Permissions&quot;;allow (write)(groupdn = &quot;ldap:///cn=Accounting Managers,ou=groups,dc=example,dc=com&quot;);)
+</span><span>|- ou=People,dc=example,dc=com (targetattr !=&quot;cn || sn || uid&quot;)(targetfilter =&quot;(ou=Human Resources)&quot;)(version 3.0;acl &quot;HR Group Permissions&quot;;allow (write)(groupdn = &quot;ldap:///cn=HR Managers,ou=groups,dc=example,dc=com&quot;);)
+</span><span>|- ou=People,dc=example,dc=com (targetattr !=&quot;cn ||sn || uid&quot;)(targetfilter =&quot;(ou=Product Testing)&quot;)(version 3.0;acl &quot;QA Group Permissions&quot;;allow (write)(groupdn = &quot;ldap:///cn=QA Managers,ou=groups,dc=example,dc=com&quot;);)
+</span><span>
+</span><span>
+</span><span>Details: 
+</span><span>Acis on your system exist which are both not equals targetattr, and overlap in
+</span><span>scope.
+</span><span>
+</span><span>The way that directory server processes these, is to invert them to to white
+</span><span>lists, then union the results.
+</span><span>
+</span><span>As a result, these acis *may* allow access to the attributes you want them to
+</span><span>exclude.
+</span><span>
+</span><span>Consider:
+</span><span>
+</span><span>aci: (targetattr !=&quot;cn&quot;)(version 3.0;acl &quot;Self write all but cn&quot;;allow (write)
+</span><span>    (userdn = &quot;ldap:///self&quot;);)
+</span><span>aci: (targetattr !=&quot;sn&quot;)(version 3.0;acl &quot;Self write all but sn&quot;;allow (write)
+</span><span>    (userdn = &quot;ldap:///self&quot;);)
+</span><span>
+</span><span>This combination allows self write to *all* attributes within the subtree.
+</span><span>
+</span><span>In cases where the target is members of a group, it may allow a member who is
+</span><span>within two groups to have elevated privilege.
+</span><span>
+</span><span>
+</span><span>Advice: 
+</span><span>Convert the aci to the form &quot;(targetAttr=&quot;x || y || z&quot;)&quot;.
+</span><span>
+</span><span>Prevent the acis from overlapping, and have them on unique subtrees.
+</span><span>
+</span><span>-------------------------------------------------------------------------------
+</span><span>FAIL
+</span></code></pre>
+
+    </div>
+</article>
+
+        </main>
+        
+        <footer>
+            
+            <div class="border"></div>
+            <div class="footer">
+                <small class="footer-left">
+                    Copyright &copy; William Brown
+                </small>
+                <small class="footer-right">
+                    Powered by <a href="https://www.getzola.org">Zola</a> | Theme <a href="https://github.com/barlog-m/oceanic-zen">Oceanic Zen</a>
+                </small>
+            </div>
+        
+        </footer>
+    
+        </div>
+    </body>
+</html>

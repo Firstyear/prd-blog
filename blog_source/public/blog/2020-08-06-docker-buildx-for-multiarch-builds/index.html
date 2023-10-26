@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+        <meta name="description" content="Firstyear&#x27;s blog">
+        
+
+        <title>Firstyear&#x27;s blog-a-log</title>
+
+        
+          <link rel="alternate" type="application/rss+xml" title="RSS" href="https://fy.blackhats.net.au/rss.xml">
+        
+
+        
+            <link rel="stylesheet" href="https://fy.blackhats.net.au/theme.css">
+        
+        
+    </head>
+    <body>
+        <div class="content">
+        
+        
+            <header>
+                <div class="header-left">
+                    <a href="https:&#x2F;&#x2F;fy.blackhats.net.au" class="logo">Firstyear&#x27;s blog-a-log</a>
+                </div>
+                <div class="header-right">
+                    <nav itemscope itemtype="http://schema.org/SiteNavigationElement">
+                      <ul>
+                        
+                        
+                            
+                            <li class="nav">
+                                <a itemprop="url" href="https://fy.blackhats.net.au/blog/">
+                                    <span itemprop="name">Blog</span>
+                                </a>
+                            </li>
+                        
+                            
+                            <li class="nav">
+                                <a itemprop="url" href="https://fy.blackhats.net.au/pages/">
+                                    <span itemprop="name">Pages</span>
+                                </a>
+                            </li>
+                        
+                        
+                        <li class="nav">
+                            <a itemprop="url" href="https://github.com/firstyear">
+                                <img class="icon" src="https:&#x2F;&#x2F;fy.blackhats.net.au/icons/github.svg" alt="Github">
+                            </a>
+                        </li>
+                        
+                        <li class="nav">
+                            <a itemprop="url" href="/rss.xml">
+                                <img class="icon" src="https:&#x2F;&#x2F;fy.blackhats.net.au/rss-logo.png" alt="rss">
+                            </a>
+                        </li>
+                      </ul>
+                    </nav>
+                </div>
+            </header>
+        
+        
+        <main>
+            
+<article itemscope itemtype="http://schema.org/BlogPosting">
+    <div itemprop="headline">
+        <h1>docker buildx for multiarch builds</h1>
+        <div class="border"></div>
+        <time datetime="2020-08-06" class="date" itemprop="datePublished">
+            06 Aug 2020
+        </time>
+    </div>
+    <div itemprop="articleBody">
+        <h1 id="docker-buildx-for-multiarch-builds">docker buildx for multiarch builds</h1>
+<p>I have been previously building Kanidm with plain docker build, but
+recently a community member wanted to be able to run kanidm on arm64.
+That meant that I needed to go down the rabbit hole of how to make this
+work ...</p>
+<h2 id="what-not-to-do">What not to do ...</h2>
+<p>There is a previous method of using manifest files to allow multiarch
+uploads. It's pretty messy but it works, so this is an option if you
+want to investigate but I didn't want to pursue it.</p>
+<p>Bulidx exists and I got it working on my linux machine with the steps
+from
+<a href="https://www.docker.com/blog/getting-started-with-docker-for-arm-on-linux/">here</a>
+but the build took more than 3 hours, so I don't recommend it if you
+plan to do anything intense or frequently.</p>
+<h2 id="buildx-cluster">Buildx cluster</h2>
+<p>Docker has a cross-platform building toolkit called buildx which is
+currently tucked into the experimental features. It can be enabled on
+docker for mac in the settings (note: you only need experimental support
+on the coordinating machine aka your workstation).</p>
+<p>Rather than follow the <a href="https://docs.docker.com/buildx/working-with-buildx/">official
+docs</a> this will
+branch out. The reason is that buildx in the official docs uses
+qemu-aarch64 translation which is very slow and energy hungry, taking a
+long time to produce builds. As mentioned already I was seeing in excess
+of 3 hours for aarch64 on my builder VM or my mac.</p>
+<p>Instead, in this configuration I will use my mac as a coordinator, and
+an x86_64 VM and a rock64pro as builder nodes, so that the builds are
+performed on native architecture machines.</p>
+<p>First we need to configure our nodes. In
+[/etc/docker/daemon.json]{.title-ref} we need to expose our docker
+socket to our mac. I have done this with the following:</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>{
+</span><span>  &quot;hosts&quot;: [&quot;unix:///var/run/docker.sock&quot;, &quot;tcp://0.0.0.0:2376&quot;]
+</span><span>}
+</span></code></pre>
+<p><em>WARNING</em>: This configuration is HIGHLY INSECURE. This exposes your
+docker socket to the network with no authentication, which is equivalent
+to un-authenticated root access. I have done this because my builder
+nodes are on an isolated and authenticated VLAN of my home network. You
+should either do similar or use TLS authentication.</p>
+<p>NOTE: The [ssh://]{.title-ref} transport does not work for docker
+buildx. No idea why but it don't.</p>
+<p>Once this is done restart docker on the two builder nodes.</p>
+<p>Now we can configure our coordinator machine. We need to check buildx is
+present:</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>docker buildx --help
+</span></code></pre>
+<p>We then want to create a new builder instance and join our nodes to it.
+We can use the DOCKER_HOST environment variable for this:</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>DOCKER_HOST=tcp://x.x.x.x:2376 docker buildx create --name cluster
+</span><span>DOCKER_HOST=tcp://x.x.x.x:2376 docker buildx create --name cluster --append
+</span></code></pre>
+<p>We can then startup and bootstrap the required components with:</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>docker buildx use cluster
+</span><span>docker buildx inspect --bootstrap
+</span></code></pre>
+<p>We should see output like:</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>Name:   cluster
+</span><span>Driver: docker-container
+</span><span>
+</span><span>Nodes:
+</span><span>Name:      cluster0
+</span><span>Endpoint:  tcp://...
+</span><span>Status:    running
+</span><span>Platforms: linux/amd64, linux/386
+</span><span>
+</span><span>Name:      cluster1
+</span><span>Endpoint:  tcp://...
+</span><span>Status:    running
+</span><span>Platforms: linux/arm64, linux/arm/v7, linux/arm/v6
+</span></code></pre>
+<p>If we are happy with this we can make this the default builder.</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>docker buildx use cluster --default
+</span></code></pre>
+<p>And you can now use it to build your images such as:</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>docker buildx build --push --platform linux/amd64,linux/arm64 -f Dockerfile -t &lt;tag&gt; .
+</span></code></pre>
+<p>Now I can build my multiarch images much quicker and efficently!</p>
+
+    </div>
+</article>
+
+        </main>
+        
+        <footer>
+            
+            <div class="border"></div>
+            <div class="footer">
+                <small class="footer-left">
+                    Copyright &copy; William Brown
+                </small>
+                <small class="footer-right">
+                    Powered by <a href="https://www.getzola.org">Zola</a> | Theme <a href="https://github.com/barlog-m/oceanic-zen">Oceanic Zen</a>
+                </small>
+            </div>
+        
+        </footer>
+    
+        </div>
+    </body>
+</html>

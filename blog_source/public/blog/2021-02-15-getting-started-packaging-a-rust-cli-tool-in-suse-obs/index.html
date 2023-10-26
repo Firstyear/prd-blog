@@ -1,0 +1,338 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+        <meta name="description" content="Firstyear&#x27;s blog">
+        
+
+        <title>Firstyear&#x27;s blog-a-log</title>
+
+        
+          <link rel="alternate" type="application/rss+xml" title="RSS" href="https://fy.blackhats.net.au/rss.xml">
+        
+
+        
+            <link rel="stylesheet" href="https://fy.blackhats.net.au/theme.css">
+        
+        
+    </head>
+    <body>
+        <div class="content">
+        
+        
+            <header>
+                <div class="header-left">
+                    <a href="https:&#x2F;&#x2F;fy.blackhats.net.au" class="logo">Firstyear&#x27;s blog-a-log</a>
+                </div>
+                <div class="header-right">
+                    <nav itemscope itemtype="http://schema.org/SiteNavigationElement">
+                      <ul>
+                        
+                        
+                            
+                            <li class="nav">
+                                <a itemprop="url" href="https://fy.blackhats.net.au/blog/">
+                                    <span itemprop="name">Blog</span>
+                                </a>
+                            </li>
+                        
+                            
+                            <li class="nav">
+                                <a itemprop="url" href="https://fy.blackhats.net.au/pages/">
+                                    <span itemprop="name">Pages</span>
+                                </a>
+                            </li>
+                        
+                        
+                        <li class="nav">
+                            <a itemprop="url" href="https://github.com/firstyear">
+                                <img class="icon" src="https:&#x2F;&#x2F;fy.blackhats.net.au/icons/github.svg" alt="Github">
+                            </a>
+                        </li>
+                        
+                        <li class="nav">
+                            <a itemprop="url" href="/rss.xml">
+                                <img class="icon" src="https:&#x2F;&#x2F;fy.blackhats.net.au/rss-logo.png" alt="rss">
+                            </a>
+                        </li>
+                      </ul>
+                    </nav>
+                </div>
+            </header>
+        
+        
+        <main>
+            
+<article itemscope itemtype="http://schema.org/BlogPosting">
+    <div itemprop="headline">
+        <h1>Getting Started Packaging A Rust CLI Tool in SUSE OBS</h1>
+        <div class="border"></div>
+        <time datetime="2021-02-15" class="date" itemprop="datePublished">
+            15 Feb 2021
+        </time>
+    </div>
+    <div itemprop="articleBody">
+        <h1 id="getting-started-packaging-a-rust-cli-tool-in-suse-obs">Getting Started Packaging A Rust CLI Tool in SUSE OBS</h1>
+<p>Distribution packaging always seems like something that is really
+difficult or hard to do, but the SUSE <a href="https://build.opensuse.org">Open Build
+Service</a> makes it really easy to not only
+build packages, but to then contribute them to Tumbleweed. Not only
+that, OBS can also build for Fedora, CentOS and more.</p>
+<h2 id="getting-started">Getting Started</h2>
+<p>You'll need to sign up to service - there is a sign up link on the
+front page of <a href="https://build.opensuse.org">OBS</a></p>
+<p>To do this you'll need a SUSE environment. Docker is an easy way to
+create this without having to commit to a full virtual machine /
+install.</p>
+<pre data-lang="bash" style="background-color:#2b303b;color:#c0c5ce;" class="language-bash "><code class="language-bash" data-lang="bash"><span>    </span><span style="color:#bf616a;">docker</span><span> run \
+</span><span style="color:#bf616a;">        --security-opt</span><span>=seccomp:unconfined</span><span style="color:#bf616a;"> --cap-add</span><span>=SYS_PTRACE</span><span style="color:#bf616a;"> --cap-add</span><span>=SYS_CHROOT</span><span style="color:#bf616a;"> --cap-add</span><span>=SYS_ADMIN \
+</span><span style="color:#bf616a;">        -i -t</span><span> opensuse/tumbleweed:latest /bin/sh
+</span><span style="color:#bf616a;">bash
+</span><span>
+</span><span style="color:#bf616a;">-</span><span>   NOTE: We need these extra privileges so that the osc build command
+</span><span>    </span><span style="color:#bf616a;">can</span><span> work due to how it uses chroots/mounts.
+</span><span>
+</span><span style="color:#bf616a;">Inside</span><span> of this we</span><span style="color:#96b5b4;">\&#39;</span><span>ll need some packages to help make the process
+</span><span style="color:#bf616a;">easier.
+</span><span>
+</span><span>```</span><span style="color:#bf616a;">bash
+</span><span>    </span><span style="color:#bf616a;">zypper</span><span> install obs-service-cargo_vendor osc obs-service-tar obs-service-obs_scm \
+</span><span>        obs-service-recompress obs-service-set_version obs-service-format_spec_file \
+</span><span>        obs-service-cargo_audit cargo sudo
+</span></code></pre>
+<p>You should also install your editor of choice in this command (docker
+images tend not to come with any editors!)</p>
+<p>You'll need to configure osc, which is the CLI interface to OBS. This
+is done in the file [~/.config/osc/oscrc]{.title-ref}. A minimal
+starting configuration is:</p>
+<pre data-lang="ini" style="background-color:#2b303b;color:#c0c5ce;" class="language-ini "><code class="language-ini" data-lang="ini"><span style="color:#b48ead;">    [general]
+</span><span>    </span><span style="color:#65737e;"># URL to access API server, e.g. https://api.opensuse.org
+</span><span>    </span><span style="color:#65737e;"># you also need a section [https://api.opensuse.org] with the credentials
+</span><span>    </span><span style="color:#bf616a;">apiurl </span><span>= </span><span style="color:#d08770;">https://api.opensuse.org
+</span><span style="color:#b48ead;">    [https://api.opensuse.org]
+</span><span>    </span><span style="color:#bf616a;">user </span><span>= &lt;username&gt;
+</span><span>    </span><span style="color:#bf616a;">pass </span><span>= &lt;password&gt;
+</span></code></pre>
+<p>You can check this works by using the &quot;whois&quot; command.</p>
+<pre data-lang="bash" style="background-color:#2b303b;color:#c0c5ce;" class="language-bash "><code class="language-bash" data-lang="bash"><span>    </span><span style="color:#65737e;"># osc whois
+</span><span>    </span><span style="color:#bf616a;">firstyear: </span><span>&quot;</span><span style="color:#a3be8c;">William Brown</span><span>&quot; &lt;email here&gt;
+</span></code></pre>
+<p>Optionally, you may install <a href="https://github.com/Firstyear/cargo-lock2rpmprovides">cargo
+lock2rpmprovides</a>
+to assist with creation of the license string for your package:</p>
+<pre data-lang="bash" style="background-color:#2b303b;color:#c0c5ce;" class="language-bash "><code class="language-bash" data-lang="bash"><span>    </span><span style="color:#bf616a;">cargo</span><span> install cargo-lock2rpmprovides
+</span></code></pre>
+<h2 id="packaging-a-rust-project">Packaging A Rust Project</h2>
+<p>In this example we'll use a toy Rust application I created called
+<a href="https://github.com/Firstyear/hellorust">hellorust</a>. Of course, feel
+free to choose your own project or Rust project you want to package!</p>
+<ul>
+<li>HINT: It's best to choose binaries, not libraries to package. This
+is because Rust can self-manage it's dependencies, so we don't
+need to package every library. Neat!</li>
+</ul>
+<p>First we'll create a package in our OBS home project.</p>
+<pre data-lang="bash" style="background-color:#2b303b;color:#c0c5ce;" class="language-bash "><code class="language-bash" data-lang="bash"><span>    </span><span style="color:#bf616a;">osc</span><span> co home:&lt;username&gt;
+</span><span>    </span><span style="color:#96b5b4;">cd</span><span> home:&lt;username&gt;
+</span><span>    </span><span style="color:#bf616a;">osc</span><span> mkpac hellorust
+</span><span>    </span><span style="color:#96b5b4;">cd</span><span> hellorust
+</span></code></pre>
+<p>OBS comes with a lot of useful utilities to help create and manage
+sources for our project. First we'll create a skeleton RPM spec file.
+This should be in a file named [hellorust.spec]{.title-ref}</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>    %global rustflags -Clink-arg=-Wl,-z,relro,-z,now -C debuginfo=2
+</span><span>
+</span><span>    Name:           hellorust
+</span><span>    #               This will be set by osc services, that will run after this.
+</span><span>    Version:        0.0.0
+</span><span>    Release:        0
+</span><span>    Summary:        A hello world with a number of the day printer.
+</span><span>    #               If you know the license, put it&#39;s SPDX string here.
+</span><span>    #               Alternately, you can use cargo lock2rpmprovides to help generate this.
+</span><span>    License:        Unknown
+</span><span>    #               Select a group from this link:
+</span><span>    #               https://en.opensuse.org/openSUSE:Package_group_guidelines
+</span><span>    Group:          Amusements/Games/Other
+</span><span>    Url:            https://github.com/Firstyear/hellorust
+</span><span>    Source0:        %{name}-%{version}.tar.xz
+</span><span>    Source1:        vendor.tar.xz
+</span><span>    Source2:        cargo_config
+</span><span>
+</span><span>    BuildRequires:  rust-packaging
+</span><span>    ExcludeArch:    s390 s390x ppc ppc64 ppc64le %ix86
+</span><span>
+</span><span>    %description
+</span><span>    A hello world with a number of the day printer.
+</span><span>
+</span><span>    %prep
+</span><span>    %setup -q
+</span><span>    %setup -qa1
+</span><span>    mkdir .cargo
+</span><span>    cp %{SOURCE2} .cargo/config
+</span><span>    # Remove exec bits to prevent an issue in fedora shebang checking
+</span><span>    find vendor -type f -name \*.rs -exec chmod -x &#39;{}&#39; \;
+</span><span>
+</span><span>    %build
+</span><span>    export RUSTFLAGS=&quot;%{rustflags}&quot;
+</span><span>    cargo build --offline --release
+</span><span>
+</span><span>    %install
+</span><span>    install -D -d -m 0755 %{buildroot}%{_bindir}
+</span><span>
+</span><span>    install -m 0755 %{_builddir}/%{name}-%{version}/target/release/hellorust %{buildroot}%{_bindir}/hellorust
+</span><span>
+</span><span>    %files
+</span><span>    %{_bindir}/hellorust
+</span><span>
+</span><span>    %changelog
+</span></code></pre>
+<p>There are a few commented areas you'll need to fill in and check. But
+next we will create a service file that allows OBS to help get our
+sources and bundle them for us. This should go in a file called
+<code>_service</code></p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>    &lt;services&gt;
+</span><span>      &lt;service mode=&quot;disabled&quot; name=&quot;obs_scm&quot;&gt;
+</span><span>        &lt;!-- ✨ URL of the git repo ✨ --&gt;
+</span><span>        &lt;param name=&quot;url&quot;&gt;https://github.com/Firstyear/hellorust.git&lt;/param&gt;
+</span><span>        &lt;param name=&quot;versionformat&quot;&gt;@PARENT_TAG@~git@TAG_OFFSET@.%h&lt;/param&gt;
+</span><span>        &lt;param name=&quot;scm&quot;&gt;git&lt;/param&gt;
+</span><span>        &lt;!-- ✨ The version tag or branch name from git ✨ --&gt;
+</span><span>        &lt;param name=&quot;revision&quot;&gt;v0.1.1&lt;/param&gt;
+</span><span>        &lt;param name=&quot;match-tag&quot;&gt;*&lt;/param&gt;
+</span><span>        &lt;param name=&quot;versionrewrite-pattern&quot;&gt;v(\d+\.\d+\.\d+)&lt;/param&gt;
+</span><span>        &lt;param name=&quot;versionrewrite-replacement&quot;&gt;\1&lt;/param&gt;
+</span><span>        &lt;param name=&quot;changesgenerate&quot;&gt;enable&lt;/param&gt;
+</span><span>        &lt;!-- ✨ Your email here ✨ --&gt;
+</span><span>        &lt;param name=&quot;changesauthor&quot;&gt; YOUR EMAIL HERE &lt;/param&gt;
+</span><span>      &lt;/service&gt;
+</span><span>      &lt;service mode=&quot;disabled&quot; name=&quot;tar&quot; /&gt;
+</span><span>      &lt;service mode=&quot;disabled&quot; name=&quot;recompress&quot;&gt;
+</span><span>        &lt;param name=&quot;file&quot;&gt;*.tar&lt;/param&gt;
+</span><span>        &lt;param name=&quot;compression&quot;&gt;xz&lt;/param&gt;
+</span><span>      &lt;/service&gt;
+</span><span>      &lt;service mode=&quot;disabled&quot; name=&quot;set_version&quot;/&gt;
+</span><span>      &lt;service name=&quot;cargo_audit&quot; mode=&quot;disabled&quot;&gt;
+</span><span>          &lt;!-- ✨ The name of the project here ✨ --&gt;
+</span><span>         &lt;param name=&quot;srcdir&quot;&gt;hellorust&lt;/param&gt;
+</span><span>      &lt;/service&gt;
+</span><span>      &lt;service name=&quot;cargo_vendor&quot; mode=&quot;disabled&quot;&gt;
+</span><span>          &lt;!-- ✨ The name of the project here ✨ --&gt;
+</span><span>         &lt;param name=&quot;srcdir&quot;&gt;hellorust&lt;/param&gt;
+</span><span>         &lt;param name=&quot;compression&quot;&gt;xz&lt;/param&gt;
+</span><span>      &lt;/service&gt;
+</span><span>
+</span><span>    &lt;/services&gt;
+</span></code></pre>
+<p>Now this service file does a lot of the heavy lifting for us:</p>
+<ul>
+<li>It will fetch the sources from git, based on the version we set.</li>
+<li>It will turn them into a tar.xz for us.</li>
+<li>It will update the changelog for the rpm, and set the correct
+version in the spec file.</li>
+<li>It scans our project for any known vulnerabilities</li>
+<li>It will download our rust dependencies, and then bundle them to
+vendor.tar.xz.</li>
+</ul>
+<p>So our current work dir should look like:</p>
+<pre data-lang="bash" style="background-color:#2b303b;color:#c0c5ce;" class="language-bash "><code class="language-bash" data-lang="bash"><span>    </span><span style="color:#65737e;"># ls -1 .
+</span><span>    </span><span style="color:#bf616a;">.osc
+</span><span>    </span><span style="color:#bf616a;">_service
+</span><span>    </span><span style="color:#bf616a;">hellorust.spec
+</span></code></pre>
+<p>Now we can run [osc service ra]{.title-ref}. This will run the services
+in our [_service]{.title-ref} file as we mentioned. Once it's complete
+we'll have quite a few more files in our directory:</p>
+<pre data-lang="bash" style="background-color:#2b303b;color:#c0c5ce;" class="language-bash "><code class="language-bash" data-lang="bash"><span>    </span><span style="color:#65737e;"># ls -1 .
+</span><span>    </span><span style="color:#bf616a;">_service
+</span><span>    </span><span style="color:#bf616a;">_servicedata
+</span><span>    </span><span style="color:#bf616a;">cargo_config
+</span><span>    </span><span style="color:#bf616a;">hellorust
+</span><span>    </span><span style="color:#bf616a;">hellorust-0.1.1~git0.db340ad.obscpio
+</span><span>    </span><span style="color:#bf616a;">hellorust-0.1.1~git0.db340ad.tar.xz
+</span><span>    </span><span style="color:#bf616a;">hellorust.obsinfo
+</span><span>    </span><span style="color:#bf616a;">hellorust.spec
+</span><span>    </span><span style="color:#bf616a;">vendor.tar.xz
+</span></code></pre>
+<p>Inside the [hellorust]{.title-ref} folder
+([home:username/hellorust/hellorust]{.title-ref}), is a checkout of our
+source. If you cd to that directory, you can run [cargo
+lock2rpmprovides]{.title-ref} which will display your license string you
+need:</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>    License: ( Apache-2.0 OR MIT ) AND ( Apache-2.0 WITH LLVM-exception OR Apache-2.0 OR MIT ) AND
+</span></code></pre>
+<p>Just add the license from the project, and then we can update our
+[hellorust.spec]{.title-ref} with the correct license.</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>    License: ( Apache-2.0 OR MIT ) AND ( Apache-2.0 WITH LLVM-exception OR Apache-2.0 OR MIT ) AND MPL-2.0
+</span></code></pre>
+<ul>
+<li>HINT: You don't need to use the emitted &quot;provides&quot; lines here.
+They are just for fedora rpms to adhere to some of their policy
+requirements.</li>
+</ul>
+<p>Now we can build our package on our local system to test it. This may
+take a while to get all its build dependencies and other parts, so be
+patient :)</p>
+<pre data-lang="bash" style="background-color:#2b303b;color:#c0c5ce;" class="language-bash "><code class="language-bash" data-lang="bash"><span>    </span><span style="color:#bf616a;">osc</span><span> build
+</span></code></pre>
+<p>If that completes successfully, you can now test these rpms:</p>
+<pre data-lang="bash" style="background-color:#2b303b;color:#c0c5ce;" class="language-bash "><code class="language-bash" data-lang="bash"><span>    </span><span style="color:#65737e;"># zypper in /var/tmp/build-root/openSUSE_Tumbleweed-x86_64/home/abuild/rpmbuild/RPMS/x86_64/hellorust-0.1.1~git0.db340ad-0.x86_64.rpm
+</span><span>    (</span><span style="color:#bf616a;">1/1</span><span>) Installing: hellorust-0.1.1</span><span style="color:#bf616a;">~</span><span>git0.db340ad-0.x86_64  ... </span><span style="color:#b48ead;">[</span><span>done</span><span style="color:#b48ead;">]
+</span><span>    </span><span style="color:#65737e;"># rpm -ql hellorust
+</span><span>    </span><span style="color:#bf616a;">/usr/bin/hellorust
+</span><span>    </span><span style="color:#65737e;"># hellorust
+</span><span>    </span><span style="color:#bf616a;">Hello,</span><span> Rust! The number of the day is: 68
+</span></code></pre>
+<p>Next you can commit to your project. Add the files that we created:</p>
+<pre data-lang="bash" style="background-color:#2b303b;color:#c0c5ce;" class="language-bash "><code class="language-bash" data-lang="bash"><span>    </span><span style="color:#65737e;"># osc add _service cargo_config hellorust-0.1.1~git0.db340ad.tar.xz hellorust.spec vendor.tar.xz
+</span><span>    </span><span style="color:#65737e;"># osc status
+</span><span>    </span><span style="color:#bf616a;">A</span><span>    _service
+</span><span>    </span><span style="color:#bf616a;">?</span><span>    _servicedata
+</span><span>    </span><span style="color:#bf616a;">A</span><span>    cargo_config
+</span><span>    </span><span style="color:#bf616a;">?</span><span>    hellorust-0.1.1</span><span style="color:#bf616a;">~</span><span>git0.db340ad.obscpio
+</span><span>    </span><span style="color:#bf616a;">A</span><span>    hellorust-0.1.1</span><span style="color:#bf616a;">~</span><span>git0.db340ad.tar.xz
+</span><span>    </span><span style="color:#bf616a;">?</span><span>    hellorust.obsinfo
+</span><span>    </span><span style="color:#bf616a;">A</span><span>    hellorust.spec
+</span><span>    </span><span style="color:#bf616a;">A</span><span>    vendor.tar.xz
+</span></code></pre>
+<ul>
+<li>HINT: You DO NOT need to commit _servicedata OR
+hellorust-0.1.1~git0.db340ad.obscpio OR hellorust.obsinfo</li>
+</ul>
+<pre data-lang="bash" style="background-color:#2b303b;color:#c0c5ce;" class="language-bash "><code class="language-bash" data-lang="bash"><span>    </span><span style="color:#bf616a;">osc</span><span> ci
+</span></code></pre>
+<p>From here, you can use your packages from your own respository, or you
+can forward them to OpenSUSE Tumbleweed (via Factory). You likely need
+to polish and add extra parts to your package for it to be accepted into
+Factory, but this should at least make it easier for you to start!</p>
+<p>For more, see the <a href="https://en.opensuse.org/openSUSE:How_to_contribute_to_Factory">how to contribute to
+Factory</a>
+document. To submit to Leap, the package must be in Factory, then you
+can request it to be <a href="https://en.opensuse.org/openSUSE:Packaging_for_Leap">submitted to
+Leap</a> as well.</p>
+<p>Happy Contributing! 🦎🦀</p>
+
+    </div>
+</article>
+
+        </main>
+        
+        <footer>
+            
+            <div class="border"></div>
+            <div class="footer">
+                <small class="footer-left">
+                    Copyright &copy; William Brown
+                </small>
+                <small class="footer-right">
+                    Powered by <a href="https://www.getzola.org">Zola</a> | Theme <a href="https://github.com/barlog-m/oceanic-zen">Oceanic Zen</a>
+                </small>
+            </div>
+        
+        </footer>
+    
+        </div>
+    </body>
+</html>

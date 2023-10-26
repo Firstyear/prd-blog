@@ -1,0 +1,363 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+        <meta name="description" content="Firstyear&#x27;s blog">
+        
+
+        <title>Firstyear&#x27;s blog-a-log</title>
+
+        
+          <link rel="alternate" type="application/rss+xml" title="RSS" href="https://fy.blackhats.net.au/rss.xml">
+        
+
+        
+            <link rel="stylesheet" href="https://fy.blackhats.net.au/theme.css">
+        
+        
+    </head>
+    <body>
+        <div class="content">
+        
+        
+            <header>
+                <div class="header-left">
+                    <a href="https:&#x2F;&#x2F;fy.blackhats.net.au" class="logo">Firstyear&#x27;s blog-a-log</a>
+                </div>
+                <div class="header-right">
+                    <nav itemscope itemtype="http://schema.org/SiteNavigationElement">
+                      <ul>
+                        
+                        
+                            
+                            <li class="nav">
+                                <a itemprop="url" href="https://fy.blackhats.net.au/blog/">
+                                    <span itemprop="name">Blog</span>
+                                </a>
+                            </li>
+                        
+                            
+                            <li class="nav">
+                                <a itemprop="url" href="https://fy.blackhats.net.au/pages/">
+                                    <span itemprop="name">Pages</span>
+                                </a>
+                            </li>
+                        
+                        
+                        <li class="nav">
+                            <a itemprop="url" href="https://github.com/firstyear">
+                                <img class="icon" src="https:&#x2F;&#x2F;fy.blackhats.net.au/icons/github.svg" alt="Github">
+                            </a>
+                        </li>
+                        
+                        <li class="nav">
+                            <a itemprop="url" href="/rss.xml">
+                                <img class="icon" src="https:&#x2F;&#x2F;fy.blackhats.net.au/rss-logo.png" alt="rss">
+                            </a>
+                        </li>
+                      </ul>
+                    </nav>
+                </div>
+            </header>
+        
+        
+        <main>
+            
+<article itemscope itemtype="http://schema.org/BlogPosting">
+    <div itemprop="headline">
+        <h1>CPU atomics and orderings explained</h1>
+        <div class="border"></div>
+        <time datetime="2019-07-16" class="date" itemprop="datePublished">
+            16 Jul 2019
+        </time>
+    </div>
+    <div itemprop="articleBody">
+        <h1 id="cpu-atomics-and-orderings-explained">CPU atomics and orderings explained</h1>
+<p>Sometimes the question comes up about how CPU memory orderings work, and
+what they do. I hope this post explains it in a really accessible way.</p>
+<h2 id="short-version-i-wanna-code">Short Version - I wanna code!</h2>
+<p>Summary - The memory model you commonly see is from C++ and it defines:</p>
+<ul>
+<li>Relaxed</li>
+<li>Acquire</li>
+<li>Release</li>
+<li>Acquire/Release (sometimes AcqRel)</li>
+<li>SeqCst</li>
+</ul>
+<p>There are memory orderings - every operation is &quot;atomic&quot;, so will work
+correctly, but there rules define how the memory and code <em>around</em> the
+atomic are influenced.</p>
+<p>If in doubt - use SeqCst - it's the strongest guarantee and prevents
+all re-ordering of operations and will do the right thing.</p>
+<p>The summary is:</p>
+<ul>
+<li>Relaxed - no ordering guarantees, just execute the atomic as is.</li>
+<li>Acquire - all code after this atomic, will be executed after the
+atomic.</li>
+<li>Release - all code before this atomic, will be executed before the
+atomic.</li>
+<li>Acquire/Release - both Acquire and Release - ie code stays before
+and after.</li>
+<li>SeqCst - Stronger consistency of Acquire/Release.</li>
+</ul>
+<h2 id="long-version-let-s-begin">Long Version ... let's begin ...</h2>
+<p>So why do we have memory and operation orderings at all? Let's look at
+some code to explain:</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>let mut x = 0;
+</span><span>let mut y = 0;
+</span><span>x = x + 3;
+</span><span>y = y + 7;
+</span><span>x = x + 4;
+</span><span>x = y + x;
+</span></code></pre>
+<p>Really trivial example - now to us as a human, we read this and see a
+set of operations that are linear by time. That means, they execute from
+top to bottom, in order.</p>
+<p>However, this is not how computers work. First, compilers will optimise
+your code, and optimisation means re-ordering of the operations to
+achieve better results. A compiler may optimise this to:</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>let mut x = 0;
+</span><span>let mut y = 0;
+</span><span>// Note removal of the x + 3 and x + 4, folded to a single operation.
+</span><span>x = x + 7
+</span><span>y = y + 7;
+</span><span>x = y + x;
+</span></code></pre>
+<p>Now there is a second element. Your CPU presents the illusion of running
+as a linear system, but it's actually an asynchronous, out-of-order
+task execution engine. That means a CPU will reorder your instructions,
+and may even run them concurrently and asynchronously.</p>
+<p>For example, your CPU will have both x + 7 and y + 7 in the pipeline,
+even though neither operation has completed - they are effectively
+running at the &quot;same time&quot; (concurrently).</p>
+<p>When you write a single thread program, you generally won't notice this
+behaviour. This is because a lot of smart people write compilers and
+CPU's to give the illusion of linear ordering, even though both of them
+are operating very differently.</p>
+<p>Now we want to write a multithreaded application. Suddenly this is the
+challenge:</p>
+<p><em>We write a concurrent program, in a linear language, executed on a
+concurrent asynchronous machine.</em></p>
+<p>This means there is a challenge is the translation between our mind
+(thinking about the concurrent problem), the program (which we have to
+express as a linear set of operations), which then runs on our CPU (an
+async concurrent device).</p>
+<p>Phew. How do computers even work in this scenario?!</p>
+<h2 id="why-are-cpu-s-async">Why are CPU's async?</h2>
+<p>CPU's have to be async to be fast - remember spectre and meltdown?
+These are attacks based on measuring the side effects of CPU's
+asynchronous behaviour. While computers are &quot;fast&quot; these attacks will
+always be possible, because to make a CPU synchronous is <em>slow</em> - and
+asynchronous behaviour will always have measurable side effects. Every
+modern CPU's performance is an illusion of async forbidden magic.</p>
+<p>A large portion of the async behaviour comes from the interaction of the
+CPU, cache, and memory.</p>
+<p>In order to provide the &quot;illusion&quot; of a coherent synchronous memory
+interface there is no seperation of your programs cache and memory. When
+the cpu wants to access &quot;memory&quot; the CPU cache is utilised
+transparently and will handle the request, and only on a cache miss,
+will we retrieve the values from RAM.</p>
+<p>(Aside: in almost all cases more CPU cache, not frequency will make your
+system perform better, because a cache miss will mean your task stalls
+waiting on RAM. Ohh no!)</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>CPU -&gt; Cache -&gt; RAM
+</span></code></pre>
+<p>When you have multiple CPU's, each CPU has it's own L1 cache:</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>CPU1 -&gt; L1 Cache -&gt; |              |
+</span><span>CPU2 -&gt; L1 Cache -&gt; | Shared L2/L3 | -&gt; RAM
+</span><span>CPU3 -&gt; L1 Cache -&gt; |              |
+</span><span>CPU4 -&gt; L1 Cache -&gt; |              |
+</span></code></pre>
+<p>Ahhh! Suddenly we can see where problems can occur - each CPU has an L1
+cache, which is transparent to memory but <em>unique</em> to the CPU. This
+means that each CPU can make a change to the same piece of memory in
+their L1 cache <em>without the other CPU knowing</em>. To help explain, let's
+show a demo.</p>
+<h2 id="cpu-just-trash-my-variables">CPU just trash my variables</h2>
+<p>We'll assume we now have two threads - my code is in rust again, and
+there is a good reason for the unsafes - this code really is unsafe!</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>// assume global x: usize = 0; y: usize = 0;
+</span><span>
+</span><span>THREAD 1                        THREAD 2
+</span><span>
+</span><span>if unsafe { *x == 1 } {          unsafe {
+</span><span>    unsafe { *y += 1 }              *y = 10;
+</span><span>}                                   *x = 1;
+</span><span>                                }
+</span></code></pre>
+<p>At the end of execution, what state will X and Y be in? The answer is
+&quot;it depends&quot;:</p>
+<ul>
+<li>What order did the threads run?</li>
+<li>The state of the L1 cache of each CPU</li>
+<li>The possible interleavings of the operations.</li>
+<li>Compiler re-ordering</li>
+</ul>
+<p>In the end the result of x will always be 1 - because x is only mutated
+in one thread, the caches will &quot;eventually&quot; (explained soon) become
+consistent.</p>
+<p>The real question is y. y could be:</p>
+<ul>
+<li>10</li>
+<li>11</li>
+<li>1</li>
+</ul>
+<p><em>10</em> - This can occur because in thread 2, x = 1 is re-ordered above y =
+10, causing the thread 1 &quot;y += 1&quot; to execute, followed by thread 2
+assign 10 directly to y. It can also occur because the check for x == 1
+occurs first, so y += 1 is skipped, then thread 2 is run, causing y =
+10. Two ways to achieve the same result!</p>
+<p><em>11</em> - This occurs in the &quot;normal&quot; execution path - all things
+considered it's a miracle :)</p>
+<p><em>1</em> - This is the most complex one - The y = 10 in thread 2 is applied,
+but the result is never sent to THREAD 1's cache, so x = 1 occurs and
+<em>is</em> made available to THREAD 1 (yes, this is possible to have different
+values made available to each cpu ...). Then thread 1 executes y (0) +=
+1, which is then sent back trampling the value of y = 10 from thread 2.</p>
+<p>If you want to know more about this and many other horrors of CPU
+execution, Paul McKenny is an expert in this field and has many talks at
+LCA and others on the topic. He can be found on
+<a href="https://twitter.com/paulmckrcu">twitter</a> and is super helpful if you
+have questions.</p>
+<h2 id="so-how-does-a-cpu-work-at-all">So how does a CPU work at all?</h2>
+<p>Obviously your system (likely a multicore system) works today - so it
+must be possible to write correct concurrent software. Cache's are kept
+in sync via a protocol called MESI. This is a state machine describing
+the states of memory and cache, and how they can be synchronised. The
+states are:</p>
+<ul>
+<li>Modified</li>
+<li>Exclusive</li>
+<li>Shared</li>
+<li>Invalid</li>
+</ul>
+<p>What's interesting about MESI is that each cache line is maintaining
+it's own state machine of the memory addresses - it's not a global
+state machine. To coordinate CPU's asynchronously message each other.</p>
+<p>A CPU can be messaged via IPC (Inter-Processor-Communication) to say
+that another CPU wants to &quot;claim&quot; exclusive ownership of a memory
+address, or to indicate that it has changed the content of a memory
+address and you should discard your version. It's important to
+understand these messages are <em>asynchronous</em>. When a CPU modifies an
+address it does not immediately send the invalidation message to all
+other CPU's - and when a CPU recieves the invalidation request it does
+not immediately act upon that message.</p>
+<p>If CPU's did &quot;synchronously&quot; act on all these messages, they would be
+spending so much time handling IPC traffic, they would never get
+anything done!</p>
+<p>As a result, it must be possible to indicate to a CPU that it's time to
+send or acknowledge these invalidations in the cache line. This is where
+barriers, or the memory orderings come in.</p>
+<ul>
+<li>Relaxed - No messages are sent or acknowledged.</li>
+<li>Release - flush all pending invalidations to be sent to other CPUS</li>
+<li>Acquire - Acknowledge and process all invalidation requests in my
+queue</li>
+<li>Acquire/Release - flush all outgoing invalidations, and process my
+incomming queue</li>
+<li>SeqCst - as AcqRel, but with some other guarantees around ordering
+that are beyond this discussion.</li>
+</ul>
+<h2 id="understand-a-mutex">Understand a Mutex</h2>
+<p>With this knowledge in place, we are finally in a position to understand
+the operations of a Mutex</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>// Assume mutex: Mutex&lt;usize&gt; = Mutex::new(0);
+</span><span>
+</span><span>THREAD 1                            THREAD 2
+</span><span>
+</span><span>{                                   {
+</span><span>    let guard = mutex.lock()            let guard = mutex.lock()
+</span><span>    *guard += 1;                        println!(*guard)
+</span><span>}                                   }
+</span></code></pre>
+<p>We know very clearly that this will print 1 or 0 - it's safe, no weird
+behaviours. Let's explain this case though:</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>THREAD 1
+</span><span>
+</span><span>{
+</span><span>    let guard = mutex.lock()
+</span><span>    // Acquire here!
+</span><span>    // All invalidation handled, guard is 0.
+</span><span>    // Compiler is told &quot;all following code must stay after .lock()&quot;.
+</span><span>    *guard += 1;
+</span><span>    // content of usize is changed, invalid req is queue
+</span><span>}
+</span><span>// Release here!
+</span><span>// Guard goes out of scope, invalidation reqs sent to all CPU&#39;s
+</span><span>// Compiler told all proceeding code must stay above this point.
+</span><span>
+</span><span>            THREAD 2
+</span><span>
+</span><span>            {
+</span><span>                let guard = mutex.lock()
+</span><span>                // Acquire here!
+</span><span>                // All invalidations handled - previous cache of usize discarded
+</span><span>                // and read from THREAD 1 cache into S state.
+</span><span>                // Compiler is told &quot;all following code must stay after .lock()&quot;.
+</span><span>                println(*guard);
+</span><span>            }
+</span><span>            // Release here!
+</span><span>            // Guard goes out of scope, no invalidations sent due to
+</span><span>            // no modifications.
+</span><span>            // Compiler told all proceeding code must stay above this point.
+</span></code></pre>
+<p>And there we have it! How barriers allow us to define an ordering in
+code and a CPU, to ensure our caches and compiler outputs are correct
+and consistent.</p>
+<h2 id="benefits-of-rust">Benefits of Rust</h2>
+<p>A nice benefit of Rust, and knowing these MESI states now, we can see
+that the best way to run a system is to minimise the number of
+invalidations being sent and acknowledged as this always causes a delay
+on CPU time. Rust variables are always mutable or immutable. These map
+almost directly to the E and S states of MESI. A mutable value is always
+exclusive to a single cache line, with no contention - and immutable
+values can be placed into the Shared state allowing each CPU to maintain
+a cache copy for higher performance.</p>
+<p>This is one of the reasons for Rust's amazing concurrency story is that
+the memory in your program map to cache states very clearly.</p>
+<p>It's also why it's unsafe to mutate a pointer between two threads (a
+global) - because the cache of the two cpus' won't be coherent, and
+you may not cause a crash, but one threads work will absolutely be lost!</p>
+<p>Finally, it's important to see that this is why using the correct
+concurrency primitives matter -it can highly influence your cache
+behaviour in your program and how that affects cache line contention and
+performance.</p>
+<p>For comments and more, please feel free to <a href="mailto:william@blackhats.net.au">email
+me!</a></p>
+<h2 id="shameless-plug">Shameless Plug</h2>
+<p>I'm the author and maintainer of Conc Read - a concurrently readable
+datastructure library for Rust. <a href="https://crates.io/crates/concread">Check it out on
+crates.io!</a></p>
+<h2 id="references">References</h2>
+<p><a href="https://people.freebsd.org/~lstewart/articles/cpumemory.pdf">What every programmer should know about memory
+(pdf)</a></p>
+<p><a href="https://doc.rust-lang.org/nomicon/atomics.html">Rust-nomicon - memory
+ordering</a></p>
+<p><a href="https://gamozolabs.github.io/metrology/2019/08/19/sushi_roll.html">Microarchitectural inspection with Sushi
+Roll</a></p>
+
+    </div>
+</article>
+
+        </main>
+        
+        <footer>
+            
+            <div class="border"></div>
+            <div class="footer">
+                <small class="footer-left">
+                    Copyright &copy; William Brown
+                </small>
+                <small class="footer-right">
+                    Powered by <a href="https://www.getzola.org">Zola</a> | Theme <a href="https://github.com/barlog-m/oceanic-zen">Oceanic Zen</a>
+                </small>
+            </div>
+        
+        </footer>
+    
+        </div>
+    </body>
+</html>

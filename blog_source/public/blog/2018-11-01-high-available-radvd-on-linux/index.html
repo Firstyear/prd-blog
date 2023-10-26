@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+        <meta name="description" content="Firstyear&#x27;s blog">
+        
+
+        <title>Firstyear&#x27;s blog-a-log</title>
+
+        
+          <link rel="alternate" type="application/rss+xml" title="RSS" href="https://fy.blackhats.net.au/rss.xml">
+        
+
+        
+            <link rel="stylesheet" href="https://fy.blackhats.net.au/theme.css">
+        
+        
+    </head>
+    <body>
+        <div class="content">
+        
+        
+            <header>
+                <div class="header-left">
+                    <a href="https:&#x2F;&#x2F;fy.blackhats.net.au" class="logo">Firstyear&#x27;s blog-a-log</a>
+                </div>
+                <div class="header-right">
+                    <nav itemscope itemtype="http://schema.org/SiteNavigationElement">
+                      <ul>
+                        
+                        
+                            
+                            <li class="nav">
+                                <a itemprop="url" href="https://fy.blackhats.net.au/blog/">
+                                    <span itemprop="name">Blog</span>
+                                </a>
+                            </li>
+                        
+                            
+                            <li class="nav">
+                                <a itemprop="url" href="https://fy.blackhats.net.au/pages/">
+                                    <span itemprop="name">Pages</span>
+                                </a>
+                            </li>
+                        
+                        
+                        <li class="nav">
+                            <a itemprop="url" href="https://github.com/firstyear">
+                                <img class="icon" src="https:&#x2F;&#x2F;fy.blackhats.net.au/icons/github.svg" alt="Github">
+                            </a>
+                        </li>
+                        
+                        <li class="nav">
+                            <a itemprop="url" href="/rss.xml">
+                                <img class="icon" src="https:&#x2F;&#x2F;fy.blackhats.net.au/rss-logo.png" alt="rss">
+                            </a>
+                        </li>
+                      </ul>
+                    </nav>
+                </div>
+            </header>
+        
+        
+        <main>
+            
+<article itemscope itemtype="http://schema.org/BlogPosting">
+    <div itemprop="headline">
+        <h1>High Available RADVD on Linux</h1>
+        <div class="border"></div>
+        <time datetime="2018-11-01" class="date" itemprop="datePublished">
+            01 Nov 2018
+        </time>
+    </div>
+    <div itemprop="articleBody">
+        <h1 id="high-available-radvd-on-linux">High Available RADVD on Linux</h1>
+<p>Recently I was experimenting again with high availability router
+configurations so that in the cause of an outage or a failover the other
+router will take over and traffic is still served.</p>
+<p>This is usually done through protocols like VRRP to allow virtual ips to
+exist that can be failed between. However with ipv6 one needs to still
+allow clients to find the router, and in the cause of a failure, the
+router advertisments still must continue for client renewals.</p>
+<p>To achieve this we need two parts. A shared Link Local address, and a
+special RADVD configuration.</p>
+<p>Because of howe ipv6 routers work, all traffic (even global) is still
+sent to your link local router. We can use an address like:</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>fe80::1:1
+</span></code></pre>
+<p>This doesn't clash with any reserved or special ipv6 addresses, and
+it's easy to remember. Because of how link local works, we can put this
+on many interfaces of the router (many vlans) with no conflict.</p>
+<p>So now to the two components.</p>
+<h2 id="keepalived">Keepalived</h2>
+<p>Keepalived is a VRRP implementation for linux. It has extensive
+documentation and sometimes uses some implementation specific language,
+but it works well for what it does.</p>
+<p>Our configuration looks like:</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>#  /etc/keepalived/keepalived.conf
+</span><span>global_defs {
+</span><span>  vrrp_version 3
+</span><span>}
+</span><span>
+</span><span>vrrp_sync_group G1 {
+</span><span> group {
+</span><span>   ipv6_ens256
+</span><span> }
+</span><span>}
+</span><span>
+</span><span>vrrp_instance ipv6_ens256 {
+</span><span>   interface ens256
+</span><span>   virtual_router_id 62
+</span><span>   priority 50
+</span><span>   advert_int 1.0
+</span><span>   virtual_ipaddress {
+</span><span>    fe80::1:1
+</span><span>    2001:db8::1
+</span><span>   }
+</span><span>   nopreempt
+</span><span>   garp_master_delay 1
+</span><span>}
+</span></code></pre>
+<p>Note that we provide both a global address and an LL address for the
+failover. This is important for services and DNS for the router to have
+the global, but you could omit this. The LL address however is critical
+to this configuration and must be present.</p>
+<p>Now you can start up vrrp, and you should see one of your two linux
+machines pick up the address.</p>
+<h2 id="radvd">RADVD</h2>
+<p>For RADVD to work, a feature of the 2.x series is required. Packaging
+this for el7 is out of scope of this post, but fedora ships the version
+required.</p>
+<p>The feature is that RADVD can be configured to specify which address it
+advertises for the router, rather than assuming the interface LL
+autoconf address is the address to advertise. The configuration appears
+as:</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span># /etc/radvd.conf
+</span><span>interface ens256
+</span><span>{
+</span><span>    AdvSendAdvert on;
+</span><span>    MinRtrAdvInterval 30;
+</span><span>    MaxRtrAdvInterval 100;
+</span><span>    AdvRASrcAddress {
+</span><span>        fe80::1:1;
+</span><span>    };
+</span><span>    prefix 2001:db8::/64
+</span><span>    {
+</span><span>        AdvOnLink on;
+</span><span>        AdvAutonomous on;
+</span><span>        AdvRouterAddr off;
+</span><span>    };
+</span><span>};
+</span></code></pre>
+<p>Note the AdvRASrcAddress parameter? This defines a priority list of
+address to advertise that could be available on the interface.</p>
+<p>Now start up radvd on your two routers, and try failing over between
+them while you ping from your client. Remember to ping LL from a client
+you need something like:</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>ping6 fe80::1:1%en1
+</span></code></pre>
+<p>Where the outgoing interface of your client traffic is denoted after the
+'%'.</p>
+<p>Happy failover routing!</p>
+
+    </div>
+</article>
+
+        </main>
+        
+        <footer>
+            
+            <div class="border"></div>
+            <div class="footer">
+                <small class="footer-left">
+                    Copyright &copy; William Brown
+                </small>
+                <small class="footer-right">
+                    Powered by <a href="https://www.getzola.org">Zola</a> | Theme <a href="https://github.com/barlog-m/oceanic-zen">Oceanic Zen</a>
+                </small>
+            </div>
+        
+        </footer>
+    
+        </div>
+    </body>
+</html>

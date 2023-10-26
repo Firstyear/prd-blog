@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+        <meta name="description" content="Firstyear&#x27;s blog">
+        
+
+        <title>Firstyear&#x27;s blog-a-log</title>
+
+        
+          <link rel="alternate" type="application/rss+xml" title="RSS" href="https://fy.blackhats.net.au/rss.xml">
+        
+
+        
+            <link rel="stylesheet" href="https://fy.blackhats.net.au/theme.css">
+        
+        
+    </head>
+    <body>
+        <div class="content">
+        
+        
+            <header>
+                <div class="header-left">
+                    <a href="https:&#x2F;&#x2F;fy.blackhats.net.au" class="logo">Firstyear&#x27;s blog-a-log</a>
+                </div>
+                <div class="header-right">
+                    <nav itemscope itemtype="http://schema.org/SiteNavigationElement">
+                      <ul>
+                        
+                        
+                            
+                            <li class="nav">
+                                <a itemprop="url" href="https://fy.blackhats.net.au/blog/">
+                                    <span itemprop="name">Blog</span>
+                                </a>
+                            </li>
+                        
+                            
+                            <li class="nav">
+                                <a itemprop="url" href="https://fy.blackhats.net.au/pages/">
+                                    <span itemprop="name">Pages</span>
+                                </a>
+                            </li>
+                        
+                        
+                        <li class="nav">
+                            <a itemprop="url" href="https://github.com/firstyear">
+                                <img class="icon" src="https:&#x2F;&#x2F;fy.blackhats.net.au/icons/github.svg" alt="Github">
+                            </a>
+                        </li>
+                        
+                        <li class="nav">
+                            <a itemprop="url" href="/rss.xml">
+                                <img class="icon" src="https:&#x2F;&#x2F;fy.blackhats.net.au/rss-logo.png" alt="rss">
+                            </a>
+                        </li>
+                      </ul>
+                    </nav>
+                </div>
+            </header>
+        
+        
+        <main>
+            
+<article itemscope itemtype="http://schema.org/BlogPosting">
+    <div itemprop="headline">
+        <h1>Using Rust Generics to Enforce DB Record State</h1>
+        <div class="border"></div>
+        <time datetime="2019-04-13" class="date" itemprop="datePublished">
+            13 Apr 2019
+        </time>
+    </div>
+    <div itemprop="articleBody">
+        <h1 id="using-rust-generics-to-enforce-db-record-state">Using Rust Generics to Enforce DB Record State</h1>
+<p>In a database, entries go through a lifecycle which represents what
+attributes they have have, db record keys, and if they have conformed to
+schema checking.</p>
+<p>I'm currently working on a (private in 2019, public in july 2019)
+project which is a NoSQL database writting in Rust. To help us manage
+the correctness and lifecycle of database entries, I have been using
+advice from the <a href="https://docs.rust-embedded.org/book/static-guarantees/state-machines.html">Rust Embedded Group's
+Book.</a></p>
+<p>As I have mentioned in the past, state machines are a great way to
+design code, so let's plot out the state machine we have for Entries:</p>
+<h2 id="entry-state-machine">Entry State Machine</h2>
+<p>The lifecyle is:</p>
+<ul>
+<li>A new entry is submitted by the user for creation</li>
+<li>We schema check that entry</li>
+<li>If it passes schema, we commit it and assign internal ID's</li>
+<li>When we search the entry, we retrieve it by internal ID's</li>
+<li>When we modify the entry, we need to recheck it's schema before we
+commit it back</li>
+<li>When we delete, we just remove the entry.</li>
+</ul>
+<p>This leads to a state machine of:</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>|
+</span><span>(create operation)
+</span><span>|
+</span><span>v
+</span><span>[ New + Invalid ] -(schema check)-&gt; [ New + Valid ]
+</span><span>                                  |
+</span><span>                           (send to backend)
+</span><span>                                  |
+</span><span>                                  v    v-------------\
+</span><span>[Commited + Invalid] &lt;-(modify operation)- [ Commited + Valid ]          |
+</span><span>|                                          ^   \       (write to backend)
+</span><span>\--------------(schema check)-------------/     ---------------/
+</span></code></pre>
+<p>This is a bit rough - The version on my whiteboard was better :)</p>
+<p>The main observation is that we are focused only on the commitability
+and validty of entries - not about where they are or if the commit was a
+success.</p>
+<h2 id="entry-structs">Entry Structs</h2>
+<p>So to make these states work we have the following structs:</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>struct EntryNew;
+</span><span>struct EntryCommited;
+</span><span>
+</span><span>struct EntryValid;
+</span><span>struct EntryInvalid;
+</span><span>
+</span><span>struct Entry&lt;STATE, VALID&gt; {
+</span><span>    state: STATE,
+</span><span>    valid: VALID,
+</span><span>    // Other db junk goes here :)
+</span><span>}
+</span></code></pre>
+<p>We can then use these to establish the lifecycle with functions
+(similar) to this:</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>impl Entry&lt;EntryNew, EntryInvalid&gt; {
+</span><span>    fn new() -&gt; Self {
+</span><span>        Entry {
+</span><span>            state: EntryNew,
+</span><span>            valid: EntryInvalid,
+</span><span>            ...
+</span><span>        }
+</span><span>    }
+</span><span>
+</span><span>}
+</span><span>
+</span><span>impl&lt;STATE&gt; Entry&lt;STATE, EntryInvalid&gt; {
+</span><span>    fn validate(self, schema: Schema) -&gt; Result&lt;Entry&lt;STATE, EntryValid&gt;, ()&gt; {
+</span><span>        if schema.check(self) {
+</span><span>            Ok(Entry {
+</span><span>                state: self.state,
+</span><span>                valid: EntryValid,
+</span><span>                ...
+</span><span>            })
+</span><span>        } else {
+</span><span>            Err(())
+</span><span>        }
+</span><span>    }
+</span><span>
+</span><span>    fn modify(&amp;mut self, ...) {
+</span><span>        // Perform any modifications on the entry you like, only works
+</span><span>        // on invalidated entries.
+</span><span>    }
+</span><span>}
+</span><span>
+</span><span>impl&lt;STATE&gt; Entry&lt;STATE, EntryValid&gt; {
+</span><span>    fn seal(self) -&gt; Entry&lt;EntryCommitted, EntryValid&gt; {
+</span><span>        // Assign internal id&#39;s etc
+</span><span>        Entry {
+</span><span>            state: EntryCommited,
+</span><span>            valid: EntryValid,
+</span><span>        }
+</span><span>    }
+</span><span>
+</span><span>    fn compare(&amp;self, other: Entry&lt;STATE, EntryValid&gt;) -&gt; ... {
+</span><span>        // Only allow compares on schema validated/normalised
+</span><span>        // entries, so that checks don&#39;t have to be schema aware
+</span><span>        // as the entries are already in a comparable state.
+</span><span>    }
+</span><span>}
+</span><span>
+</span><span>impl Entry&lt;EntryCommited, EntryValid&gt; {
+</span><span>    fn invalidate(self) -&gt; Entry&lt;EntryCommited, EntryInvalid&gt; {
+</span><span>        // Invalidate an entry, to allow modifications to be performed
+</span><span>        // note that modifications can only be applied once an entry is created!
+</span><span>        Entry {
+</span><span>            state: self.state,
+</span><span>            valid: EntryInvalid,
+</span><span>        }
+</span><span>    }
+</span><span>}
+</span></code></pre>
+<p>What this allows us to do importantly is to control when we apply search
+terms, send entries to the backend for storage and more. Benefit is this
+is compile time checked, so you can never send an entry to a backend
+that is <em>not</em> schema checked, or run comparisons or searches on entries
+that aren't schema checked, and you can even only modify or delete
+something once it's created. For example other parts of the code now
+have:</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>impl BackendStorage {
+</span><span>    // Can only create if no db id&#39;s are assigned, IE it must be new.
+</span><span>    fn create(&amp;self, ..., entry: Entry&lt;EntryNew, EntryValid&gt;) -&gt; Result&lt;...&gt; {
+</span><span>    }
+</span><span>
+</span><span>    // Can only modify IF it has been created, and is validated.
+</span><span>    fn modify(&amp;self, ..., entry: Entry&lt;EntryCommited, EntryValid&gt;) -&gt; Result&lt;...&gt; {
+</span><span>    }
+</span><span>
+</span><span>    // Can only delete IF it has been created and committed.
+</span><span>    fn delete(&amp;self, ..., entry: Entry&lt;EntryCommited, EntryValid&gt;) -&gt; Result&lt;...&gt; {
+</span><span>    }
+</span><span>}
+</span><span>
+</span><span>impl Filter&lt;STATE&gt; {
+</span><span>    // Can only apply filters (searches) if the entry is schema checked. This has an
+</span><span>    // important behaviour, where we can schema normalise. Consider a case-insensitive
+</span><span>    // type, we can schema-normalise this on the entry, then our compare can simply
+</span><span>    // be a string.compare, because we assert both entries *must* have been through
+</span><span>    // the normalisation routines!
+</span><span>    fn apply_filter(&amp;self, ..., entry: &amp;Entry&lt;STATE, EntryValid&gt;) -&gt; Result&lt;bool, ...&gt; {
+</span><span>    }
+</span><span>}
+</span></code></pre>
+<h2 id="using-this-with-serde">Using this with Serde?</h2>
+<p>I have noticed that when we serialise the entry, that this causes the
+valid/state field to <em>not</em> be compiled away - because they <em>have</em> to be
+serialised, regardless of the empty content meaning the compiler can't
+eliminate them.</p>
+<p>A future cleanup will be to have a serialised DBEntry form such as the
+following:</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>struct DBEV1 {
+</span><span>    // entry data here
+</span><span>}
+</span><span>
+</span><span>enum DBEntryVersion {
+</span><span>    V1(DBEV1)
+</span><span>}
+</span><span>
+</span><span>struct DBEntry {
+</span><span>    data: DBEntryVersion
+</span><span>}
+</span><span>
+</span><span>impl From&lt;Entry&lt;EntryNew, EntryValid&gt;&gt; for DBEntry {
+</span><span>    fn from(e: Entry&lt;EntryNew, EntryValid&gt;) -&gt; Self {
+</span><span>        // assign db id&#39;s, and return a serialisable entry.
+</span><span>    }
+</span><span>}
+</span><span>
+</span><span>impl From&lt;Entry&lt;EntryCommited, EntryValid&gt;&gt; for DBEntry {
+</span><span>    fn from(e: Entry&lt;EntryCommited, EntryValid&gt;) -&gt; Self {
+</span><span>        // Just translate the entry to a serialisable form
+</span><span>    }
+</span><span>}
+</span></code></pre>
+<p>This way we still have the zero-cost state on Entry, but we are able to
+move to a versioned seralised structure, and we minimise the run time
+cost.</p>
+<h2 id="testing-the-entry">Testing the Entry</h2>
+<p>To help with testing, I needed to be able to shortcut and move between
+anystate of the entry so I could quickly make fake entries, so I added
+some unsafe methods:</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>#[cfg(test)]
+</span><span>unsafe fn to_new_valid(self, Entry&lt;EntryNew, EntryInvalid&gt;) -&gt; {
+</span><span>    Entry {
+</span><span>        state: EntryNew,
+</span><span>        valid: EntryValid
+</span><span>    }
+</span><span>}
+</span></code></pre>
+<p>These allow me to setup and create small unit tests where I may not have
+a full backend or schema infrastructure, so I can test specific aspects
+of the entries and their lifecycle. It's limited to test runs only, and
+marked unsafe. It's not &quot;technically&quot; memory unsafe, but it's unsafe
+from the view of &quot;it could absolutely mess up your database consistency
+guarantees&quot; so you have to really want it.</p>
+<h2 id="summary">Summary</h2>
+<p>Using statemachines like this, really helped me to clean up my code,
+make stronger assertions about the correctness of what I was doing for
+entry lifecycles, and means that I have more faith when I and
+future-contributors will work on the code base that we'll have compile
+time checks to ensure we are doing the right thing - to prevent data
+corruption and inconsistency.</p>
+
+    </div>
+</article>
+
+        </main>
+        
+        <footer>
+            
+            <div class="border"></div>
+            <div class="footer">
+                <small class="footer-left">
+                    Copyright &copy; William Brown
+                </small>
+                <small class="footer-right">
+                    Powered by <a href="https://www.getzola.org">Zola</a> | Theme <a href="https://github.com/barlog-m/oceanic-zen">Oceanic Zen</a>
+                </small>
+            </div>
+        
+        </footer>
+    
+        </div>
+    </body>
+</html>

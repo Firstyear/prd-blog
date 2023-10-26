@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+        <meta name="description" content="Firstyear&#x27;s blog">
+        
+
+        <title>Firstyear&#x27;s blog-a-log</title>
+
+        
+          <link rel="alternate" type="application/rss+xml" title="RSS" href="https://fy.blackhats.net.au/rss.xml">
+        
+
+        
+            <link rel="stylesheet" href="https://fy.blackhats.net.au/theme.css">
+        
+        
+    </head>
+    <body>
+        <div class="content">
+        
+        
+            <header>
+                <div class="header-left">
+                    <a href="https:&#x2F;&#x2F;fy.blackhats.net.au" class="logo">Firstyear&#x27;s blog-a-log</a>
+                </div>
+                <div class="header-right">
+                    <nav itemscope itemtype="http://schema.org/SiteNavigationElement">
+                      <ul>
+                        
+                        
+                            
+                            <li class="nav">
+                                <a itemprop="url" href="https://fy.blackhats.net.au/blog/">
+                                    <span itemprop="name">Blog</span>
+                                </a>
+                            </li>
+                        
+                            
+                            <li class="nav">
+                                <a itemprop="url" href="https://fy.blackhats.net.au/pages/">
+                                    <span itemprop="name">Pages</span>
+                                </a>
+                            </li>
+                        
+                        
+                        <li class="nav">
+                            <a itemprop="url" href="https://github.com/firstyear">
+                                <img class="icon" src="https:&#x2F;&#x2F;fy.blackhats.net.au/icons/github.svg" alt="Github">
+                            </a>
+                        </li>
+                        
+                        <li class="nav">
+                            <a itemprop="url" href="/rss.xml">
+                                <img class="icon" src="https:&#x2F;&#x2F;fy.blackhats.net.au/rss-logo.png" alt="rss">
+                            </a>
+                        </li>
+                      </ul>
+                    </nav>
+                </div>
+            </header>
+        
+        
+        <main>
+            
+<article itemscope itemtype="http://schema.org/BlogPosting">
+    <div itemprop="headline">
+        <h1>OpenBSD nat64</h1>
+        <div class="border"></div>
+        <time datetime="2015-07-04" class="date" itemprop="datePublished">
+            04 Jul 2015
+        </time>
+    </div>
+    <div itemprop="articleBody">
+        <h1 id="openbsd-nat64">OpenBSD nat64</h1>
+<p>I'm a bit of a fan of ipv6. I would like to move as many of my systems
+to be ipv6-only but in the current world of dual stack that's just not
+completely possible. Nat64 helps allow ipv6 hosts connect to the ipv4
+internet.</p>
+<p>Normally you have:</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>ipv4 &lt;-- | ------- |--&gt; ipv4 internet
+</span><span>         |         |
+</span><span>host     | gateway |
+</span><span>         |         |
+</span><span>ipv6 &lt;-- | ------- |--&gt; ipv6 internet
+</span></code></pre>
+<p>The two protocols are kept seperate, and you need both to connect to the
+network.</p>
+<p>In a Nat64 setup, your gate way defines a magic prefix that is routed to
+it, that is at least a /96 - in other words, it contains a /32 that you
+can populate with ipv4 addresses. So at home I have a /56:</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>2001:db8::/56
+</span></code></pre>
+<p>Inside of this I have reserved a network:</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>2001:db8:0:64::/64
+</span></code></pre>
+<p>Now, if you change the last 32 bits to an ipv4 address such as:</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>2001:db8:0:64::8.8.8.8
+</span></code></pre>
+<p>Or in &quot;pure&quot; ipv6</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>2001:db8:0:64::808:808
+</span></code></pre>
+<p>This traffic is sent via the default route, and the gateway picks it up.
+It sees the prefix of 2001:db8:0:64::/96 on the packet, it then removes
+the last 32 bits and forms an ipv4 address. The data of the packet is
+encapsulated to ipv4, a session table built and the data sent out. When
+a response comes back, the session table is consulted, the data is
+mapped back to the origin ipv6 address and re-encapsulated back to the
+client.</p>
+<p>Thus you see:</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>ping6 2001:db8:0:64::8.8.8.8  
+</span><span>PING 2001:db8:0:64::8.8.8.8(2001:db8:0:64::808:808) 56 data bytes
+</span><span>64 bytes from 2001:db8:0:64::808:808: icmp_seq=1 ttl=57 time=123 ms
+</span></code></pre>
+<p>Or from our previous diagram, you can now construct:</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>ipv4  X  |     ---- | --&gt; ipv4 internet
+</span><span>         |    /     |
+</span><span>host     |   /      |
+</span><span>         |  /       |
+</span><span>ipv6 &lt;-- | -------- | --&gt; ipv6 internet
+</span></code></pre>
+<p>However, you need a supporting technology. If you were to use this
+normally, applications don't know how to attach the ipv4 data into the
+ipv6 prefix. So you need to support this application with DNS64. This
+allows hostnames that have no AAAA record, to automatically have the A
+data appended to the Nat64 prefix. For example with out DNS64:</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>dig www.adelaide.edu.au  +short A
+</span><span>129.127.144.141
+</span><span>
+</span><span>dig www.adelaide.edu.au  +short AAAA
+</span></code></pre>
+<p>Now, if we add DNS64</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>dig www.adelaide.edu.au  +short AAAA
+</span><span>2001:db8:0:64::817f:908d
+</span></code></pre>
+<p>Now we can contact this:</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>ping6 www.adelaide.edu.au
+</span><span>PING 2001:db8:0:64::129.127.144.141(2001:db8:0:64::817f:908d) 56 data bytes
+</span><span>64 bytes from 2001:db8:0:64::817f:908d: icmp_seq=1 ttl=64 time=130 ms
+</span></code></pre>
+<p>So, lets get into the meat of the configuration.</p>
+<p>First, you need a working Nat64. I'm using openBSD 5.7 on my router, so
+this is configured purely in pf.conf</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>pass in quick on $interface_int_r0 inet6 from any to 2001:db8:0:64::/96 af-to inet from (egress:0) keep state rtable 0
+</span></code></pre>
+<p>That's all it is! Provided you have working ipv6 already, the addition
+of this will enable a /96 to now function as your nat64 prefix.
+Remember, you DO NOT need this /96 on an interface or routed. It exists
+&quot;in the ether&quot; and pf recognises traffic to the prefix and will
+automatically convert it to ipv4 traffic exiting on your egress device.</p>
+<p>Next you need to configure dns64. I like bind9 so here is the config you
+need:</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>options {
+</span><span>    //.... snip .....
+</span><span>            dns64 2001:db8:0:64::/96 {
+</span><span>                clients { any; };
+</span><span>                //Exclude prviate networks we connect to.
+</span><span>                mapped { !172.24.0.0/16; !10.0.0.0/8; any; };
+</span><span>                suffix ::;
+</span><span>                recursive-only yes;
+</span><span>        };
+</span><span>
+</span><span>}
+</span></code></pre>
+<p>Once you restart named, you will have working DNS64, and able to contact
+the ipv4 internet from ipv4 hosts.</p>
+<p>The only gotcha I have found is with VPNs. When you VPN from the site or
+into the site with DNS64/Nat64, often you will find that your DNS will
+resolve hosts to ipv6 addresses, for example, 2001:db8:0:64::10.0.0.1
+and then will be put onto your network egress port, rather than down the
+VPN: Not ideal at all! So I exclude the ipv4 ranges from my local
+networks and my work place to avoid these issues.</p>
+
+    </div>
+</article>
+
+        </main>
+        
+        <footer>
+            
+            <div class="border"></div>
+            <div class="footer">
+                <small class="footer-left">
+                    Copyright &copy; William Brown
+                </small>
+                <small class="footer-right">
+                    Powered by <a href="https://www.getzola.org">Zola</a> | Theme <a href="https://github.com/barlog-m/oceanic-zen">Oceanic Zen</a>
+                </small>
+            </div>
+        
+        </footer>
+    
+        </div>
+    </body>
+</html>

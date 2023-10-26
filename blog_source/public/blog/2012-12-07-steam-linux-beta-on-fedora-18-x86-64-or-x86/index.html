@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+        <meta name="description" content="Firstyear&#x27;s blog">
+        
+
+        <title>Firstyear&#x27;s blog-a-log</title>
+
+        
+          <link rel="alternate" type="application/rss+xml" title="RSS" href="https://fy.blackhats.net.au/rss.xml">
+        
+
+        
+            <link rel="stylesheet" href="https://fy.blackhats.net.au/theme.css">
+        
+        
+    </head>
+    <body>
+        <div class="content">
+        
+        
+            <header>
+                <div class="header-left">
+                    <a href="https:&#x2F;&#x2F;fy.blackhats.net.au" class="logo">Firstyear&#x27;s blog-a-log</a>
+                </div>
+                <div class="header-right">
+                    <nav itemscope itemtype="http://schema.org/SiteNavigationElement">
+                      <ul>
+                        
+                        
+                            
+                            <li class="nav">
+                                <a itemprop="url" href="https://fy.blackhats.net.au/blog/">
+                                    <span itemprop="name">Blog</span>
+                                </a>
+                            </li>
+                        
+                            
+                            <li class="nav">
+                                <a itemprop="url" href="https://fy.blackhats.net.au/pages/">
+                                    <span itemprop="name">Pages</span>
+                                </a>
+                            </li>
+                        
+                        
+                        <li class="nav">
+                            <a itemprop="url" href="https://github.com/firstyear">
+                                <img class="icon" src="https:&#x2F;&#x2F;fy.blackhats.net.au/icons/github.svg" alt="Github">
+                            </a>
+                        </li>
+                        
+                        <li class="nav">
+                            <a itemprop="url" href="/rss.xml">
+                                <img class="icon" src="https:&#x2F;&#x2F;fy.blackhats.net.au/rss-logo.png" alt="rss">
+                            </a>
+                        </li>
+                      </ul>
+                    </nav>
+                </div>
+            </header>
+        
+        
+        <main>
+            
+<article itemscope itemtype="http://schema.org/BlogPosting">
+    <div itemprop="headline">
+        <h1>Steam Linux Beta on Fedora 18 (x86 64 or x86)</h1>
+        <div class="border"></div>
+        <time datetime="2012-12-07" class="date" itemprop="datePublished">
+            07 Dec 2012
+        </time>
+    </div>
+    <div itemprop="articleBody">
+        <h1 id="steam-linux-beta-on-fedora-18-x86-64-or-x86">Steam Linux Beta on Fedora 18 (x86 64 or x86)</h1>
+<p>These instructions are old! Use this instead:</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>wget http://spot.fedorapeople.org/steam/steam.repo -O /etc/yum.repos.d/steam.repo
+</span><span>yum install steam
+</span></code></pre>
+<p>OLD METHOD below</p>
+<p>Get the .deb.</p>
+<p>Unpack it with :</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>ar x steam.deb
+</span><span>tar -xvzf data.tar.gz -C /
+</span></code></pre>
+<p>Now install</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>yum install glibc.i686 \
+</span><span>libX11.i686 \
+</span><span>libstdc++.i686 \
+</span><span>mesa-libGL.i686 \
+</span><span>mesa-dri-drivers.i686 \
+</span><span>libtxc_dxtn.i686 \
+</span><span>libXrandr.i686 \
+</span><span>pango.i686 \
+</span><span>gtk2.i686 \
+</span><span>alsa-lib.i686 \
+</span><span>nss.i686 \
+</span><span>libpng12.i686 \
+</span><span>openal-soft.i686 \
+</span><span>pulseaudio-libs.i686
+</span></code></pre>
+<p>Now you should be able to run the steam client from /usr/bin/steam or
+from the Applications - Games menu</p>
+<p>If you have issues, try :</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>cd ~/.local/share/Steam
+</span><span>LD_DEBUG=&quot;libs&quot; ./steam.sh
+</span></code></pre>
+<p>To see what is going on. Sometimes you will see something like :</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>9228:   trying file=tls/i686/sse2/libGL.so.1
+</span><span>9228:   trying file=tls/i686/libGL.so.1
+</span><span>9228:   trying file=tls/sse2/libGL.so.1
+</span><span>9228:   trying file=tls/libGL.so.1
+</span><span>9228:   trying file=i686/sse2/libGL.so.1
+</span><span>9228:   trying file=i686/libGL.so.1
+</span><span>9228:   trying file=sse2/libGL.so.1
+</span><span>9228:   trying file=libGL.so.1
+</span><span>9228:  search cache=/etc/ld.so.cache
+</span><span>9228:  search path=/lib/i686:/lib/sse2:/lib:/usr/lib/i686:/usr/lib/sse2:/usr/lib      (system search path)
+</span><span>9228:   trying file=/lib/i686/libGL.so.1
+</span><span>9228:   trying file=/lib/sse2/libGL.so.1
+</span><span>9228:   trying file=/lib/libGL.so.1
+</span><span>9228:   trying file=/usr/lib/i686/libGL.so.1
+</span><span>9228:   trying file=/usr/lib/sse2/libGL.so.1
+</span><span>9228:   trying file=/usr/lib/libGL.so.1
+</span></code></pre>
+<p>And the steam client will then hang, or say &quot;Error loading
+steamui.so&quot;. It is because you are missing libGL.so.1 in this case.</p>
+<p>running ldd against the files in &quot;.local/share/Steam/ubuntu12_32/&quot;
+should reveal most of the deps you need.</p>
+
+    </div>
+</article>
+
+        </main>
+        
+        <footer>
+            
+            <div class="border"></div>
+            <div class="footer">
+                <small class="footer-left">
+                    Copyright &copy; William Brown
+                </small>
+                <small class="footer-right">
+                    Powered by <a href="https://www.getzola.org">Zola</a> | Theme <a href="https://github.com/barlog-m/oceanic-zen">Oceanic Zen</a>
+                </small>
+            </div>
+        
+        </footer>
+    
+        </div>
+    </body>
+</html>

@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+        <meta name="description" content="Firstyear&#x27;s blog">
+        
+
+        <title>Firstyear&#x27;s blog-a-log</title>
+
+        
+          <link rel="alternate" type="application/rss+xml" title="RSS" href="https://fy.blackhats.net.au/rss.xml">
+        
+
+        
+            <link rel="stylesheet" href="https://fy.blackhats.net.au/theme.css">
+        
+        
+    </head>
+    <body>
+        <div class="content">
+        
+        
+            <header>
+                <div class="header-left">
+                    <a href="https:&#x2F;&#x2F;fy.blackhats.net.au" class="logo">Firstyear&#x27;s blog-a-log</a>
+                </div>
+                <div class="header-right">
+                    <nav itemscope itemtype="http://schema.org/SiteNavigationElement">
+                      <ul>
+                        
+                        
+                            
+                            <li class="nav">
+                                <a itemprop="url" href="https://fy.blackhats.net.au/blog/">
+                                    <span itemprop="name">Blog</span>
+                                </a>
+                            </li>
+                        
+                            
+                            <li class="nav">
+                                <a itemprop="url" href="https://fy.blackhats.net.au/pages/">
+                                    <span itemprop="name">Pages</span>
+                                </a>
+                            </li>
+                        
+                        
+                        <li class="nav">
+                            <a itemprop="url" href="https://github.com/firstyear">
+                                <img class="icon" src="https:&#x2F;&#x2F;fy.blackhats.net.au/icons/github.svg" alt="Github">
+                            </a>
+                        </li>
+                        
+                        <li class="nav">
+                            <a itemprop="url" href="/rss.xml">
+                                <img class="icon" src="https:&#x2F;&#x2F;fy.blackhats.net.au/rss-logo.png" alt="rss">
+                            </a>
+                        </li>
+                      </ul>
+                    </nav>
+                </div>
+            </header>
+        
+        
+        <main>
+            
+<article itemscope itemtype="http://schema.org/BlogPosting">
+    <div itemprop="headline">
+        <h1>There are no root causes</h1>
+        <div class="border"></div>
+        <time datetime="2020-01-20" class="date" itemprop="datePublished">
+            20 Jan 2020
+        </time>
+    </div>
+    <div itemprop="articleBody">
+        <h1 id="there-are-no-root-causes">There are no root causes</h1>
+<p>At Gold Coast LCA2020 I gave a <a href="https://www.youtube.com/watch?v=eqQUepwTHjA&amp;t=25m47s">lightning talk on swiss
+cheese</a>. Well,
+maybe not really swiss cheese. But it was about the <a href="https://en.wikipedia.org/wiki/Swiss_cheese_model">swiss cheese
+failure model</a> which
+was proposed at the university of manchester.</p>
+<p>Please note this will cover some of the same topics as the talk, but in
+more detail, and with less jokes.</p>
+<h2 id="an-example-problem">An example problem</h2>
+<p>So we'll discuss the current issues behind modern CPU isolation attacks
+IE spectre. Spectre is an attack that uses timing of a CPU's
+speculative execution unit to retrieve information from another running
+process on the same physical system.</p>
+<p>Modern computers rely on hardware features in their CPU to isolate
+programs from each other. This could be isolating your web-browser from
+your slack client, or your sibling's login from yours.</p>
+<p>This isolation however has been compromised by attacks like Spectre, and
+it looks unlikely that it can be resolved.</p>
+<h2 id="what-is-speculative-execution">What is speculative execution?</h2>
+<p>In order to be &quot;fast&quot; modern CPU's are far more complex than most of
+us have been taught. Often we believe that a CPU thread/core is
+executing &quot;one instruction/operation&quot; at a time. However this isn't
+how most CPU's work. Most work by having a pipeline of instructions
+that are in various stages of execution. You could imagine it like this:</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>let mut x = 0
+</span><span>let mut y = 0
+</span><span>x = 15 * some_input;
+</span><span>y = 10 * other_input;
+</span><span>if x &gt; y {
+</span><span>    return true;
+</span><span>} else {
+</span><span>    return false;
+</span><span>}
+</span></code></pre>
+<p>This is some made up code, but in a CPU, every part of this could be in
+the &quot;pipeline&quot; at once.</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>let mut x = 0                   &lt;&lt;-- at the head of the queue and &quot;further&quot; along completion
+</span><span>let mut y = 0                   &lt;&lt;-- it&#39;s executed part way, but not to completion
+</span><span>x = 15 * some_input;
+</span><span>y = 10 * other_input;           &lt;&lt;-- all of these are in pipeline, and partially complete
+</span><span>if x &gt; y {                      &lt;&lt;-- what happens here?
+</span><span>    return true;
+</span><span>} else {
+</span><span>    return false;
+</span><span>}
+</span></code></pre>
+<p>So how does this &quot;pipeline&quot; handle the if statement? If the pipeline
+is looking ahead, how can we handle a choice like an if? Can we really
+predict the future?</p>
+<h2 id="speculative-execution">Speculative execution</h2>
+<p>At the if statement, the CPU uses past measurements to make a
+<em>prediction</em> about which branch <em>might</em> be taken, and it then begins to
+execute that path, even though 'x &gt; y' has not been executed or
+completed yet! At this point x or y may not have even finished <em>being
+computed</em> yet!</p>
+<p>Let's assume for now our branch predictor thinks that 'x &gt; y' is
+false, so we'll start to execute the &quot;return false&quot; or any other
+content in that branch.</p>
+<p>Now the instructions ahead catch up, and we resolve &quot;did we really
+predict correctly?&quot;. If we did, great! We have been able to advance the
+program state <em>asynchronously</em> even without knowing the answer until we
+get there.</p>
+<p>If not, ohh nooo. We have to unwind what we were doing, clear some of
+the pipeline and try to do the correct branch.</p>
+<p>Of course this has an impact on <em>timing</em> of the program. Some people
+found you could write a program to manipulate this predictor and using
+specific addresses and content, they could use these timing variations
+to &quot;access memory&quot; they are not allowed to by letting the specualative
+executor contribute to code they are not allowed to access before the
+unroll occurs. They could time this, and retrieve the memory contents
+from areas they are not allowed to access, breaking isolation.</p>
+<h2 id="owwww-my-brain">Owwww my brain</h2>
+<p>Yes. Mine too.</p>
+<h2 id="community-reactions">Community Reactions</h2>
+<p>Since this has been found, a large amount of the community reaction has
+been about the &quot;root cause&quot;. 'Clearly' the root cause is &quot;Intel are
+bad at making CPU's&quot; and so everyone should buy AMD instead because
+they &quot;weren't affected quite as badly&quot; (Narrators voice: <a href="https://www.zdnet.com/article/amd-processors-from-2011-to-2019-vulnerable-to-two-new-attacks/">They were
+absolutely just as
+bad</a>).
+We've had some intel CPU updates and kernel/program fixes so all good
+right? We addressed the root cause.</p>
+<h2 id="or-did-we">Or ... did we?</h2>
+<p>Our computers are still asynchronous, and contain many out-of-order
+parts. It's hard to believe we have &quot;found&quot; every method of
+exploiting this. Indeed in the last year many more ways to bypass
+hardware isolation due to our systems async nature have been found.</p>
+<p>Maybe the &quot;root cause&quot; wasn't addressed. Maybe ... there are no
+....</p>
+<h2 id="history">History</h2>
+<p>To understand how we got to this situation we need to look at how CPU's
+have evolved. This is not a complete history.</p>
+<p>The PDP11 was a system owned at bell labs, where the C programing
+language was developed. Back then CPU's were very simple - A CPU and
+memory, executing one instruction at a time.</p>
+<p>The C programming language gained a lot of popularity as it was able to
+be &quot;quickly&quot; ported to other CPU models to allow software to be
+compiled on other platforms. This led to many systems being developed in
+C.</p>
+<p>Intel introduced the 8086, and many C programs were ported to run on it.
+Intel then released the 80486 in 1989, which had the first pipeline and
+cache to improve performance. In order to continue to support C, this
+meant the memory model could not change from the PDP11 - the cache had
+to be transparent, and the pipeline could not expose state.</p>
+<p>This has of course led to computers being more important in our lives
+and businesses, so we expected further performance, leading to increased
+frequencies and async behaviours.</p>
+<p>The limits of frequencies were really hit in the Pentium 4 era, when
+about 4GHz was shown to be a barrier of stability for those systems.
+They had very deep pipelines to improve performance, but that also had
+issues when branch prediction failed causing pipeline stalls. Systems
+had to improve their async behaviours <em>futher</em> to squeeze every single
+piece of performance possible out.</p>
+<p>Compiler developers also wanted more performance so they started to
+develop ways to transform C in ways that &quot;took advantage&quot; of x86_64
+tricks, by manipulating the environment so the CPU is &quot;hinted&quot; into
+states we &quot;hope&quot; it gets into.</p>
+<p>Many businesses also started to run servers to provide to consumers, and
+in order to keep costs low they would put many users onto single pieces
+of hardware so they could share or overcommit resources.</p>
+<p>This has created a series of positive reinforcement loops - C is 'abi
+stable' so we keep developing it due to it's universal nature. C code
+can't be changed without breaking every existing system. We can't
+change the CPU memory model without breaking C, which is hugely
+prevalent. We improve the CPU to make C faster, transparently so that
+users/businesses can run more C programs and users. And then we improve
+compilers to make C faster given quirks of the current CPU models that
+exist ...</p>
+<h2 id="swiss-cheese-model">Swiss cheese model</h2>
+<p>It's hard to look at the current state of systems security and simply
+say &quot;it's the cpu vendors fault&quot;. There are many layers that have
+come together to cause this situation.</p>
+<p>This is called the &quot;swiss cheese model&quot;. Imagine you take a stack of
+swiss cheese and rotate and rearrange the slices. You will not be able
+to see through it. but as you continue to rotate and rearrange,
+eventually you may see a tunnel through the cheese where all the holes
+line up.</p>
+<p>This is what has happened here - we developed many layers socially and
+technically that all seemed reasonable over time, and only after enough
+time and re-arrangements of the layers, have we now arrived at a
+situation where a failure has occured that permeates all of computer
+hardware.</p>
+<p>To address it, we need to look beyond just &quot;blaming hardware makers&quot;
+or &quot;software patches&quot;. We need to help developers move away from C to
+other languages that can be brought onto new memory models that have
+manual or other cache strategies. We need hardware vendors to implement
+different async models. We need to educate businesses on risk analysis
+and how hardware works to provide proper decision making capability. We
+need developers to alter there behaviour to work in environments with
+higher performance constraints. And probably much much more.</p>
+<h2 id="there-are-no-root-causes-1">There are no root causes</h2>
+<p>It is a very pervasive attitude in IT that every issue has a root cause.
+However, looking above we can see it's never quite so simple.</p>
+<p>Saying an issue has a root cause, prevents us from examining the social,
+political, economic and human factors that all become contributing
+factors to failure. Because we are unable to examine them, we are unable
+to address the various layers that have contributed to our failures.</p>
+<p>There are no root causes. Only contributing factors.</p>
+
+    </div>
+</article>
+
+        </main>
+        
+        <footer>
+            
+            <div class="border"></div>
+            <div class="footer">
+                <small class="footer-left">
+                    Copyright &copy; William Brown
+                </small>
+                <small class="footer-right">
+                    Powered by <a href="https://www.getzola.org">Zola</a> | Theme <a href="https://github.com/barlog-m/oceanic-zen">Oceanic Zen</a>
+                </small>
+            </div>
+        
+        </footer>
+    
+        </div>
+    </body>
+</html>

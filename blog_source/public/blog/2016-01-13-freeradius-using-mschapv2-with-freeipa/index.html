@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+        <meta name="description" content="Firstyear&#x27;s blog">
+        
+
+        <title>Firstyear&#x27;s blog-a-log</title>
+
+        
+          <link rel="alternate" type="application/rss+xml" title="RSS" href="https://fy.blackhats.net.au/rss.xml">
+        
+
+        
+            <link rel="stylesheet" href="https://fy.blackhats.net.au/theme.css">
+        
+        
+    </head>
+    <body>
+        <div class="content">
+        
+        
+            <header>
+                <div class="header-left">
+                    <a href="https:&#x2F;&#x2F;fy.blackhats.net.au" class="logo">Firstyear&#x27;s blog-a-log</a>
+                </div>
+                <div class="header-right">
+                    <nav itemscope itemtype="http://schema.org/SiteNavigationElement">
+                      <ul>
+                        
+                        
+                            
+                            <li class="nav">
+                                <a itemprop="url" href="https://fy.blackhats.net.au/blog/">
+                                    <span itemprop="name">Blog</span>
+                                </a>
+                            </li>
+                        
+                            
+                            <li class="nav">
+                                <a itemprop="url" href="https://fy.blackhats.net.au/pages/">
+                                    <span itemprop="name">Pages</span>
+                                </a>
+                            </li>
+                        
+                        
+                        <li class="nav">
+                            <a itemprop="url" href="https://github.com/firstyear">
+                                <img class="icon" src="https:&#x2F;&#x2F;fy.blackhats.net.au/icons/github.svg" alt="Github">
+                            </a>
+                        </li>
+                        
+                        <li class="nav">
+                            <a itemprop="url" href="/rss.xml">
+                                <img class="icon" src="https:&#x2F;&#x2F;fy.blackhats.net.au/rss-logo.png" alt="rss">
+                            </a>
+                        </li>
+                      </ul>
+                    </nav>
+                </div>
+            </header>
+        
+        
+        <main>
+            
+<article itemscope itemtype="http://schema.org/BlogPosting">
+    <div itemprop="headline">
+        <h1>FreeRADIUS: Using mschapv2 with freeipa</h1>
+        <div class="border"></div>
+        <time datetime="2016-01-13" class="date" itemprop="datePublished">
+            13 Jan 2016
+        </time>
+    </div>
+    <div itemprop="articleBody">
+        <h1 id="freeradius-using-mschapv2-with-freeipa">FreeRADIUS: Using mschapv2 with freeipa</h1>
+<p><a href="/blog/html/2019/07/10/i_no_longer_recommend_freeipa.html">I no longer recommend using FreeIPA - Read more
+here!</a></p>
+<p>Wireless and radius is pretty much useless without mschapv2 and peap.
+This is because iPhones, androids, even linux have fundamental issues
+with ttls or other 802.1x modes. mschapv2 &quot;just works&quot;, yet it's one
+of the most obscure to get working in some cases without AD.</p>
+<p>If you have an active directory environment, it's pretty well a
+painless process. But when you want to use anything else, you are in a
+tight spot.</p>
+<p>The FreeRADIUS team go on <em>a lot</em> about how mschapv2 doesn't work with
+ldap: and they are correct. mschapv2 is a challenge response protocol,
+and you can't do that in conjunction with an ldap bind.</p>
+<p>However it <em>IS</em> possible to use mschapv2 with an ldap server: It's just
+not obvious or straight forwards.</p>
+<p>The way that this works is you need freeradius to look up a user to an
+ldap dn, then you read (not bind) the nthash of the user from their dn.
+From there, the FreeRADIUS server is able to conduct the challenge
+response component.</p>
+<p>So the main things here to note:</p>
+<ul>
+<li>nthash are pretty much an md4. They are broken and terrible. But you
+need to use them, so you need to secure the access to these.</li>
+<li>Because you need to secure these, you need to be sure your access
+controls are correct.</li>
+</ul>
+<p>We can pretty easily make this setup work with freeipa in fact.</p>
+<p>First, follow the contents of <a href="/blog/html/2015/07/06/FreeIPA:_Giving_permissions_to_service_accounts..html">my previous blog
+post</a>
+on how to setup the adtrust components and the access controls.</p>
+<p>You don't actually need to complete the trust with AD, you just need to
+run the setup util, as this triggers IPA to generate and store nthashes
+in ipaNTHash on the user account.</p>
+<p>Now armed with your service account that can read these hashes, and the
+password, we need to configure FreeRADIUS.</p>
+<p>FreeRADIUS is EXTREMELY HARD TO CONFIGURE. You can mess it up VERY
+QUICKLY.</p>
+<p>Thankfully, the developers provide an excellent default configuration
+that should only need minimal tweaks to make this configuration work.</p>
+<p>first, symlink ldap to mods-enabled</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>cd /etc/raddb/mods-enabled
+</span><span>ln -s ../mods-available/ldap ./ldap
+</span></code></pre>
+<p>Now, edit the ldap config in mods-available (That way if a swap file is
+made, it's not put into mods-enabled where it may do damage)</p>
+<p>You need to change the parameters to match your site, however the most
+important setting is:</p>
+<p>:</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>identity = krbprincipalname=radius/host.ipa.example.net.au@IPA.EXAMPLE.NET.AU,cn=services,cn=accounts,dc=ipa,dc=example,dc=net,dc=au
+</span><span>password = SERVICE ACCOUNT BIND PW
+</span><span>
+</span><span>....snip.....
+</span><span>
+</span><span>update {
+</span><span>      ....snip......
+</span><span>      control:NT-Password··   := &#39;ipaNTHash&#39;
+</span><span>}
+</span><span>
+</span><span> .....snip ....
+</span><span>
+</span><span>user {
+</span><span>       base_dn = &quot;cn=users,cn=accounts,dc=ipa,dc=example,dc=net,dc=au&quot;
+</span><span>       filter = &quot;(uid=%{%{Stripped-User-Name}:-%{User-Name}})&quot;
+</span><span>        ....snip....
+</span><span>}
+</span></code></pre>
+<p>Next, you want to edit the mods-available/eap</p>
+<p>you want to change the value of default_eap_type to:</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>default_eap_type = mschapv2
+</span></code></pre>
+<p>Finally, you need to update your sites-available, most likely
+inner-tunnel and default to make sure that they contain:</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>authorize {
+</span><span>
+</span><span>      ....snip .....
+</span><span>      -ldap
+</span><span>
+</span><span>}
+</span></code></pre>
+<p>That's it! Now you should be able to test an ldap account with radtest,
+using the default NAS configured in /etc/raddb/clients.conf.</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>radtest -t mschap william password 127.0.0.1:1812 0 testing123
+</span><span>    User-Name = &#39;william&#39;
+</span><span>    NAS-IP-Address = 172.24.16.13
+</span><span>    NAS-Port = 0
+</span><span>    Message-Authenticator = 0x00
+</span><span>    MS-CHAP-Challenge = 0x642690f62148e238
+</span><span>        MS-CHAP-Response = ....
+</span><span>Received Access-Accept Id 130 from 127.0.0.1:1812 to 127.0.0.1:56617 length 84
+</span><span>    MS-CHAP-MPPE-Keys = 0x
+</span><span>    MS-MPPE-Encryption-Policy = Encryption-Allowed
+</span><span>    MS-MPPE-Encryption-Types = RC4-40or128-bit-Allowed
+</span></code></pre>
+<h2 id="why-not-use-krb">Why not use KRB?</h2>
+<p>I was asked in IRC about using KRB keytabs for authenticating the
+service account. Now the configuration is quite easy - but I won't put
+it hear.</p>
+<p>The issue is that it opens up a number of weaknesses. Between FreeRADIUS
+and LDAP you have communication. Now FreeIPA/389DS doesn't allow GSSAPI
+over LDAPS/StartTLS. When you are doing an MSCHAPv2 authentication this
+isn't so bad: FreeRADIUS authenticates with GSSAPI with encryption
+layers, then reads the NTHash. The NTHash is used inside FreeRADIUS to
+generate the challenge, and the 802.1x authentication suceeds or fails.</p>
+<p>Now what happens when we use PAP instead? FreeRADIUS can either read the
+NTHash and do a comparison (as above), or it can <em>directly bind</em> to the
+LDAP server. This means in the direct bind case, that the transport <em>may
+not be encrypted</em> due to the keytab. See, the keytab when used for the
+service account, will install encryption, but when the simple bind
+occurs, we don't have GSSAPI material, so we would send this clear
+text.</p>
+<p>Which one will occur ... Who knows! FreeRADIUS is a complex piece of
+software, as is LDAP. Unless you are willing to test all the different
+possibilities of 802.1x types and LDAP interactions, there is a risk
+here.</p>
+<p>Today the only secure, guaranteed way to protect your accounts is TLS.
+You should use LDAPS, and this guarantees all communication will be
+secure. It's simpler, faster, and better.</p>
+<p>That's why I don't document or advise how to use krb keytabs with this
+configuration.</p>
+<p>Thanks to <em>moep</em> for helping point out some of the issues with KRB
+integration.</p>
+
+    </div>
+</article>
+
+        </main>
+        
+        <footer>
+            
+            <div class="border"></div>
+            <div class="footer">
+                <small class="footer-left">
+                    Copyright &copy; William Brown
+                </small>
+                <small class="footer-right">
+                    Powered by <a href="https://www.getzola.org">Zola</a> | Theme <a href="https://github.com/barlog-m/oceanic-zen">Oceanic Zen</a>
+                </small>
+            </div>
+        
+        </footer>
+    
+        </div>
+    </body>
+</html>

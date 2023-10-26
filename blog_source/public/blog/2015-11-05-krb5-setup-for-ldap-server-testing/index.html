@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+        <meta name="description" content="Firstyear&#x27;s blog">
+        
+
+        <title>Firstyear&#x27;s blog-a-log</title>
+
+        
+          <link rel="alternate" type="application/rss+xml" title="RSS" href="https://fy.blackhats.net.au/rss.xml">
+        
+
+        
+            <link rel="stylesheet" href="https://fy.blackhats.net.au/theme.css">
+        
+        
+    </head>
+    <body>
+        <div class="content">
+        
+        
+            <header>
+                <div class="header-left">
+                    <a href="https:&#x2F;&#x2F;fy.blackhats.net.au" class="logo">Firstyear&#x27;s blog-a-log</a>
+                </div>
+                <div class="header-right">
+                    <nav itemscope itemtype="http://schema.org/SiteNavigationElement">
+                      <ul>
+                        
+                        
+                            
+                            <li class="nav">
+                                <a itemprop="url" href="https://fy.blackhats.net.au/blog/">
+                                    <span itemprop="name">Blog</span>
+                                </a>
+                            </li>
+                        
+                            
+                            <li class="nav">
+                                <a itemprop="url" href="https://fy.blackhats.net.au/pages/">
+                                    <span itemprop="name">Pages</span>
+                                </a>
+                            </li>
+                        
+                        
+                        <li class="nav">
+                            <a itemprop="url" href="https://github.com/firstyear">
+                                <img class="icon" src="https:&#x2F;&#x2F;fy.blackhats.net.au/icons/github.svg" alt="Github">
+                            </a>
+                        </li>
+                        
+                        <li class="nav">
+                            <a itemprop="url" href="/rss.xml">
+                                <img class="icon" src="https:&#x2F;&#x2F;fy.blackhats.net.au/rss-logo.png" alt="rss">
+                            </a>
+                        </li>
+                      </ul>
+                    </nav>
+                </div>
+            </header>
+        
+        
+        <main>
+            
+<article itemscope itemtype="http://schema.org/BlogPosting">
+    <div itemprop="headline">
+        <h1>KRB5 setup for ldap server testing</h1>
+        <div class="border"></div>
+        <time datetime="2015-11-05" class="date" itemprop="datePublished">
+            05 Nov 2015
+        </time>
+    </div>
+    <div itemprop="articleBody">
+        <h1 id="krb5-setup-for-ldap-server-testing">KRB5 setup for ldap server testing</h1>
+<p>UPDATE: 2019 this is now automated, but I <a href="/blog/html/2017/05/23/kerberos_why_the_world_moved_on.html">don't recommend using
+kerberos - read more
+here.</a></p>
+<p>This will eventually get automated, but here is a quick krb recipe for
+testing. Works in docker containers too!</p>
+<h2 id="krb5-without-ldap-backend">-- krb5 without ldap backend.</h2>
+<p>Add kerberos.example.com as an entry to /etc/hosts for this local
+machine. It should be the first entry.</p>
+<p>Edit /etc/krb5.conf.d/example.com</p>
+<p>NOTE: This doesn't work, you need to add it to krb5.conf. Why doesn't
+it work?</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>[realms]
+</span><span>EXAMPLE.COM = {
+</span><span> kdc = kerberos.example.com
+</span><span> admin_server = kerberos.example.com
+</span><span>}
+</span><span>
+</span><span>[domain_realm]
+</span><span>.example.com = EXAMPLE.COM
+</span><span>example.com = EXAMPLE.COM
+</span></code></pre>
+<p>Edit /var/kerberos/krb5kdc/kdc.conf</p>
+<p># Note, I think the defalt kdc.conf is good. :</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>[kdcdefaults]
+</span><span> kdc_ports = 88
+</span><span> kdc_tcp_ports = 88
+</span><span>
+</span><span>[realms]
+</span><span> EXAMPLE.COM = {
+</span><span>  #master_key_type = aes256-cts
+</span><span>  acl_file = /var/kerberos/krb5kdc/kadm5.acl
+</span><span>  dict_file = /usr/share/dict/words
+</span><span>  admin_keytab = /var/kerberos/krb5kdc/kadm5.keytab
+</span><span>  supported_enctypes = aes256-cts:normal aes128-cts:normal des3-hmac-sha1:normal arcfour-hmac:normal camellia256-cts:normal camellia128-cts:normal des-hmac-sha1:normal des-cbc-md5:normal des-cbc-crc:normal
+</span><span> }
+</span></code></pre>
+<p>Now setup the database.</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>/usr/sbin/kdb5_util create -r EXAMPLE.COM -s  # Prompts for password. Is there a way to avoid prompt?
+</span></code></pre>
+<p>Edit /var/kerberos/krb5kdc/kadm5.acl</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>/usr/sbin/kadmin.local -r EXAMPLE.COM -q listprincs
+</span></code></pre>
+<p>Add our LDAP servers</p>
+<p># There is a way to submit these on the CLI, but I get kadmin.local:
+Cannot find master key record in database while initializing
+kadmin.local interface</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>/usr/sbin/kadmin.local -r EXAMPLE.COM                                                                
+</span><span>add_principal -randkey ldap/kerberos.example.com@EXAMPLE.COM
+</span><span>ktadd -k /opt/dirsrv/etc/dirsrv/slapd-localhost/ldap.keytab ldap/kerberos.example.com
+</span><span>add_principal -pw password client
+</span><span>exit
+</span></code></pre>
+<p>Start the kdc</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>/usr/sbin/krb5kdc -P /var/run/krb5kdc.pid -r EXAMPLE.COM
+</span></code></pre>
+<p>OR</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span># You need to edit /etc/sysconfig/krb5kdc and put -r EXAMPLE.COM into args
+</span><span>systemctl start krb5kdc
+</span><span>
+</span><span>KRB5_TRACE=/tmp/foo kinit client@EXAMPLE.COM
+</span><span>klist
+</span><span>Ticket cache: KEYRING:persistent:0:0
+</span><span>Default principal: client@EXAMPLE.COM
+</span><span>
+</span><span>Valid starting     Expires            Service principal
+</span><span>05/11/15 11:35:37  06/11/15 11:35:37  krbtgt/EXAMPLE.COM@EXAMPLE.COM
+</span></code></pre>
+<p>Now setup the DS instance.</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span># Note, might be dirsrv in newer installs.
+</span><span>chown nobody: /opt/dirsrv/etc/dirsrv/slapd-localhost/ldap.keytab
+</span></code></pre>
+<p>Add:</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>KRB5_KTNAME=/opt/dirsrv/etc/dirsrv/slapd-localhost/ldap.keytab ; export KRB5_KTNAME    
+</span></code></pre>
+<p>To /opt/dirsrv/etc/sysconfig/dirsrv-localhost</p>
+<p>Now restart the DS</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>/opt/dirsrv/etc/rc.d/init.d/dirsrv restart
+</span></code></pre>
+<p>Add a client object:</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>uid=client,ou=People,dc=example,dc=com
+</span><span>objectClass: top
+</span><span>objectClass: account
+</span><span>uid: client
+</span></code></pre>
+<p>Now check the GSSAPI is working.</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>ldapwhoami -Y GSSAPI -H ldap://kerberos.example.com:389    
+</span><span>SASL/GSSAPI authentication started
+</span><span>SASL username: client@EXAMPLE.COM
+</span><span>SASL SSF: 56
+</span><span>SASL data security layer installed.
+</span><span>dn: uid=client,ou=people,dc=example,dc=com
+</span></code></pre>
+<p>All ready to go!</p>
+<p>I have created some helpers in lib389 that are able to do this now.</p>
+<p>TODO: How to setup krb5 with ldap backend.</p>
+<p>create instance:</p>
+<p>/opt/dirsrv/sbin/setup-ds.pl --silent --debug
+--file=/home/wibrown/development/389ds/setup.inf</p>
+<p>Now, add the krb5 schema</p>
+<p>cd /opt/dirsrv/etc/dirsrv/slapd-localhost/schema ln -s
+../../../../../../usr/share/doc/krb5-server-ldap/60kerberos.ldif</p>
+<p>/opt/dirsrv/etc/rc.d/init.d/dirsrv restart</p>
+<p>Query the schema:</p>
+<p>python
+/home/wibrown/development/389ds/lib389/clitools/ds_schema_attributetype_list.py
+| grep krb</p>
+
+    </div>
+</article>
+
+        </main>
+        
+        <footer>
+            
+            <div class="border"></div>
+            <div class="footer">
+                <small class="footer-left">
+                    Copyright &copy; William Brown
+                </small>
+                <small class="footer-right">
+                    Powered by <a href="https://www.getzola.org">Zola</a> | Theme <a href="https://github.com/barlog-m/oceanic-zen">Oceanic Zen</a>
+                </small>
+            </div>
+        
+        </footer>
+    
+        </div>
+    </body>
+</html>

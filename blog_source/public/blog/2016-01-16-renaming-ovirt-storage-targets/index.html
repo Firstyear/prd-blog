@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+        <meta name="description" content="Firstyear&#x27;s blog">
+        
+
+        <title>Firstyear&#x27;s blog-a-log</title>
+
+        
+          <link rel="alternate" type="application/rss+xml" title="RSS" href="https://fy.blackhats.net.au/rss.xml">
+        
+
+        
+            <link rel="stylesheet" href="https://fy.blackhats.net.au/theme.css">
+        
+        
+    </head>
+    <body>
+        <div class="content">
+        
+        
+            <header>
+                <div class="header-left">
+                    <a href="https:&#x2F;&#x2F;fy.blackhats.net.au" class="logo">Firstyear&#x27;s blog-a-log</a>
+                </div>
+                <div class="header-right">
+                    <nav itemscope itemtype="http://schema.org/SiteNavigationElement">
+                      <ul>
+                        
+                        
+                            
+                            <li class="nav">
+                                <a itemprop="url" href="https://fy.blackhats.net.au/blog/">
+                                    <span itemprop="name">Blog</span>
+                                </a>
+                            </li>
+                        
+                            
+                            <li class="nav">
+                                <a itemprop="url" href="https://fy.blackhats.net.au/pages/">
+                                    <span itemprop="name">Pages</span>
+                                </a>
+                            </li>
+                        
+                        
+                        <li class="nav">
+                            <a itemprop="url" href="https://github.com/firstyear">
+                                <img class="icon" src="https:&#x2F;&#x2F;fy.blackhats.net.au/icons/github.svg" alt="Github">
+                            </a>
+                        </li>
+                        
+                        <li class="nav">
+                            <a itemprop="url" href="/rss.xml">
+                                <img class="icon" src="https:&#x2F;&#x2F;fy.blackhats.net.au/rss-logo.png" alt="rss">
+                            </a>
+                        </li>
+                      </ul>
+                    </nav>
+                </div>
+            </header>
+        
+        
+        <main>
+            
+<article itemscope itemtype="http://schema.org/BlogPosting">
+    <div itemprop="headline">
+        <h1>Renaming ovirt storage targets</h1>
+        <div class="border"></div>
+        <time datetime="2016-01-16" class="date" itemprop="datePublished">
+            16 Jan 2016
+        </time>
+    </div>
+    <div itemprop="articleBody">
+        <h1 id="renaming-ovirt-storage-targets">Renaming ovirt storage targets</h1>
+<p>I run an ovirt server, and sometimes like a tinker that I am, I like to
+rename things due to new hardware or other ideas that come up.</p>
+<p>Ovirt makes it quite hard to change the nfs target or name of a storage
+volume. Although it's not supported, I'm more than happy to dig
+through the database.</p>
+<p>NOTE: Take a backup before you start, this is some serious unsupported
+magic here.</p>
+<p>First, we need to look at the main tables that are involved in nfs
+storage:</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>engine=# select id,storage,storage_name from storage_domain_static;
+</span><span>                  id                  |               storage                |   storage_name    
+</span><span>--------------------------------------+--------------------------------------+-------------------
+</span><span> 6bffd537-badb-43c9-91b2-a922cf847533 | 842add9e-ffef-44d9-bf6d-4f8231b375eb | def_t2_nfs_import
+</span><span> c3aa02d8-02fd-4a16-bfe6-59f9348a0b1e | 5b8ba182-7d05-44e4-9d64-2a1bb529b797 | def_t2_nfs_iso
+</span><span> a8ac8bd0-cf40-45ae-9f39-b376c16b7fec | d2fd5e4b-c3de-4829-9f4a-d56246f5454b | def_t2_nfs_lcs
+</span><span> d719e5f2-f59d-434d-863e-3c9c31e4c02f | e2ba769c-e5a3-4652-b75d-b68959369b55 | def_t1_nfs_master
+</span><span> a085aca5-112c-49bf-aa91-fbf59e8bde0b | f5be3009-4c84-4d59-9cfe-a1bcedac4038 | def_t1_nfs_sas
+</span><span>
+</span><span>engine=# select id,connection from storage_server_connections;
+</span><span>                  id                  |                           connection                            
+</span><span>--------------------------------------+-----------------------------------------------------------------
+</span><span> 842add9e-ffef-44d9-bf6d-4f8231b375eb | mion.ipa.example.com:/var/lib/exports/t2/def_t2_nfs_import
+</span><span> 5b8ba182-7d05-44e4-9d64-2a1bb529b797 | mion.ipa.example.com:/var/lib/exports/t2/def_t2_nfs_iso
+</span><span> d2fd5e4b-c3de-4829-9f4a-d56246f5454b | mion.ipa.example.com:/var/lib/exports/t2/def_t2_nfs_lcs
+</span><span> e2ba769c-e5a3-4652-b75d-b68959369b55 | mion.ipa.example.com:/var/lib/exports/t1/def_t1_nfs_master
+</span><span> f5be3009-4c84-4d59-9cfe-a1bcedac4038 | mion.ipa.example.com:/var/lib/exports/t1/def_t1_nfs_sas
+</span></code></pre>
+<p>So we are going to rename the def_t2_nfs targets to def_t3_nfs. First we
+need to update the mount point:</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>update storage_server_connections set connection=&#39;mion.ipa.example.com:/var/lib/exports/t3/def_t3_nfs_import&#39; where id=&#39;842add9e-ffef-44d9-bf6d-4f8231b375eb&#39;;
+</span><span>
+</span><span>update storage_server_connections set connection=&#39;mion.ipa.example.com:/var/lib/exports/t3/def_t3_nfs_iso&#39; where id=&#39;5b8ba182-7d05-44e4-9d64-2a1bb529b797&#39;;
+</span><span>
+</span><span>update storage_server_connections set connection=&#39;mion.ipa.example.com:/var/lib/exports/t2/def_t2_nfs_lcs&#39; where id=&#39;d2fd5e4b-c3de-4829-9f4a-d56246f5454b&#39;;
+</span></code></pre>
+<p>Next we are going to replace the name in the storage_domain_static
+table.</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>update storage_domain_static set storage_name=&#39;def_t3_nfs_lcs&#39; where storage=&#39;d2fd5e4b-c3de-4829-9f4a-d56246f5454b&#39;;
+</span><span>
+</span><span>update storage_domain_static set storage_name=&#39;def_t3_nfs_iso&#39; where storage=&#39;5b8ba182-7d05-44e4-9d64-2a1bb529b797&#39;;
+</span><span>
+</span><span>update storage_domain_static set storage_name=&#39;def_t3_nfs_import&#39; where storage=&#39;842add9e-ffef-44d9-bf6d-4f8231b375eb&#39;;
+</span></code></pre>
+<p>That's it! Now check it all looks correct and restart.</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>engine=# select id,storage,storage_name from storage_domain_static;
+</span><span>                  id                  |               storage                |   storage_name    
+</span><span>--------------------------------------+--------------------------------------+-------------------
+</span><span> a8ac8bd0-cf40-45ae-9f39-b376c16b7fec | d2fd5e4b-c3de-4829-9f4a-d56246f5454b | def_t3_nfs_lcs
+</span><span> c3aa02d8-02fd-4a16-bfe6-59f9348a0b1e | 5b8ba182-7d05-44e4-9d64-2a1bb529b797 | def_t3_nfs_iso
+</span><span> 6bffd537-badb-43c9-91b2-a922cf847533 | 842add9e-ffef-44d9-bf6d-4f8231b375eb | def_t3_nfs_import
+</span><span> d719e5f2-f59d-434d-863e-3c9c31e4c02f | e2ba769c-e5a3-4652-b75d-b68959369b55 | def_t1_nfs_master
+</span><span> a085aca5-112c-49bf-aa91-fbf59e8bde0b | f5be3009-4c84-4d59-9cfe-a1bcedac4038 | def_t1_nfs_sas
+</span><span>(5 rows)
+</span><span>
+</span><span>engine=# select id,connection from storage_server_connections;
+</span><span>                  id                  |                           connection                            
+</span><span>--------------------------------------+-----------------------------------------------------------------
+</span><span> e2ba769c-e5a3-4652-b75d-b68959369b55 | mion.ipa.example.com:/var/lib/exports/t1/def_t1_nfs_master
+</span><span> f5be3009-4c84-4d59-9cfe-a1bcedac4038 | mion.ipa.example.com:/var/lib/exports/t1/def_t1_nfs_sas
+</span><span> 842add9e-ffef-44d9-bf6d-4f8231b375eb | mion.ipa.example.com:/var/lib/exports/t3/def_t3_nfs_import
+</span><span> 5b8ba182-7d05-44e4-9d64-2a1bb529b797 | mion.ipa.example.com:/var/lib/exports/t3/def_t3_nfs_iso
+</span><span> d2fd5e4b-c3de-4829-9f4a-d56246f5454b | mion.ipa.example.com:/var/lib/exports/t3/def_t3_nfs_lcs
+</span><span>(5 rows)
+</span></code></pre>
+
+    </div>
+</article>
+
+        </main>
+        
+        <footer>
+            
+            <div class="border"></div>
+            <div class="footer">
+                <small class="footer-left">
+                    Copyright &copy; William Brown
+                </small>
+                <small class="footer-right">
+                    Powered by <a href="https://www.getzola.org">Zola</a> | Theme <a href="https://github.com/barlog-m/oceanic-zen">Oceanic Zen</a>
+                </small>
+            </div>
+        
+        </footer>
+    
+        </div>
+    </body>
+</html>

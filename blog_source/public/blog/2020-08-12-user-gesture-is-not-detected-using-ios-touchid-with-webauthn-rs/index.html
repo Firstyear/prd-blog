@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+        <meta name="description" content="Firstyear&#x27;s blog">
+        
+
+        <title>Firstyear&#x27;s blog-a-log</title>
+
+        
+          <link rel="alternate" type="application/rss+xml" title="RSS" href="https://fy.blackhats.net.au/rss.xml">
+        
+
+        
+            <link rel="stylesheet" href="https://fy.blackhats.net.au/theme.css">
+        
+        
+    </head>
+    <body>
+        <div class="content">
+        
+        
+            <header>
+                <div class="header-left">
+                    <a href="https:&#x2F;&#x2F;fy.blackhats.net.au" class="logo">Firstyear&#x27;s blog-a-log</a>
+                </div>
+                <div class="header-right">
+                    <nav itemscope itemtype="http://schema.org/SiteNavigationElement">
+                      <ul>
+                        
+                        
+                            
+                            <li class="nav">
+                                <a itemprop="url" href="https://fy.blackhats.net.au/blog/">
+                                    <span itemprop="name">Blog</span>
+                                </a>
+                            </li>
+                        
+                            
+                            <li class="nav">
+                                <a itemprop="url" href="https://fy.blackhats.net.au/pages/">
+                                    <span itemprop="name">Pages</span>
+                                </a>
+                            </li>
+                        
+                        
+                        <li class="nav">
+                            <a itemprop="url" href="https://github.com/firstyear">
+                                <img class="icon" src="https:&#x2F;&#x2F;fy.blackhats.net.au/icons/github.svg" alt="Github">
+                            </a>
+                        </li>
+                        
+                        <li class="nav">
+                            <a itemprop="url" href="/rss.xml">
+                                <img class="icon" src="https:&#x2F;&#x2F;fy.blackhats.net.au/rss-logo.png" alt="rss">
+                            </a>
+                        </li>
+                      </ul>
+                    </nav>
+                </div>
+            </header>
+        
+        
+        <main>
+            
+<article itemscope itemtype="http://schema.org/BlogPosting">
+    <div itemprop="headline">
+        <h1>User gesture is not detected - using iOS TouchID with webauthn-rs</h1>
+        <div class="border"></div>
+        <time datetime="2020-08-12" class="date" itemprop="datePublished">
+            12 Aug 2020
+        </time>
+    </div>
+    <div itemprop="articleBody">
+        <h1 id="user-gesture-is-not-detected-using-ios-touchid-with-webauthn-rs">User gesture is not detected - using iOS TouchID with webauthn-rs</h1>
+<p>I was recently contacted by a future user of
+<a href="https://github.com/kanidm/webauthn-rs">webauthn-rs</a> who indicated that
+the library may not currently support Windows Hello as an authenticator.
+This is due to the nature of the device being a platform attached
+authenticator and that webauthn-rs at the time did not support
+attachment preferences.</p>
+<p>As I have an ipad, and it's not a primary computing device I decided to
+upgrade to iPadOS 14 beta to try out webauthn via touch (and handwriting
+support).</p>
+<h2 id="the-issue">The Issue</h2>
+<p>After watching <a href="https://developer.apple.com/videos/play/wwdc2020/10670/">Jiewen's WWDC
+presentation</a>
+about using TouchID with webauthn, I had a better idea about some of the
+server side requirements to work with this.</p>
+<p>Once I started to test though, I would recieve the following error in
+the safari debug console.</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>User gesture is not detected. To use the platform authenticator,
+</span><span>call &#39;navigator.credentials.create&#39; within user activated events.
+</span></code></pre>
+<p>I was quite confused by this error - a user activated event seems to be
+a bit of an unknown term, and asking other people they also didn't
+quite know what it meant. My demo site was using a button input with
+onclick event handlers to call javascript similar to the following:</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>function register() {
+</span><span>fetch(REG_CHALLENGE_URL + username, {method: &quot;POST&quot;})
+</span><span>   .then(res =&gt; {
+</span><span>      ... // error handling
+</span><span>   })
+</span><span>   .then(res =&gt; res.json())
+</span><span>   .then(challenge =&gt; {
+</span><span>     challenge.publicKey.challenge = fromBase64(challenge.publicKey.challenge);
+</span><span>     challenge.publicKey.user.id = fromBase64(challenge.publicKey.user.id);
+</span><span>     return navigator.credentials.create(challenge)
+</span><span>       .then(newCredential =&gt; {
+</span><span>         console.log(&quot;PublicKeyCredential Created&quot;);
+</span><span>              .... 
+</span><span>         return fetch(REGISTER_URL + username, {
+</span><span>           method: &quot;POST&quot;,
+</span><span>           body: JSON.stringify(cc),
+</span><span>           headers: {
+</span><span>             &quot;Content-Type&quot;: &quot;application/json&quot;,
+</span><span>           },
+</span><span>         })
+</span><span>       })
+</span></code></pre>
+<p>This works happily in Firefox and Chrome, and for iPadOS it event works
+with my yubikey 5ci.</p>
+<p>I investigated further to determine if the issue was in the way I was
+presenting the registration to the
+[navigator.credentials.create]{.title-ref} function. Comparing to
+webauthn.io (which does work with TouchID on iPadOS 14 beta), I noticed
+some subtle differences but nothing that should cause an issue like
+this.</p>
+<p>After much pacing, thinking and asking for help I eventually gave in and
+went to the source of webkit</p>
+<h2 id="the-solution">The Solution</h2>
+<p>Reading through the webkit source I noted that the check within the code
+was looking for association of how the event was initiated. This comes
+from a context that is available within the browser. This got me to
+think about the fact that the fetch api is <em>async</em>, and I realised at
+this point that webauthn.io was using the [jQuery.ajax]{.title-ref}
+apis. I altered my demo to use the same, and it began to work with
+TouchID. That meant that the user activation was being lost over the
+async boundary to the fetch API. (note: it's quite reasonable to expect
+user interaction to use [navigator.credentials]{.title-ref} to prevent
+tricking or manipulating users into activating their webauthn devices).</p>
+<p>I emailed Jiewen, who responded overnight and informed me that this is
+an issue, and it's being tracked in the <a href="https://bugs.webkit.org/show_bug.cgi?id=214722">webkit
+bugzilla</a> . He assures
+me that it will be resolved in a future release. Many thanks to him for
+helping me with this issue!</p>
+<p>At this point I now know that TouchID will work with webauthn-rs, and I
+can submit some updates to the library to help support this.</p>
+<h2 id="notes-on-webauthn-with-touchid">Notes on Webauthn with TouchID</h2>
+<p>It's worth pointing out a few notes from the WWDC talk, and the
+differences I have observed with webauthn on real devices.</p>
+<p>In the presentation it is recommended that in your Credential Creation
+Options, that you (must?) define the options listed to work with TouchID</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>authenticatorSelection: { authenticatorAttachment: &quot;platform&quot; },
+</span><span>attestation: &quot;direct&quot;
+</span></code></pre>
+<p>It's worth pointing out that authenticatorAttachment is only a <em>hint</em>
+to the client to which credentials it should use. This allows your web
+page to streamline the UI flow (such as detection of platform key and
+then using that to toggle the authenticatorAttachment), but it's not an
+enforced security policy. <em>There is no part of the attestation response
+that indicates the attachement method</em>. The only way to determine that
+the authenticator is a platform authenticator would be in attestation
+&quot;direct&quot; to validate the issuing CA or the device's AAGUID match the
+expectations you hold for what authenticators can be used within your
+organisation or site.</p>
+<p>Additionally, TouchID does work with <em>no</em> authenticatorAttachment hint
+(safari prompts if you want to use an external key or TouchID), and that
+[attestation: &quot;none&quot;]{.title-ref} also works. This means that a
+minimised and default set of Credential Creation Options will allow you
+to work with the majority of webauthn devices.</p>
+<p>Finally, the WWDC video glosses over the server side process. Be sure to
+follow the w3c standard for verifying attestations, or use a library
+that implementes this standard (such as
+<a href="https://github.com/kanidm/webauthn-rs">webauthn-rs</a> or <a href="https://github.com/duo-labs/webauthn/">duo-labs go
+webauthn</a>). I'm sure that other
+libraries exist, but it's critical that they follow the w3c process as
+webauthn is quite complex and fiddly to implement in a correct and
+secure manner.</p>
+
+    </div>
+</article>
+
+        </main>
+        
+        <footer>
+            
+            <div class="border"></div>
+            <div class="footer">
+                <small class="footer-left">
+                    Copyright &copy; William Brown
+                </small>
+                <small class="footer-right">
+                    Powered by <a href="https://www.getzola.org">Zola</a> | Theme <a href="https://github.com/barlog-m/oceanic-zen">Oceanic Zen</a>
+                </small>
+            </div>
+        
+        </footer>
+    
+        </div>
+    </body>
+</html>

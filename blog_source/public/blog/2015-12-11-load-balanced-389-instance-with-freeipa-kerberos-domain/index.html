@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+        <meta name="description" content="Firstyear&#x27;s blog">
+        
+
+        <title>Firstyear&#x27;s blog-a-log</title>
+
+        
+          <link rel="alternate" type="application/rss+xml" title="RSS" href="https://fy.blackhats.net.au/rss.xml">
+        
+
+        
+            <link rel="stylesheet" href="https://fy.blackhats.net.au/theme.css">
+        
+        
+    </head>
+    <body>
+        <div class="content">
+        
+        
+            <header>
+                <div class="header-left">
+                    <a href="https:&#x2F;&#x2F;fy.blackhats.net.au" class="logo">Firstyear&#x27;s blog-a-log</a>
+                </div>
+                <div class="header-right">
+                    <nav itemscope itemtype="http://schema.org/SiteNavigationElement">
+                      <ul>
+                        
+                        
+                            
+                            <li class="nav">
+                                <a itemprop="url" href="https://fy.blackhats.net.au/blog/">
+                                    <span itemprop="name">Blog</span>
+                                </a>
+                            </li>
+                        
+                            
+                            <li class="nav">
+                                <a itemprop="url" href="https://fy.blackhats.net.au/pages/">
+                                    <span itemprop="name">Pages</span>
+                                </a>
+                            </li>
+                        
+                        
+                        <li class="nav">
+                            <a itemprop="url" href="https://github.com/firstyear">
+                                <img class="icon" src="https:&#x2F;&#x2F;fy.blackhats.net.au/icons/github.svg" alt="Github">
+                            </a>
+                        </li>
+                        
+                        <li class="nav">
+                            <a itemprop="url" href="/rss.xml">
+                                <img class="icon" src="https:&#x2F;&#x2F;fy.blackhats.net.au/rss-logo.png" alt="rss">
+                            </a>
+                        </li>
+                      </ul>
+                    </nav>
+                </div>
+            </header>
+        
+        
+        <main>
+            
+<article itemscope itemtype="http://schema.org/BlogPosting">
+    <div itemprop="headline">
+        <h1>Load balanced 389 instance with freeipa kerberos domain.</h1>
+        <div class="border"></div>
+        <time datetime="2015-12-11" class="date" itemprop="datePublished">
+            11 Dec 2015
+        </time>
+    </div>
+    <div itemprop="articleBody">
+        <h1 id="load-balanced-389-instance-with-freeipa-kerberos-domain">Load balanced 389 instance with freeipa kerberos domain.</h1>
+<p><a href="/blog/html/2019/07/10/i_no_longer_recommend_freeipa.html">I no longer recommend using FreeIPA - Read more
+here!</a></p>
+<p>First, create a fake host that we can assign services too. This is for
+the load balancer (f5, netscaler, ace, haproxy)</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>ipa host-add haproxydemo.ipa.example.com --random --force
+</span></code></pre>
+<p>Now you can add the keytab for the loadbalanced service.</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>ipa service-add --force ldap/haproxydemo.ipa.example.com
+</span></code></pre>
+<p>Then you need to delegate the keytab to the ldap servers that will sit
+behind the lb.</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>ipa service-add-host ldap/haproxydemo.ipa.example.com --hosts=liza.ipa.example.com
+</span></code></pre>
+<p>You should be able to extract this keytab on the host now.</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>ipa-getkeytab -s alina.ipa.example.com -p ldap/haproxydemo.ipa.example.com -k /etc/dirsrv/slapd-localhost/ldap.keytab 
+</span></code></pre>
+<p>into /etc/sysconfig/dirsrv-localhost</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>KRB5_KTNAME=/etc/dirsrv/slapd-localhost/ldap.keytab 
+</span></code></pre>
+<p>Now, restart the instance and make sure you can't connect directly.</p>
+<p>Setup haproxy. I had a huge amount of grief with ipv6, so I went v4 only
+for this demo. :</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>global
+</span><span>    log         127.0.0.1 local2
+</span><span>
+</span><span>    chroot      /var/lib/haproxy
+</span><span>    pidfile     /var/run/haproxy.pid
+</span><span>    maxconn     4000
+</span><span>    user        haproxy
+</span><span>    group       haproxy
+</span><span>    daemon
+</span><span>
+</span><span>    stats socket /var/lib/haproxy/stats
+</span><span>
+</span><span>listen ldap :3389
+</span><span>        mode tcp
+</span><span>        balance roundrobin
+</span><span>
+</span><span>        server ldap 10.0.0.2:389 check
+</span><span>        timeout connect        10s
+</span><span>        timeout server          1m
+</span><span>
+</span><span>ldapsearch -H ldap://haproxydemo.ipa.example.com:3389 -Y GSSAPI
+</span></code></pre>
+<p>Reveals a working connection!</p>
+
+    </div>
+</article>
+
+        </main>
+        
+        <footer>
+            
+            <div class="border"></div>
+            <div class="footer">
+                <small class="footer-left">
+                    Copyright &copy; William Brown
+                </small>
+                <small class="footer-right">
+                    Powered by <a href="https://www.getzola.org">Zola</a> | Theme <a href="https://github.com/barlog-m/oceanic-zen">Oceanic Zen</a>
+                </small>
+            </div>
+        
+        </footer>
+    
+        </div>
+    </body>
+</html>

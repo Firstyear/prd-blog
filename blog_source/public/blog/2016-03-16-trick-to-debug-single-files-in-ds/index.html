@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+        <meta name="description" content="Firstyear&#x27;s blog">
+        
+
+        <title>Firstyear&#x27;s blog-a-log</title>
+
+        
+          <link rel="alternate" type="application/rss+xml" title="RSS" href="https://fy.blackhats.net.au/rss.xml">
+        
+
+        
+            <link rel="stylesheet" href="https://fy.blackhats.net.au/theme.css">
+        
+        
+    </head>
+    <body>
+        <div class="content">
+        
+        
+            <header>
+                <div class="header-left">
+                    <a href="https:&#x2F;&#x2F;fy.blackhats.net.au" class="logo">Firstyear&#x27;s blog-a-log</a>
+                </div>
+                <div class="header-right">
+                    <nav itemscope itemtype="http://schema.org/SiteNavigationElement">
+                      <ul>
+                        
+                        
+                            
+                            <li class="nav">
+                                <a itemprop="url" href="https://fy.blackhats.net.au/blog/">
+                                    <span itemprop="name">Blog</span>
+                                </a>
+                            </li>
+                        
+                            
+                            <li class="nav">
+                                <a itemprop="url" href="https://fy.blackhats.net.au/pages/">
+                                    <span itemprop="name">Pages</span>
+                                </a>
+                            </li>
+                        
+                        
+                        <li class="nav">
+                            <a itemprop="url" href="https://github.com/firstyear">
+                                <img class="icon" src="https:&#x2F;&#x2F;fy.blackhats.net.au/icons/github.svg" alt="Github">
+                            </a>
+                        </li>
+                        
+                        <li class="nav">
+                            <a itemprop="url" href="/rss.xml">
+                                <img class="icon" src="https:&#x2F;&#x2F;fy.blackhats.net.au/rss-logo.png" alt="rss">
+                            </a>
+                        </li>
+                      </ul>
+                    </nav>
+                </div>
+            </header>
+        
+        
+        <main>
+            
+<article itemscope itemtype="http://schema.org/BlogPosting">
+    <div itemprop="headline">
+        <h1>Trick to debug single files in ds</h1>
+        <div class="border"></div>
+        <time datetime="2016-03-16" class="date" itemprop="datePublished">
+            16 Mar 2016
+        </time>
+    </div>
+    <div itemprop="articleBody">
+        <h1 id="trick-to-debug-single-files-in-ds">Trick to debug single files in ds</h1>
+<p>I've been debugging thread deadlocks in directory server. When you turn
+on detailed tracing with</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>ns-slapd -d 1
+</span></code></pre>
+<p>You slow the server down so much that you can barely function.</p>
+<p>A trick is that defines in the local .c file, override from the .h. Copy
+paste this to the file you want to debug. This allows the logs from this
+file to be emitted at -d 0, but without turning it on everywhere, so you
+don't grind the server to a halt.</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>/* Do this so we can get the messages at standard log levels. */
+</span><span>#define SLAPI_LOG_FATAL         0
+</span><span>#define SLAPI_LOG_TRACE         0
+</span><span>#define SLAPI_LOG_PACKETS       0
+</span><span>#define SLAPI_LOG_ARGS          0
+</span><span>#define SLAPI_LOG_CONNS         0
+</span><span>#define SLAPI_LOG_BER           0
+</span><span>#define SLAPI_LOG_FILTER        0
+</span><span>#define SLAPI_LOG_CONFIG        0
+</span><span>#define SLAPI_LOG_ACL           0
+</span><span>#define SLAPI_LOG_SHELL         0
+</span><span>#define SLAPI_LOG_PARSE         0
+</span><span>#define SLAPI_LOG_HOUSE         0
+</span><span>#define SLAPI_LOG_REPL          0
+</span><span>#define SLAPI_LOG_CACHE         0
+</span><span>#define SLAPI_LOG_PLUGIN        0
+</span><span>#define SLAPI_LOG_TIMING        0
+</span><span>#define SLAPI_LOG_BACKLDBM      0
+</span><span>#define SLAPI_LOG_ACLSUMMARY    0
+</span></code></pre>
+
+    </div>
+</article>
+
+        </main>
+        
+        <footer>
+            
+            <div class="border"></div>
+            <div class="footer">
+                <small class="footer-left">
+                    Copyright &copy; William Brown
+                </small>
+                <small class="footer-right">
+                    Powered by <a href="https://www.getzola.org">Zola</a> | Theme <a href="https://github.com/barlog-m/oceanic-zen">Oceanic Zen</a>
+                </small>
+            </div>
+        
+        </footer>
+    
+        </div>
+    </body>
+</html>

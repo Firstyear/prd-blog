@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+        <meta name="description" content="Firstyear&#x27;s blog">
+        
+
+        <title>Firstyear&#x27;s blog-a-log</title>
+
+        
+          <link rel="alternate" type="application/rss+xml" title="RSS" href="https://fy.blackhats.net.au/rss.xml">
+        
+
+        
+            <link rel="stylesheet" href="https://fy.blackhats.net.au/theme.css">
+        
+        
+    </head>
+    <body>
+        <div class="content">
+        
+        
+            <header>
+                <div class="header-left">
+                    <a href="https:&#x2F;&#x2F;fy.blackhats.net.au" class="logo">Firstyear&#x27;s blog-a-log</a>
+                </div>
+                <div class="header-right">
+                    <nav itemscope itemtype="http://schema.org/SiteNavigationElement">
+                      <ul>
+                        
+                        
+                            
+                            <li class="nav">
+                                <a itemprop="url" href="https://fy.blackhats.net.au/blog/">
+                                    <span itemprop="name">Blog</span>
+                                </a>
+                            </li>
+                        
+                            
+                            <li class="nav">
+                                <a itemprop="url" href="https://fy.blackhats.net.au/pages/">
+                                    <span itemprop="name">Pages</span>
+                                </a>
+                            </li>
+                        
+                        
+                        <li class="nav">
+                            <a itemprop="url" href="https://github.com/firstyear">
+                                <img class="icon" src="https:&#x2F;&#x2F;fy.blackhats.net.au/icons/github.svg" alt="Github">
+                            </a>
+                        </li>
+                        
+                        <li class="nav">
+                            <a itemprop="url" href="/rss.xml">
+                                <img class="icon" src="https:&#x2F;&#x2F;fy.blackhats.net.au/rss-logo.png" alt="rss">
+                            </a>
+                        </li>
+                      </ul>
+                    </nav>
+                </div>
+            </header>
+        
+        
+        <main>
+            
+<article itemscope itemtype="http://schema.org/BlogPosting">
+    <div itemprop="headline">
+        <h1>Time safety and Rust</h1>
+        <div class="border"></div>
+        <time datetime="2017-07-12" class="date" itemprop="datePublished">
+            12 Jul 2017
+        </time>
+    </div>
+    <div itemprop="articleBody">
+        <h1 id="time-safety-and-rust">Time safety and Rust</h1>
+<p>Recently I have had the great fortune to work on <a href="https://pagure.io/389-ds-base/issue/49316">this
+ticket</a> . This was an issue
+that stemmed from an attempt to make clock performance faster.
+Previously, a call to time or clock_gettime would involve a context
+switch an a system call (think solaris etc). On linux we have VDSO
+instead, so we can easily just swap to the use of raw time calls.</p>
+<h2 id="the-problem">The problem</h2>
+<p>So what was the problem? And how did the engineers of the past try and
+solve it?</p>
+<p>DS heavily relies on time. As a result, we call time() a <em>lot</em> in the
+codebase. But this would mean context switches.</p>
+<p>So a wrapper was made called &quot;current_time()&quot;, which would cache a
+recent output of time(), and then provide that to the caller instead of
+making the costly context switch. So the code had the following:</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>static time_t   currenttime;
+</span><span>static int      currenttime_set = 0;
+</span><span>
+</span><span>time_t
+</span><span>poll_current_time()
+</span><span>{
+</span><span>    if ( !currenttime_set ) {
+</span><span>        currenttime_set = 1;
+</span><span>    }
+</span><span>
+</span><span>    time( &amp;currenttime );
+</span><span>    return( currenttime );
+</span><span>}
+</span><span>
+</span><span>time_t
+</span><span>current_time( void )
+</span><span>{
+</span><span>    if ( currenttime_set ) {
+</span><span>        return( currenttime );
+</span><span>    } else {
+</span><span>        return( time( (time_t *)0 ));
+</span><span>    }
+</span><span>}
+</span></code></pre>
+<p>In another thread, we would poll this every second to update the
+currenttime value:</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>void * 
+</span><span>time_thread(void *nothing __attribute__((unused)))
+</span><span>{
+</span><span>    PRIntervalTime    interval;
+</span><span>
+</span><span>    interval = PR_SecondsToInterval(1);
+</span><span>
+</span><span>    while(!time_shutdown) {
+</span><span>        poll_current_time();
+</span><span>        csngen_update_time ();
+</span><span>        DS_Sleep(interval);
+</span><span>    }
+</span><span>
+</span><span>    /*NOTREACHED*/
+</span><span>    return(NULL);
+</span><span>}
+</span></code></pre>
+<p><em>So what is the problem here</em></p>
+<p>Besides the fact that we may not poll accurately (meaning we miss
+seconds but always advance), this is not <em>thread safe</em>. The reason is
+that CPU's have register and buffers that may cache both stores and
+writes until a series of other operations (barriers + atomics) occur to
+flush back out to cache. This means the time polling thread could update
+the clock and unless the POLLING thread issues a lock or a
+barrier+atomic, there is <em>no guarantee the new value of currenttime will
+be seen in any other thread</em>. This means that the only way this worked
+was by luck, and no one noticing that time would jump about or often
+just be wrong.</p>
+<p>Clearly this is a broken design, but this is C - we can do anything.</p>
+<h2 id="what-if-this-was-rust">What if this was Rust?</h2>
+<p>Rust touts mulithread safety high on it's list. So lets try and
+recreate this in rust.</p>
+<p>First, the exact same way:</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>use std::time::{SystemTime, Duration};
+</span><span>use std::thread;
+</span><span>
+</span><span>
+</span><span>static mut currenttime: Option&lt;SystemTime&gt; = None;
+</span><span>
+</span><span>fn read_thread() {
+</span><span>    let interval = Duration::from_secs(1);
+</span><span>
+</span><span>    for x in 0..10 {
+</span><span>        thread::sleep(interval);
+</span><span>        let c_time = currenttime.unwrap();
+</span><span>        println!(&quot;reading time {:?}&quot;, c_time);
+</span><span>    }
+</span><span>}
+</span><span>
+</span><span>fn poll_thread() {
+</span><span>    let interval = Duration::from_secs(1);
+</span><span>
+</span><span>    for x in 0..10 {
+</span><span>        currenttime = Some(SystemTime::now());
+</span><span>        println!(&quot;polling time&quot;);
+</span><span>        thread::sleep(interval);
+</span><span>    }
+</span><span>}
+</span><span>
+</span><span>fn main() {
+</span><span>    let poll = thread::spawn(poll_thread);
+</span><span>    let read = thread::spawn(read_thread);
+</span><span>    read.join().unwrap();
+</span><span>    poll.join().unwrap();
+</span><span>}
+</span></code></pre>
+<p><em>Rust will not compile this code</em>.</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>&gt; rustc clock.rs
+</span><span>error[E0133]: use of mutable static requires unsafe function or block
+</span><span>  --&gt; clock.rs:13:22
+</span><span>   |
+</span><span>13 |         let c_time = currenttime.unwrap();
+</span><span>   |                      ^^^^^^^^^^^ use of mutable static
+</span><span>
+</span><span>error[E0133]: use of mutable static requires unsafe function or block
+</span><span>  --&gt; clock.rs:22:9
+</span><span>   |
+</span><span>22 |         currenttime = Some(SystemTime::now());
+</span><span>   |         ^^^^^^^^^^^ use of mutable static
+</span><span>
+</span><span>error: aborting due to 2 previous errors
+</span></code></pre>
+<p>Rust has told us that this action is <em>unsafe</em>, and that we shouldn't be
+modifying a global static like this.</p>
+<p>This alone is a great reason and demonstration of why we need a language
+like Rust instead of C - the compiler can tell us when actions are
+dangerous at compile time, rather than being allowed to sit in
+production code for years.</p>
+<p>For bonus marks, because Rust is stricter about types than C, we don't
+have issues like:</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>int c_time = time();
+</span></code></pre>
+<p>Which is a 2038 problem in the making :)</p>
+
+    </div>
+</article>
+
+        </main>
+        
+        <footer>
+            
+            <div class="border"></div>
+            <div class="footer">
+                <small class="footer-left">
+                    Copyright &copy; William Brown
+                </small>
+                <small class="footer-right">
+                    Powered by <a href="https://www.getzola.org">Zola</a> | Theme <a href="https://github.com/barlog-m/oceanic-zen">Oceanic Zen</a>
+                </small>
+            </div>
+        
+        </footer>
+    
+        </div>
+    </body>
+</html>

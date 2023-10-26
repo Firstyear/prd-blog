@@ -1,0 +1,370 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+        <meta name="description" content="Firstyear&#x27;s blog">
+        
+
+        <title>Firstyear&#x27;s blog-a-log</title>
+
+        
+          <link rel="alternate" type="application/rss+xml" title="RSS" href="https://fy.blackhats.net.au/rss.xml">
+        
+
+        
+            <link rel="stylesheet" href="https://fy.blackhats.net.au/theme.css">
+        
+        
+    </head>
+    <body>
+        <div class="content">
+        
+        
+            <header>
+                <div class="header-left">
+                    <a href="https:&#x2F;&#x2F;fy.blackhats.net.au" class="logo">Firstyear&#x27;s blog-a-log</a>
+                </div>
+                <div class="header-right">
+                    <nav itemscope itemtype="http://schema.org/SiteNavigationElement">
+                      <ul>
+                        
+                        
+                            
+                            <li class="nav">
+                                <a itemprop="url" href="https://fy.blackhats.net.au/blog/">
+                                    <span itemprop="name">Blog</span>
+                                </a>
+                            </li>
+                        
+                            
+                            <li class="nav">
+                                <a itemprop="url" href="https://fy.blackhats.net.au/pages/">
+                                    <span itemprop="name">Pages</span>
+                                </a>
+                            </li>
+                        
+                        
+                        <li class="nav">
+                            <a itemprop="url" href="https://github.com/firstyear">
+                                <img class="icon" src="https:&#x2F;&#x2F;fy.blackhats.net.au/icons/github.svg" alt="Github">
+                            </a>
+                        </li>
+                        
+                        <li class="nav">
+                            <a itemprop="url" href="/rss.xml">
+                                <img class="icon" src="https:&#x2F;&#x2F;fy.blackhats.net.au/rss-logo.png" alt="rss">
+                            </a>
+                        </li>
+                      </ul>
+                    </nav>
+                </div>
+            </header>
+        
+        
+        <main>
+            
+<article itemscope itemtype="http://schema.org/BlogPosting">
+    <div itemprop="headline">
+        <h1>Debbuging and patching 389-ds.</h1>
+        <div class="border"></div>
+        <time datetime="2015-12-08" class="date" itemprop="datePublished">
+            08 Dec 2015
+        </time>
+    </div>
+    <div itemprop="articleBody">
+        <h1 id="debbuging-and-patching-389-ds">Debbuging and patching 389-ds.</h1>
+<p>Debugging and working on software like 389-ds looks pretty daunting.
+However, I think it's one of the easiest projects to setup, debug and
+contribute to (for a variety of reasons).</p>
+<p>Fixing issues like the one referenced in this post is a good way to get
+your hands dirty into C, gdb, and the project in general. It's how I
+started, by solving small issues like this, and working up to managing
+larger fixes and commits. You will end up doing a lot of research and
+testing, but you learn a lot for it.</p>
+<p>Additionally, the 389-ds team are great people, and very willing to help
+and walk you through debugging and issue solving like this.</p>
+<p>Lets get started!</p>
+<p>First, lets get your build env working.</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>git clone http://git.fedorahosted.org/git/389/ds.git
+</span></code></pre>
+<p>If you need to apply any patches to test, now is the time:</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>cd ds
+</span><span>git am ~/path/to/patch
+</span></code></pre>
+<p>Now we can actually get all the dependencies. Changes these paths to
+suit your environment.</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>export DSPATH=~/development/389ds/ds
+</span><span>sudo yum-builddep 389-ds-base
+</span><span>sudo yum install libasan llvm
+</span><span>mkdir -p ~/build/ds/
+</span><span>cd ~/build/ds/ &amp;&amp; $DSPATH/configure --with-openldap --enable-debug --enable-asan --prefix=/opt/dirsrv/
+</span><span>make -C ~/build/ds
+</span><span>sudo make -C ~/build/ds install
+</span></code></pre>
+<p>NOTE: Thanks to Viktor for the tip about yum-builddep working without a
+spec file.</p>
+<p>If you are still missing packages, these commands are rough, but work.</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>sudo yum install `grep &quot;^BuildRequires&quot; $DSPATH/rpm/389-ds-base.spec.in | awk &#39;{ print $2 }&#39; | grep -v &quot;^/&quot;`
+</span><span>sudo yum install `grep &quot;^Requires:&quot; $DSPATH/ds/rpm/389-ds-base.spec.in | awk &#39;{ print $2 $3 $4 $5 $6 $7 }&#39; | grep -v &quot;^/&quot; | grep -v &quot;name&quot;`
+</span></code></pre>
+<p>Now with that out the way, we can get into it. Setup the ds install:</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>sudo /opt/dirsrv/sbin/setup-ds.pl --debug General.StrictHostChecking=false
+</span></code></pre>
+<p>If you have enabled ASAN you may notice that the install freezes trying
+to start slapd. That's okay, at this point you can control C it. If
+setup-ds.pl finishes, even better.</p>
+<p>Now lets run the instance up:</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>sudo -s
+</span><span>export ASAN_SYMBOLIZER_PATH=/usr/bin/llvm-symbolizer
+</span><span>export ASAN_OPTIONS=symbolize=1
+</span><span>/opt/dirsrv/sbin/ns-slapd -d 0 -D /opt/dirsrv/etc/dirsrv/slapd-localhost
+</span><span>
+</span><span>[08/Dec/2015:13:09:01 +1000] - 389-Directory/1.3.5 B2015.342.252 starting up
+</span><span>=================================================================
+</span><span>==28682== ERROR: AddressSanitizer: unknown-crash on address 0x7fff49a54ff0 at pc 0x7f59bc0f719f bp 0x7fff49a54c80 sp 0x7fff49a54c28
+</span></code></pre>
+<p>Uh oh! We have a crash. Lets work it out.</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>=================================================================
+</span><span>==28682== ERROR: AddressSanitizer: unknown-crash on address 0x7fff49a54ff0 at pc 0x7f59bc0f719f bp 0x7fff49a54c80 sp 0x7fff49a54c28
+</span><span>WRITE of size 513 at 0x7fff49a54ff0 thread T0
+</span><span>    #0 0x7f59bc0f719e in scanf_common /usr/src/debug/gcc-4.8.3-20140911/obj-x86_64-redhat-linux/x86_64-redhat-linux/libsanitizer/asan/../../../../libsanitizer/sanitizer_common/sanitizer_common_interceptors_scanf.inc:305
+</span><span>    #1 0x7f59bc0f78b6 in __interceptor_vsscanf /usr/src/debug/gcc-4.8.3-20140911/obj-x86_64-redhat-linux/x86_64-redhat-linux/libsanitizer/asan/../../../../libsanitizer/sanitizer_common/sanitizer_common_interceptors.inc:262
+</span><span>    #2 0x7f59bc0f79e9 in __interceptor_sscanf /usr/src/debug/gcc-4.8.3-20140911/obj-x86_64-redhat-linux/x86_64-redhat-linux/libsanitizer/asan/../../../../libsanitizer/sanitizer_common/sanitizer_common_interceptors.inc:297
+</span><span>    #3 0x7f59b141e060 in read_metadata.isra.5 /home/wibrown/development/389ds/ds/ldap/servers/slapd/back-ldbm/dblayer.c:5268
+</span><span>    #4 0x7f59b1426b63 in dblayer_start /home/wibrown/development/389ds/ds/ldap/servers/slapd/back-ldbm/dblayer.c:1587
+</span><span>    #5 0x7f59b14d698e in ldbm_back_start /home/wibrown/development/389ds/ds/ldap/servers/slapd/back-ldbm/start.c:225
+</span><span>    #6 0x7f59bbd2dc60 in plugin_call_func /home/wibrown/development/389ds/ds/ldap/servers/slapd/plugin.c:1920
+</span><span>    #7 0x7f59bbd2e8a7 in plugin_call_one /home/wibrown/development/389ds/ds/ldap/servers/slapd/plugin.c:1870
+</span><span>    #8 0x7f59bbd2e8a7 in plugin_dependency_startall.isra.10.constprop.13 /home/wibrown/development/389ds/ds/ldap/servers/slapd/plugin.c:1679
+</span><span>    #9 0x4121c5 in main /home/wibrown/development/389ds/ds/ldap/servers/slapd/main.c:1054
+</span><span>    #10 0x7f59b8df5af4 in __libc_start_main /usr/src/debug/glibc-2.17-c758a686/csu/libc-start.c:274
+</span><span>    #11 0x4133b4 in _start (/opt/dirsrv/sbin/ns-slapd+0x4133b4)
+</span><span>Address 0x7fff49a54ff0 is located at offset 448 in frame &lt;read_metadata.isra.5&gt; of T0&#39;s stack:
+</span><span>  This frame has 7 object(s):
+</span><span>    [32, 33) &#39;delimiter&#39;
+</span><span>    [96, 100) &#39;count&#39;
+</span><span>    [160, 168) &#39;buf&#39;
+</span><span>    [224, 256) &#39;prfinfo&#39;
+</span><span>    [288, 416) &#39;value&#39;
+</span><span>    [448, 960) &#39;attribute&#39;
+</span><span>    [992, 5088) &#39;filename&#39;
+</span><span>HINT: this may be a false positive if your program uses some custom stack unwind mechanism or swapcontext
+</span><span>      (longjmp and C++ exceptions *are* supported)
+</span><span>SUMMARY: AddressSanitizer: unknown-crash /usr/src/debug/gcc-4.8.3-20140911/obj-x86_64-redhat-linux/x86_64-redhat-linux/libsanitizer/asan/../../../../libsanitizer/sanitizer_common/sanitizer_common_interceptors_scanf.inc:305 scanf_common
+</span><span>Shadow bytes around the buggy address:
+</span><span>  0x1000693429a0: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+</span><span>  0x1000693429b0: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+</span><span>  0x1000693429c0: 00 00 00 00 00 00 f1 f1 f1 f1 01 f4 f4 f4 f2 f2
+</span><span>  0x1000693429d0: f2 f2 04 f4 f4 f4 f2 f2 f2 f2 00 f4 f4 f4 f2 f2
+</span><span>  0x1000693429e0: f2 f2 00 00 00 00 f2 f2 f2 f2 00 00 00 00 00 00
+</span><span>=&gt;0x1000693429f0: 00 00 00 00 00 00 00 00 00 00 f2 f2 f2 f2[00]00
+</span><span>  0x100069342a00: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+</span><span>  0x100069342a10: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+</span><span>  0x100069342a20: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+</span><span>  0x100069342a30: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 f2 f2
+</span><span>  0x100069342a40: f2 f2 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+</span><span>Shadow byte legend (one shadow byte represents 8 application bytes):
+</span><span>  Addressable:           00
+</span><span>  Partially addressable: 01 02 03 04 05 06 07 
+</span><span>  Heap left redzone:     fa
+</span><span>  Heap righ redzone:     fb
+</span><span>  Freed Heap region:     fd
+</span><span>  Stack left redzone:    f1
+</span><span>  Stack mid redzone:     f2
+</span><span>  Stack right redzone:   f3
+</span><span>  Stack partial redzone: f4
+</span><span>  Stack after return:    f5
+</span><span>  Stack use after scope: f8
+</span><span>  Global redzone:        f9
+</span><span>  Global init order:     f6
+</span><span>  Poisoned by user:      f7
+</span><span>  ASan internal:         fe
+</span><span>==28682== ABORTING
+</span></code></pre>
+<p>First lets focus on the stack. Specifically:</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>WRITE of size 513 at 0x7fff49a54ff0 thread T0
+</span><span>    #0 0x7f59bc0f719e in scanf_common /usr/src/debug/gcc-4.8.3-20140911/obj-x86_64-redhat-linux/x86_64-redhat-linux/libsanitizer/asan/../../../../libsanitizer/sanitizer_common/sanitizer_common_interceptors_scanf.inc:305
+</span><span>    #1 0x7f59bc0f78b6 in __interceptor_vsscanf /usr/src/debug/gcc-4.8.3-20140911/obj-x86_64-redhat-linux/x86_64-redhat-linux/libsanitizer/asan/../../../../libsanitizer/sanitizer_common/sanitizer_common_interceptors.inc:262
+</span><span>    #2 0x7f59bc0f79e9 in __interceptor_sscanf /usr/src/debug/gcc-4.8.3-20140911/obj-x86_64-redhat-linux/x86_64-redhat-linux/libsanitizer/asan/../../../../libsanitizer/sanitizer_common/sanitizer_common_interceptors.inc:297
+</span><span>    #3 0x7f59b141e060 in read_metadata.isra.5 /home/wibrown/development/389ds/ds/ldap/servers/slapd/back-ldbm/dblayer.c:5268
+</span><span>    #4 0x7f59b1426b63 in dblayer_start /home/wibrown/development/389ds/ds/ldap/servers/slapd/back-ldbm/dblayer.c:1587
+</span></code></pre>
+<p>Now, we can ignore frame 0,1,2. These are all in asan. But, we do own
+code in frame 3. So lets take a look there as our first port of call.</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>vim ldap/servers/slapd/back-ldbm/dblayer.c +5268
+</span><span>
+</span><span>5262             if (NULL != nextline) {                                              
+</span><span>5263                 *nextline++ = &#39;\0&#39;;                                              
+</span><span>5264                 while (&#39;\n&#39; == *nextline) {                                      
+</span><span>5265                     nextline++;                                                  
+</span><span>5266                 }                                                                
+</span><span>5267             }                                                                    
+</span><span>5268             sscanf(thisline,&quot;%512[a-z]%c%128s&quot;,attribute,&amp;delimiter,value);      /* &lt;---- THIS LINE */
+</span><span>5269             if (0 == strcmp(&quot;cachesize&quot;,attribute)) {                            
+</span><span>5270                 priv-&gt;dblayer_previous_cachesize = strtoul(value, NULL, 10);     
+</span><span>5271             } else if (0 == strcmp(&quot;ncache&quot;,attribute)) {                        
+</span><span>5272                 number = atoi(value);                                            
+</span><span>5273                 priv-&gt;dblayer_previous_ncache = number;                          
+</span><span>5274             } else if (0 == strcmp(&quot;version&quot;,attribute)) { 
+</span></code></pre>
+<p>So the crash is that we write of size 513 here. Lets look at the
+function sscanf, to see what's happening.</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>man sscanf
+</span><span>
+</span><span>int sscanf(const char *str, const char *format, ...);
+</span><span>...
+</span><span>The scanf() family of functions scans input according to format as described below
+</span><span>...
+</span></code></pre>
+<p>So, we know that we are writing something too large here. Lets checkout
+the size of our values at that point.</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>gdb /opt/dirsrv/sbin/ns-slapd
+</span><span>
+</span><span>Reading symbols from /opt/dirsrv/sbin/ns-slapd...done.
+</span><span>(gdb) set args -d 0 -D /opt/dirsrv/etc/dirsrv/slapd-localhost
+</span><span>(gdb) break dblayer.c:5268
+</span><span>No source file named dblayer.c.
+</span><span>Make breakpoint pending on future shared library load? (y or [n]) y
+</span><span>Breakpoint 1 (dblayer.c:5268) pending.
+</span><span>(gdb) run
+</span><span>Starting program: /opt/dirsrv/sbin/ns-slapd -d 0 -D /opt/dirsrv/etc/dirsrv/slapd-localhost
+</span><span>[Thread debugging using libthread_db enabled]
+</span><span>Using host libthread_db library &quot;/lib64/libthread_db.so.1&quot;.
+</span><span>Detaching after fork from child process 28690.
+</span><span>[08/Dec/2015:13:18:08 +1000] - slapd_nss_init: chmod failed for file /opt/dirsrv/etc/dirsrv/slapd-localhost/cert8.db error (2) No such file or directory.
+</span><span>[08/Dec/2015:13:18:08 +1000] - slapd_nss_init: chmod failed for file /opt/dirsrv/etc/dirsrv/slapd-localhost/key3.db error (2) No such file or directory.
+</span><span>[08/Dec/2015:13:18:08 +1000] - slapd_nss_init: chmod failed for file /opt/dirsrv/etc/dirsrv/slapd-localhost/secmod.db error (2) No such file or directory.
+</span><span>[08/Dec/2015:13:18:08 +1000] - 389-Directory/1.3.5 B2015.342.252 starting up
+</span><span>
+</span><span>Breakpoint 1, read_metadata (li=0x6028000121c0) at /home/wibrown/development/389ds/ds/ldap/servers/slapd/back-ldbm/dblayer.c:5268
+</span><span>5268                sscanf(thisline,&quot;%512[a-z]%c%128s&quot;,attribute,&amp;delimiter,value);
+</span><span>Missing separate debuginfos, use: debuginfo-install sqlite-3.7.17-6.el7_1.1.x86_64
+</span></code></pre>
+<p>If you are missing more debuginfo, install them, and re-run.</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>(gdb) set print repeats 20
+</span><span>(gdb) print thisline
+</span><span>$6 = 0x600c0015e900 &quot;cachesize:10000000\nncache:0\nversion:5\nlocks:10000\n&quot;
+</span><span>(gdb) print attribute
+</span><span>$7 = &quot;\200\275\377\377\377\177\000\000p\275\377\377\377\177\000\000\301\066\031\020\000\000\000\000\243|\023\352\377\177\000\000\377\377\377\377\000\000\000\000\000\253bu\256\066\357oPBS\362\377\177\000\000p\277\377\377\377\177\000\000\300\317\377\377\377\177\000\000\320\356\a\000\b`\000\000\060\277\377\377\377\177\000\000\003\000\000\000\000\000\000\000\346w\377\177\000\020\000\000\262AT\362\377\177\000\000\340-T\362\377\177\000\000p\277\377\377\377\177\000\000\247\277\377\377\377\177\000\000\000\020\000\000\377\177\000\000*\021\346\364&#39;\000\200&lt;\240\300L\352\377\177\000\000\000\000\000\000\000\000\000\000\000\253bu\256\066\357o\003\000\000\000\000\000\000\000\210\275U\362\377\177\000\000i\000\020\000\000\000\000\000&quot;...
+</span><span>(gdb) print &amp;delimiter
+</span><span>$8 = 0x7fffffffbbb0 &quot;*\021\346\364\377\177&quot;
+</span><span>(gdb) print value
+</span><span>$9 = &quot;A\000\000\000\000\000\000\000\070\276\377\377\377\177\000\000\020\276\377\377\377\177\000\000\001\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\330\000\001\000F`\000\000\200\375\000\000F`\000\000\257O\336\367\377\177\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\001\000\000\000\377\177\000\000\000\000\000\000\000\000\000\000\001\000\000\000\000\000\000\000\200\375\000\000F`\000\000\306c%\352\377\177\000\000\236\061T\362\377\177\000&quot;
+</span></code></pre>
+<p>Some of these are some chunky values! Okay, lets try and see which one
+is a bit too big.</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>(gdb) print sizeof(attribute)
+</span><span>$10 = 512
+</span><span>(gdb) print sizeof(&amp;delimiter)
+</span><span>$11 = 8
+</span><span>(gdb) print sizeof(value)
+</span><span>$12 = 128
+</span></code></pre>
+<p>So, if our write is size 513, the closest is probably the attribute
+variable. But it's only size 512? How is this causing an issue?</p>
+<p>Well, if we look at the sscanf man page again for the substitution that
+attribute will land in (%512[a-z]) we see:</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>Matches a nonempty sequence of characters from the specified set of accepted characters
+</span><span>...
+</span><span>must be enough room for  all the characters in the string, plus a terminating null byte.
+</span></code></pre>
+<p>So, we have space for 512 chars, which is the size of the attribute
+block, but we don't have space for the null byte! So lets add it in:</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>5194     char attribute[513];                                                         
+</span></code></pre>
+<p>If we keep looking at the man page we see another error too for %128s</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>...next pointer must be a pointer to character array that is long enough to hold the input sequence and the terminating null byte (&#39;\0&#39;), which is added automatically.
+</span></code></pre>
+<p>So lets preemptively fix that too.</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>5195     char value[129], delimiter;                                                  
+</span></code></pre>
+<p>Now rebuild</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>make -C ~/build/ds
+</span><span>sudo make -C ~/build/ds install
+</span></code></pre>
+<p>Lets run slapd and see if it fixed it:</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>sudo -s
+</span><span>export ASAN_SYMBOLIZER_PATH=/usr/bin/llvm-symbolizer
+</span><span>export ASAN_OPTIONS=symbolize=1
+</span><span>/opt/dirsrv/sbin/ns-slapd -d 0 -D /opt/dirsrv/etc/dirsrv/slapd-localhost
+</span><span>
+</span><span>I0&gt; /opt/dirsrv/sbin/ns-slapd -d 0 -D /opt/dirsrv/etc/dirsrv/slapd-localhost
+</span><span>[08/Dec/2015:13:47:20 +1000] - slapd_nss_init: chmod failed for file /opt/dirsrv/etc/dirsrv/slapd-localhost/cert8.db error (2) No such file or directory.
+</span><span>[08/Dec/2015:13:47:20 +1000] - slapd_nss_init: chmod failed for file /opt/dirsrv/etc/dirsrv/slapd-localhost/key3.db error (2) No such file or directory.
+</span><span>[08/Dec/2015:13:47:20 +1000] - slapd_nss_init: chmod failed for file /opt/dirsrv/etc/dirsrv/slapd-localhost/secmod.db error (2) No such file or directory.
+</span><span>[08/Dec/2015:13:47:20 +1000] - 389-Directory/1.3.5 B2015.342.344 starting up
+</span><span>[08/Dec/2015:13:47:27 +1000] - slapd started.  Listening on All Interfaces port 389 for LDAP requests
+</span></code></pre>
+<p>Format this into a patch with git:</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>git commit -a
+</span><span>git format-patch HEAD~1
+</span></code></pre>
+<p>My patch looks like this</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>From eab0f0e9fc24c1915d2767a87a8f089f6d820955 Mon Sep 17 00:00:00 2001
+</span><span>From: William Brown &lt;firstyear at redhat.com&gt;
+</span><span>Date: Tue, 8 Dec 2015 13:52:29 +1000
+</span><span>Subject: [PATCH] Ticket 48372 - ASAN invalid write in dblayer.c
+</span><span>
+</span><span>Bug Description:  During server start up we attempt to write 513 bytes to a
+</span><span>buffer that is only 512 bytes long.
+</span><span>
+</span><span>Fix Description:  Increase the size of the buffer that sscanf writes into.
+</span><span>
+</span><span>https://fedorahosted.org/389/ticket/48372
+</span><span>
+</span><span>Author: wibrown
+</span><span>
+</span><span>Review by: ???
+</span><span>---
+</span><span> ldap/servers/slapd/back-ldbm/dblayer.c | 4 ++--
+</span><span> 1 file changed, 2 insertions(+), 2 deletions(-)
+</span><span>
+</span><span>diff --git a/ldap/servers/slapd/back-ldbm/dblayer.c b/ldap/servers/slapd/back-ldbm/dblayer.c
+</span><span>index 33506f4..9168c8c 100644
+</span><span>--- a/ldap/servers/slapd/back-ldbm/dblayer.c
+</span><span>+++ b/ldap/servers/slapd/back-ldbm/dblayer.c
+</span><span>@@ -5191,8 +5191,8 @@ static int read_metadata(struct ldbminfo *li)
+</span><span>     PRFileInfo64 prfinfo;
+</span><span>     int return_value = 0;
+</span><span>     PRInt32 byte_count = 0;
+</span><span>-    char attribute[512];
+</span><span>-    char value[128], delimiter;
+</span><span>+    char attribute[513];
+</span><span>+    char value[129], delimiter;
+</span><span>     int number = 0;
+</span><span>     dblayer_private *priv = (dblayer_private *)li-&gt;li_dblayer_private;
+</span><span>
+</span><span>-- 
+</span><span>2.5.0
+</span></code></pre>
+<p>One more bug fixed! Lets get it commited. If you don't have a FAS
+account, please email the git format-patch output to
+<a href="mailto:389-devel@lists.fedoraproject.org">389-devel@lists.fedoraproject.org</a> else, raise a ticket on
+<a href="https://fedorahosted.org/389">https://fedorahosted.org/389</a></p>
+<p>43</p>
+
+    </div>
+</article>
+
+        </main>
+        
+        <footer>
+            
+            <div class="border"></div>
+            <div class="footer">
+                <small class="footer-left">
+                    Copyright &copy; William Brown
+                </small>
+                <small class="footer-right">
+                    Powered by <a href="https://www.getzola.org">Zola</a> | Theme <a href="https://github.com/barlog-m/oceanic-zen">Oceanic Zen</a>
+                </small>
+            </div>
+        
+        </footer>
+    
+        </div>
+    </body>
+</html>

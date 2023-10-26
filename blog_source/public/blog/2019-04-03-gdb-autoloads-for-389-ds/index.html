@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+        <meta name="description" content="Firstyear&#x27;s blog">
+        
+
+        <title>Firstyear&#x27;s blog-a-log</title>
+
+        
+          <link rel="alternate" type="application/rss+xml" title="RSS" href="https://fy.blackhats.net.au/rss.xml">
+        
+
+        
+            <link rel="stylesheet" href="https://fy.blackhats.net.au/theme.css">
+        
+        
+    </head>
+    <body>
+        <div class="content">
+        
+        
+            <header>
+                <div class="header-left">
+                    <a href="https:&#x2F;&#x2F;fy.blackhats.net.au" class="logo">Firstyear&#x27;s blog-a-log</a>
+                </div>
+                <div class="header-right">
+                    <nav itemscope itemtype="http://schema.org/SiteNavigationElement">
+                      <ul>
+                        
+                        
+                            
+                            <li class="nav">
+                                <a itemprop="url" href="https://fy.blackhats.net.au/blog/">
+                                    <span itemprop="name">Blog</span>
+                                </a>
+                            </li>
+                        
+                            
+                            <li class="nav">
+                                <a itemprop="url" href="https://fy.blackhats.net.au/pages/">
+                                    <span itemprop="name">Pages</span>
+                                </a>
+                            </li>
+                        
+                        
+                        <li class="nav">
+                            <a itemprop="url" href="https://github.com/firstyear">
+                                <img class="icon" src="https:&#x2F;&#x2F;fy.blackhats.net.au/icons/github.svg" alt="Github">
+                            </a>
+                        </li>
+                        
+                        <li class="nav">
+                            <a itemprop="url" href="/rss.xml">
+                                <img class="icon" src="https:&#x2F;&#x2F;fy.blackhats.net.au/rss-logo.png" alt="rss">
+                            </a>
+                        </li>
+                      </ul>
+                    </nav>
+                </div>
+            </header>
+        
+        
+        <main>
+            
+<article itemscope itemtype="http://schema.org/BlogPosting">
+    <div itemprop="headline">
+        <h1>GDB autoloads for 389 DS</h1>
+        <div class="border"></div>
+        <time datetime="2019-04-03" class="date" itemprop="datePublished">
+            03 Apr 2019
+        </time>
+    </div>
+    <div itemprop="articleBody">
+        <h1 id="gdb-autoloads-for-389-ds">GDB autoloads for 389 DS</h1>
+<p>I've been writing a set of extensions to help debug 389-ds a bit
+easier. Thanks to the magic of python, writing GDB extensions is really
+easy.</p>
+<p>On OpenSUSE, when you start your DS instance under GDB, all of the
+extensions are automatically loaded. This will help make debugging a
+breeze.</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>zypper in 389-ds gdb
+</span><span>gdb /usr/sbin/ns-slapd
+</span><span>
+</span><span>GNU gdb (GDB; openSUSE Tumbleweed) 8.2
+</span><span>(gdb) ds-
+</span><span>ds-access-log  ds-backtrace
+</span><span>(gdb) set args -d 0 -D /etc/dirsrv/slapd-&lt;instance name&gt;
+</span><span>(gdb) run
+</span><span>...
+</span></code></pre>
+<p>All the extensions are under the ds- namespace, so they are easy to
+find. There are some new ones on the way, which I'll discuss here too:</p>
+<h2 id="ds-backtrace">ds-backtrace</h2>
+<p>As DS is a multithreaded process, it can be really hard to find the
+active thread involved in a problem. So we provided a command that knows
+how to fold duplicated stacks, and to highlight idle threads that you
+can (generally) skip over.</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>===== BEGIN ACTIVE THREADS =====
+</span><span>Thread 37 (LWP 70054))
+</span><span>Thread 36 (LWP 70053))
+</span><span>Thread 35 (LWP 70052))
+</span><span>Thread 34 (LWP 70051))
+</span><span>Thread 33 (LWP 70050))
+</span><span>Thread 32 (LWP 70049))
+</span><span>Thread 31 (LWP 70048))
+</span><span>Thread 30 (LWP 70047))
+</span><span>Thread 29 (LWP 70046))
+</span><span>Thread 28 (LWP 70045))
+</span><span>Thread 27 (LWP 70044))
+</span><span>Thread 26 (LWP 70043))
+</span><span>Thread 25 (LWP 70042))
+</span><span>Thread 24 (LWP 70041))
+</span><span>Thread 23 (LWP 70040))
+</span><span>Thread 22 (LWP 70039))
+</span><span>Thread 21 (LWP 70038))
+</span><span>Thread 20 (LWP 70037))
+</span><span>Thread 19 (LWP 70036))
+</span><span>Thread 18 (LWP 70035))
+</span><span>Thread 17 (LWP 70034))
+</span><span>Thread 16 (LWP 70033))
+</span><span>Thread 15 (LWP 70032))
+</span><span>Thread 14 (LWP 70031))
+</span><span>Thread 13 (LWP 70030))
+</span><span>Thread 12 (LWP 70029))
+</span><span>Thread 11 (LWP 70028))
+</span><span>Thread 10 (LWP 70027))
+</span><span>#0  0x00007ffff65db03c in pthread_cond_wait@@GLIBC_2.3.2 () at /lib64/libpthread.so.0
+</span><span>#1  0x00007ffff66318b0 in PR_WaitCondVar () at /usr/lib64/libnspr4.so
+</span><span>#2  0x00000000004220e0 in [IDLE THREAD] connection_wait_for_new_work (pb=0x608000498020, interval=4294967295) at /home/william/development/389ds/ds/ldap/servers/slapd/connection.c:970
+</span><span>#3  0x0000000000425a31 in connection_threadmain () at /home/william/development/389ds/ds/ldap/servers/slapd/connection.c:1536
+</span><span>#4  0x00007ffff6637484 in None () at /usr/lib64/libnspr4.so
+</span><span>#5  0x00007ffff65d4fab in start_thread () at /lib64/libpthread.so.0
+</span><span>#6  0x00007ffff6afc6af in clone () at /lib64/libc.so.6
+</span></code></pre>
+<p>This example shows that there are 17 idle threads (look at frame 2)
+here, that all share the same trace.</p>
+<h2 id="ds-access-log">ds-access-log</h2>
+<p>The access log is buffered before writing, so if you have a coredump,
+and want to see the last few events <em>before</em> they were written to disk,
+you can use this to display the content:</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>(gdb) ds-access-log
+</span><span>===== BEGIN ACCESS LOG =====
+</span><span>$2 = 0x7ffff3c3f800 &quot;[03/Apr/2019:10:58:42.836246400 +1000] conn=1 fd=64 slot=64 connection from 127.0.0.1 to 127.0.0.1
+</span><span>[03/Apr/2019:10:58:42.837199400 +1000] conn=1 op=0 BIND dn=\&quot;\&quot; method=128 version=3
+</span><span>[03/Apr/2019:10:58:42.837694800 +1000] conn=1 op=0 RESULT err=0 tag=97 nentries=0 etime=0.0001200300 dn=\&quot;\&quot;
+</span><span>[03/Apr/2019:10:58:42.838881800 +1000] conn=1 op=1 SRCH base=\&quot;\&quot; scope=2 filter=\&quot;(objectClass=*)\&quot; attrs=ALL
+</span><span>[03/Apr/2019:10:58:42.839107600 +1000] conn=1 op=1 RESULT err=32 tag=101 nentries=0 etime=0.0001070800
+</span><span>[03/Apr/2019:10:58:42.840687400 +1000] conn=1 op=2 UNBIND
+</span><span>[03/Apr/2019:10:58:42.840749500 +1000] conn=1 op=2 fd=64 closed - U1
+</span><span>&quot;, &#39;\276&#39; &lt;repeats 3470 times&gt;
+</span></code></pre>
+<p>At the end the line that repeats shows the log is &quot;empty&quot; in that
+segment of the buffer.</p>
+<h2 id="ds-entry-print">ds-entry-print</h2>
+<p>This command shows the in-memory entry. It can be common to see
+Slapi_Entry * pointers in the codebase, so being able to display these
+is really helpful to isolate what's occuring on the entry. Your first
+argument should be the Slapi_Entry pointer.</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>(gdb) ds-entry-print ec
+</span><span>Display Slapi_Entry: cn=config
+</span><span>cn: config
+</span><span>objectClass: top
+</span><span>objectClass: extensibleObject
+</span><span>objectClass: nsslapdConfig
+</span><span>nsslapd-schemadir: /opt/dirsrv/etc/dirsrv/slapd-standalone1/schema
+</span><span>nsslapd-lockdir: /opt/dirsrv/var/lock/dirsrv/slapd-standalone1
+</span><span>nsslapd-tmpdir: /tmp
+</span><span>nsslapd-certdir: /opt/dirsrv/etc/dirsrv/slapd-standalone1
+</span><span>...
+</span></code></pre>
+
+    </div>
+</article>
+
+        </main>
+        
+        <footer>
+            
+            <div class="border"></div>
+            <div class="footer">
+                <small class="footer-left">
+                    Copyright &copy; William Brown
+                </small>
+                <small class="footer-right">
+                    Powered by <a href="https://www.getzola.org">Zola</a> | Theme <a href="https://github.com/barlog-m/oceanic-zen">Oceanic Zen</a>
+                </small>
+            </div>
+        
+        </footer>
+    
+        </div>
+    </body>
+</html>

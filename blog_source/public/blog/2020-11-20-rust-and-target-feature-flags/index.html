@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+        <meta name="description" content="Firstyear&#x27;s blog">
+        
+
+        <title>Firstyear&#x27;s blog-a-log</title>
+
+        
+          <link rel="alternate" type="application/rss+xml" title="RSS" href="https://fy.blackhats.net.au/rss.xml">
+        
+
+        
+            <link rel="stylesheet" href="https://fy.blackhats.net.au/theme.css">
+        
+        
+    </head>
+    <body>
+        <div class="content">
+        
+        
+            <header>
+                <div class="header-left">
+                    <a href="https:&#x2F;&#x2F;fy.blackhats.net.au" class="logo">Firstyear&#x27;s blog-a-log</a>
+                </div>
+                <div class="header-right">
+                    <nav itemscope itemtype="http://schema.org/SiteNavigationElement">
+                      <ul>
+                        
+                        
+                            
+                            <li class="nav">
+                                <a itemprop="url" href="https://fy.blackhats.net.au/blog/">
+                                    <span itemprop="name">Blog</span>
+                                </a>
+                            </li>
+                        
+                            
+                            <li class="nav">
+                                <a itemprop="url" href="https://fy.blackhats.net.au/pages/">
+                                    <span itemprop="name">Pages</span>
+                                </a>
+                            </li>
+                        
+                        
+                        <li class="nav">
+                            <a itemprop="url" href="https://github.com/firstyear">
+                                <img class="icon" src="https:&#x2F;&#x2F;fy.blackhats.net.au/icons/github.svg" alt="Github">
+                            </a>
+                        </li>
+                        
+                        <li class="nav">
+                            <a itemprop="url" href="/rss.xml">
+                                <img class="icon" src="https:&#x2F;&#x2F;fy.blackhats.net.au/rss-logo.png" alt="rss">
+                            </a>
+                        </li>
+                      </ul>
+                    </nav>
+                </div>
+            </header>
+        
+        
+        <main>
+            
+<article itemscope itemtype="http://schema.org/BlogPosting">
+    <div itemprop="headline">
+        <h1>Rust, SIMD and target-feature flags</h1>
+        <div class="border"></div>
+        <time datetime="2020-11-20" class="date" itemprop="datePublished">
+            20 Nov 2020
+        </time>
+    </div>
+    <div itemprop="articleBody">
+        <h1 id="rust-simd-and-target-feature-flags">Rust, SIMD and target-feature flags</h1>
+<p>This year I've been working on
+<a href="https://github.com/kanidm/concread">concread</a> and one of the ways that
+I have improved it is through the use of
+<a href="https://github.com/rust-lang/packed_simd">packed_simd</a> for parallel key
+lookups in hashmaps. During testing I saw a ~10% speed up in Kanidm
+which heavily relies on concread, so great, pack it up, go home.</p>
+<h1 id="">...?</h1>
+<p>Or so I thought. Recently I was learning to use Ghidra with a friend,
+and as a thought exercise I wanted to see how Rust decompiled. I put the
+concread test suite into Ghidra and took a look. Looking at the version
+of concread with [simd_support]{.title-ref} enabled, I saw this in the
+disassembly (truncated for readability).</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>**************************************************************
+</span><span>*                          FUNCTION                          *
+</span><span>**************************************************************
+</span><span>Simd&lt;[packed_simd_2--masks--m64;8]&gt; __stdcall eq(Simd&lt;[p
+</span><span>...
+</span><span>100114510 55              PUSH       RBP
+</span><span>100114511 48 89 e5        MOV        RBP,RSP
+</span><span>100114514 48 83 e4 c0     AND        RSP,-0x40
+</span><span>100114518 48 81 ec        SUB        RSP,0x100
+</span><span>        00 01 00 00
+</span><span>10011451f 48 89 f8        MOV        RAX,__return_storage_ptr__
+</span><span>100114522 0f 28 06        MOVAPS     XMM0,xmmword ptr [self-&gt;__0.__0]
+</span><span>...
+</span><span>100114540 66 0f 76 c4     PCMPEQD    XMM0,XMM4
+</span><span>100114544 66 0f 70        PSHUFD     XMM4,XMM0,0xb1
+</span><span>        e0 b1
+</span><span>100114549 66 0f db c4     PAND       XMM0,XMM4
+</span><span>...
+</span><span>100114574 0f 29 9c        MOVAPS     xmmword ptr [RSP + local_90],XMM3
+</span><span>        24 b0 00 
+</span><span>        00 00
+</span><span>1001145b4 48 89 7c        MOV        qword ptr [RSP + local_c8],__return_storage_pt
+</span><span>        24 78
+</span><span>...
+</span><span>1001145be 0f 29 44        MOVAPS     xmmword ptr [RSP + local_e0],XMM0
+</span><span>        24 60
+</span><span>...
+</span><span>1001145d2 48 8b 44        MOV        RAX,qword ptr [RSP + local_c8]
+</span><span>        24 78
+</span><span>1001145d7 0f 28 44        MOVAPS     XMM0,xmmword ptr [RSP + local_e0]
+</span><span>        24 60
+</span><span>1001145dc 0f 29 00        MOVAPS     xmmword ptr [RAX],XMM0
+</span><span>...
+</span><span>1001145ff 48 89 ec        MOV        RSP,RBP
+</span><span>100114602 5d              POP        RBP
+</span><span>100114603 c3              RET
+</span></code></pre>
+<p>Now, it's been a long time since I've had to look at x86_64 asm, so I
+saw this and went &quot;great, it's not using a loop, those aren't simple
+[TEST/JNZ]{.title-ref} instructions, they have a lot of letters, awesome
+it's using HW accel.</p>
+<h1 id="time-passes">Time passes ...</h1>
+<p>Coming back to this, I have been wondering how we could enable SIMD in
+concread at SUSE, since 389 Directory Server has just merged a change
+for 2.0.0 that uses concread as a cache. For this I needed to know what
+minimum CPU is supported at SUSE. After some chasing internally, knowing
+what we need I asked in the Rust Brisbane group about how you can define
+in [packed_simd]{.title-ref} to only emit instructions that work on a
+minimum CPU level rather than <em>my</em> cpu or the builder cpu.</p>
+<p>The response was &quot;but that's already how it works&quot;.</p>
+<p>I was helpfully directed to the <a href="https://rust-lang.github.io/packed_simd/perf-guide/target-feature/rustflags.html">packed_simd perf
+guide</a>
+which discusses the use of target features and target cpu. At that point
+I realised that for this whole time I've only been using the default:</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span># rustc --print cfg | grep -i target_feature
+</span><span>target_feature=&quot;fxsr&quot;
+</span><span>target_feature=&quot;sse&quot;
+</span><span>target_feature=&quot;sse2&quot;
+</span></code></pre>
+<p>The [PCMPEQD]{.title-ref} is from sse2, but my cpu is much newer and
+should support AVX and AVX2. Retesting this, I can see my CPU has much
+more:</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span># rustc --print cfg -C target-cpu=native | grep -i target_feature
+</span><span>target_feature=&quot;aes&quot;
+</span><span>target_feature=&quot;avx&quot;
+</span><span>target_feature=&quot;avx2&quot;
+</span><span>target_feature=&quot;bmi1&quot;
+</span><span>target_feature=&quot;bmi2&quot;
+</span><span>target_feature=&quot;fma&quot;
+</span><span>target_feature=&quot;fxsr&quot;
+</span><span>target_feature=&quot;lzcnt&quot;
+</span><span>target_feature=&quot;pclmulqdq&quot;
+</span><span>target_feature=&quot;popcnt&quot;
+</span><span>target_feature=&quot;rdrand&quot;
+</span><span>target_feature=&quot;rdseed&quot;
+</span><span>target_feature=&quot;sse&quot;
+</span><span>target_feature=&quot;sse2&quot;
+</span><span>target_feature=&quot;sse3&quot;
+</span><span>target_feature=&quot;sse4.1&quot;
+</span><span>target_feature=&quot;sse4.2&quot;
+</span><span>target_feature=&quot;ssse3&quot;
+</span><span>target_feature=&quot;xsave&quot;
+</span><span>target_feature=&quot;xsavec&quot;
+</span><span>target_feature=&quot;xsaveopt&quot;
+</span><span>target_feature=&quot;xsaves&quot;
+</span></code></pre>
+<p>All this time, I haven't been using my native features!</p>
+<p>For local builds now, I have .cargo/config set with:</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>[build]
+</span><span>rustflags = &quot;-C target-cpu=native&quot;
+</span></code></pre>
+<p>I recompiled concread and I now see in Ghidra:</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>00198960 55              PUSH       RBP
+</span><span>00198961 48 89 e5        MOV        RBP,RSP
+</span><span>00198964 48 83 e4 c0     AND        RSP,-0x40
+</span><span>00198968 48 81 ec        SUB        RSP,0x100
+</span><span>         00 01 00 00
+</span><span>0019896f 48 89 f8        MOV        RAX,__return_storage_ptr__
+</span><span>00198972 c5 fc 28 06     VMOVAPS    YMM0,ymmword ptr [self-&gt;__0.__0]
+</span><span>00198976 c5 fc 28        VMOVAPS    YMM1,ymmword ptr [RSI + self-&gt;__0.__4]
+</span><span>         4e 20
+</span><span>0019897b c5 fc 28 12     VMOVAPS    YMM2,ymmword ptr [other-&gt;__0.__0]
+</span><span>0019897f c5 fc 28        VMOVAPS    YMM3,ymmword ptr [RDX + other-&gt;__0.__4]
+</span><span>         5a 20
+</span><span>00198984 c4 e2 7d        VPCMPEQQ   YMM0,YMM0,YMM2
+</span><span>         29 c2
+</span><span>00198989 c4 e2 75        VPCMPEQQ   YMM1,YMM1,YMM3
+</span><span>         29 cb
+</span><span>0019898e c5 fc 29        VMOVAPS    ymmword ptr [RSP + local_a0[0]],YMM1
+</span><span>         8c 24 a0 
+</span><span>         00 00 00
+</span><span>...
+</span><span>001989e7 48 89 ec        MOV        RSP,RBP
+</span><span>001989ea 5d              POP        RBP
+</span><span>001989eb c5 f8 77        VZEROUPPER
+</span><span>001989ee c3              RET
+</span></code></pre>
+<p>[VPCMPEQQ]{.title-ref} is the AVX2 compare instruction (You can tell
+it's AVX2 due to the register YMM, AVX uses XMM). Which means now I'm
+getting the SIMD comparisons I wanted!</p>
+<p>These can be enabled with [RUSTFLAGS='-C
+target-feature=+avx2,+avx']{.title-ref} for selected builds, or in your
+.cargo/config. It may be a good idea for just local development to do
+[target-cpu=native]{.title-ref}.</p>
+
+    </div>
+</article>
+
+        </main>
+        
+        <footer>
+            
+            <div class="border"></div>
+            <div class="footer">
+                <small class="footer-left">
+                    Copyright &copy; William Brown
+                </small>
+                <small class="footer-right">
+                    Powered by <a href="https://www.getzola.org">Zola</a> | Theme <a href="https://github.com/barlog-m/oceanic-zen">Oceanic Zen</a>
+                </small>
+            </div>
+        
+        </footer>
+    
+        </div>
+    </body>
+</html>

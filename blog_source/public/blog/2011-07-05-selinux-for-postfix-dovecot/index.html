@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+        <meta name="description" content="Firstyear&#x27;s blog">
+        
+
+        <title>Firstyear&#x27;s blog-a-log</title>
+
+        
+          <link rel="alternate" type="application/rss+xml" title="RSS" href="https://fy.blackhats.net.au/rss.xml">
+        
+
+        
+            <link rel="stylesheet" href="https://fy.blackhats.net.au/theme.css">
+        
+        
+    </head>
+    <body>
+        <div class="content">
+        
+        
+            <header>
+                <div class="header-left">
+                    <a href="https:&#x2F;&#x2F;fy.blackhats.net.au" class="logo">Firstyear&#x27;s blog-a-log</a>
+                </div>
+                <div class="header-right">
+                    <nav itemscope itemtype="http://schema.org/SiteNavigationElement">
+                      <ul>
+                        
+                        
+                            
+                            <li class="nav">
+                                <a itemprop="url" href="https://fy.blackhats.net.au/blog/">
+                                    <span itemprop="name">Blog</span>
+                                </a>
+                            </li>
+                        
+                            
+                            <li class="nav">
+                                <a itemprop="url" href="https://fy.blackhats.net.au/pages/">
+                                    <span itemprop="name">Pages</span>
+                                </a>
+                            </li>
+                        
+                        
+                        <li class="nav">
+                            <a itemprop="url" href="https://github.com/firstyear">
+                                <img class="icon" src="https:&#x2F;&#x2F;fy.blackhats.net.au/icons/github.svg" alt="Github">
+                            </a>
+                        </li>
+                        
+                        <li class="nav">
+                            <a itemprop="url" href="/rss.xml">
+                                <img class="icon" src="https:&#x2F;&#x2F;fy.blackhats.net.au/rss-logo.png" alt="rss">
+                            </a>
+                        </li>
+                      </ul>
+                    </nav>
+                </div>
+            </header>
+        
+        
+        <main>
+            
+<article itemscope itemtype="http://schema.org/BlogPosting">
+    <div itemprop="headline">
+        <h1>SELinux for postfix + dovecot</h1>
+        <div class="border"></div>
+        <time datetime="2011-07-05" class="date" itemprop="datePublished">
+            05 Jul 2011
+        </time>
+    </div>
+    <div itemprop="articleBody">
+        <h1 id="selinux-for-postfix-dovecot">SELinux for postfix + dovecot</h1>
+<blockquote>
+<p>I am currently in the middle of creating an email solution for the
+doctors surgery that I work for. I have previously tried exchange, but
+found it to slow, and unreliable for my needs. Instead, I have decided
+to go with postfix + dovecot for the doctors needs.</p>
+</blockquote>
+<p>In my experimenting, I have been using a fedora VM, with SElinux
+enabled. However, SELinux has decided to hate on everything I do for
+this, and thus in my inability to accept defeat, I have created an
+SELinux module that should allow postfix and dovecot to work as per
+following <a href="http://www.1a-centosserver.com/centos_linux_mail_server/centos_mail_server.php">this email setup
+guide</a>.</p>
+<p>the module is</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>module postfixmysql 1.0;
+</span><span>
+</span><span>require {
+</span><span>    type mysqld_var_run_t;
+</span><span>    type postfix_map_t;
+</span><span>    type usr_t;
+</span><span>    type mysqld_t;
+</span><span>    type mysqld_db_t;
+</span><span>    type postfix_virtual_t;
+</span><span>    type postfix_smtpd_t;
+</span><span>    type postfix_cleanup_t;
+</span><span>    class sock_file write;
+</span><span>    class unix_stream_socket connectto;
+</span><span>    class file getattr;
+</span><span>    class dir search;
+</span><span>}
+</span><span>
+</span><span>#============= postfix_cleanup_t ==============
+</span><span>allow postfix_cleanup_t mysqld_db_t:dir search;
+</span><span>allow postfix_cleanup_t mysqld_t:unix_stream_socket connectto;
+</span><span>allow postfix_cleanup_t mysqld_var_run_t:sock_file write;
+</span><span>allow postfix_cleanup_t usr_t:file getattr;
+</span><span>
+</span><span>#============= postfix_map_t ==============
+</span><span>allow postfix_map_t mysqld_db_t:dir search;
+</span><span>allow postfix_map_t mysqld_t:unix_stream_socket connectto;
+</span><span>allow postfix_map_t mysqld_var_run_t:sock_file write;
+</span><span>
+</span><span>#============= postfix_smtpd_t ==============
+</span><span>allow postfix_smtpd_t mysqld_db_t:dir search;
+</span><span>allow postfix_smtpd_t mysqld_t:unix_stream_socket connectto;
+</span><span>allow postfix_smtpd_t mysqld_var_run_t:sock_file write;
+</span><span>
+</span><span>#============= postfix_virtual_t ==============
+</span><span>allow postfix_virtual_t mysqld_db_t:dir search;
+</span><span>allow postfix_virtual_t mysqld_t:unix_stream_socket connectto;
+</span><span>allow postfix_virtual_t mysqld_var_run_t:sock_file write;
+</span></code></pre>
+<p>This can be built and installed with a command like such (as root)</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>checkmodule -M -m -o postfixmysql.mod postfixmysql.te; semodule_package -m postfixmysql.mod -o postfixmysql.pp; semodule -i postfixmysql.pp 
+</span></code></pre>
+
+    </div>
+</article>
+
+        </main>
+        
+        <footer>
+            
+            <div class="border"></div>
+            <div class="footer">
+                <small class="footer-left">
+                    Copyright &copy; William Brown
+                </small>
+                <small class="footer-right">
+                    Powered by <a href="https://www.getzola.org">Zola</a> | Theme <a href="https://github.com/barlog-m/oceanic-zen">Oceanic Zen</a>
+                </small>
+            </div>
+        
+        </footer>
+    
+        </div>
+    </body>
+</html>

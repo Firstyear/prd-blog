@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+        <meta name="description" content="Firstyear&#x27;s blog">
+        
+
+        <title>Firstyear&#x27;s blog-a-log</title>
+
+        
+          <link rel="alternate" type="application/rss+xml" title="RSS" href="https://fy.blackhats.net.au/rss.xml">
+        
+
+        
+            <link rel="stylesheet" href="https://fy.blackhats.net.au/theme.css">
+        
+        
+    </head>
+    <body>
+        <div class="content">
+        
+        
+            <header>
+                <div class="header-left">
+                    <a href="https:&#x2F;&#x2F;fy.blackhats.net.au" class="logo">Firstyear&#x27;s blog-a-log</a>
+                </div>
+                <div class="header-right">
+                    <nav itemscope itemtype="http://schema.org/SiteNavigationElement">
+                      <ul>
+                        
+                        
+                            
+                            <li class="nav">
+                                <a itemprop="url" href="https://fy.blackhats.net.au/blog/">
+                                    <span itemprop="name">Blog</span>
+                                </a>
+                            </li>
+                        
+                            
+                            <li class="nav">
+                                <a itemprop="url" href="https://fy.blackhats.net.au/pages/">
+                                    <span itemprop="name">Pages</span>
+                                </a>
+                            </li>
+                        
+                        
+                        <li class="nav">
+                            <a itemprop="url" href="https://github.com/firstyear">
+                                <img class="icon" src="https:&#x2F;&#x2F;fy.blackhats.net.au/icons/github.svg" alt="Github">
+                            </a>
+                        </li>
+                        
+                        <li class="nav">
+                            <a itemprop="url" href="/rss.xml">
+                                <img class="icon" src="https:&#x2F;&#x2F;fy.blackhats.net.au/rss-logo.png" alt="rss">
+                            </a>
+                        </li>
+                      </ul>
+                    </nav>
+                </div>
+            </header>
+        
+        
+        <main>
+            
+<article itemscope itemtype="http://schema.org/BlogPosting">
+    <div itemprop="headline">
+        <h1>AD directory admins group setup</h1>
+        <div class="border"></div>
+        <time datetime="2018-04-26" class="date" itemprop="datePublished">
+            26 Apr 2018
+        </time>
+    </div>
+    <div itemprop="articleBody">
+        <h1 id="ad-directory-admins-group-setup">AD directory admins group setup</h1>
+<p>Recently I have been reading many of the Microsoft Active Directory best
+practices for security and hardening. These are great resources, and
+very well written. The major theme of the articles is &quot;least
+privilege&quot;, where accounts like Administrators or Domain Admins are
+over used and lead to further compromise.</p>
+<p>A suggestion that is put forward by the author is to have a group that
+has no other permissions but to manage the directory service. This
+should be used to temporarily make a user an admin, then after a period
+of time they should be removed from the group.</p>
+<p>This way you have no Administrators or Domain Admins, but you have an AD
+only group that can temporarily grant these permissions when required.</p>
+<p>I want to explore how to create this and configure the correct access
+controls to enable this scheme.</p>
+<h2 id="create-our-group">Create our group</h2>
+<p>First, lets create a &quot;Directory Admins&quot; group which will contain our
+members that have the rights to modify or grant other privileges.</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span># /usr/local/samba/bin/samba-tool group add &#39;Directory Admins&#39;
+</span><span>Added group Directory Admins
+</span></code></pre>
+<p>It's a really good idea to add this to the &quot;Denied RODC Password
+Replication Group&quot; to limit the risk of these accounts being
+compromised during an attack. Additionally, you probably want to make
+your &quot;admin storage&quot; group also a member of this, but I'll leave that
+to you.</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span># /usr/local/samba/bin/samba-tool group addmembers &quot;Denied RODC Password Replication Group&quot; &quot;Directory Admins&quot;
+</span></code></pre>
+<p>Now that we have this, lets add a member to it. I strongly advise you
+create special accounts just for the purpose of directory
+administration - don't use your daily account for this!</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span># /usr/local/samba/bin/samba-tool user create da_william
+</span><span>User &#39;da_william&#39; created successfully
+</span><span># /usr/local/samba/bin/samba-tool group addmembers &#39;Directory Admins&#39; da_william
+</span><span>Added members to group Directory Admins
+</span></code></pre>
+<h2 id="configure-the-permissions">Configure the permissions</h2>
+<p>Now we need to configure the correct dsacls to allow Directory Admins
+full control over directory objects. It could be possible to constrain
+this to <em>only</em> modification of the cn=builtin and cn=users container
+however, as directory admins might not need so much control for things
+like dns modification.</p>
+<p>If you want to constrain these permissions, only apply the following to
+cn=builtins instead - or even just the target groups like Domain Admins.</p>
+<p>First we need the objectSID of our Directory Admins group so we can
+build the ACE.</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span># /usr/local/samba/bin/samba-tool group show &#39;directory admins&#39; --attributes=cn,objectsid
+</span><span>dn: CN=Directory Admins,CN=Users,DC=adt,DC=blackhats,DC=net,DC=au
+</span><span>cn: Directory Admins
+</span><span>objectSid: S-1-5-21-2488910578-3334016764-1009705076-1104
+</span></code></pre>
+<p>Now with this we can construct the ACE.</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>(A;CI;RPWPLCLORC;;;S-1-5-21-2488910578-3334016764-1009705076-1104)
+</span></code></pre>
+<p>This permission grants:</p>
+<ul>
+<li>RP: read property</li>
+<li>WP: write property</li>
+<li>LC: list child objects</li>
+<li>LO: list objects</li>
+<li>RC: read control</li>
+</ul>
+<p>It could be possible to expand these rights: it depends if you want
+directory admins to be able to do &quot;day to day&quot; ad control jobs, or if
+you just use them for granting of privileges. That's up to you. An
+expanded ACE might be:</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span># Same as Enterprise Admins
+</span><span>(A;CI;RPWPCRCCDCLCLORCWOWDSW;;;S-1-5-21-2488910578-3334016764-1009705076-1104)
+</span></code></pre>
+<p>Now lets actually apply this and do a test:</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span># /usr/local/samba/bin/samba-tool dsacl set --sddl=&#39;(A;CI;RPWPLCLORC;;;S-1-5-21-2488910578-3334016764-1009705076-1104)&#39; --objectdn=&#39;dc=adt,dc=blackhats,dc=net,dc=au&#39;
+</span><span># /usr/local/samba/bin/samba-tool group addmembers &#39;directory admins&#39; administrator -U &#39;da_william%...&#39;
+</span><span>Added members to group directory admins
+</span><span># /usr/local/samba/bin/samba-tool group listmembers &#39;directory admins&#39; -U &#39;da_william%...&#39;
+</span><span>da_william
+</span><span>Administrator
+</span></code></pre>
+<p>After we have completed our tasks, we remove da_william from the
+directory admins group as we no longer required the privileges. You can
+self-remove, or have the Administrator account do the removal.</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span># /usr/local/samba/bin/samba-tool group removemembers &#39;directory admins&#39; da_william -U &#39;da_william%...&#39;
+</span><span>Removed members from group directory admins
+</span><span>
+</span><span># /usr/local/samba/bin/samba-tool group removemembers &#39;directory admins&#39; da_william -U &#39;Administrator&#39;
+</span><span>Removed members from group directory admins
+</span></code></pre>
+<p>Finally check that da_william is no longer in the group.</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span># /usr/local/samba/bin/samba-tool group listmembers &#39;directory admins&#39; -U &#39;da_william%...&#39;
+</span><span>Administrator
+</span></code></pre>
+<h2 id="conclusion">Conclusion</h2>
+<p>With these steps we have created a secure account that has limited admin
+rights, able to temporarily promote users with privileges for
+administrative work - and able to remove it once the work is complete.</p>
+
+    </div>
+</article>
+
+        </main>
+        
+        <footer>
+            
+            <div class="border"></div>
+            <div class="footer">
+                <small class="footer-left">
+                    Copyright &copy; William Brown
+                </small>
+                <small class="footer-right">
+                    Powered by <a href="https://www.getzola.org">Zola</a> | Theme <a href="https://github.com/barlog-m/oceanic-zen">Oceanic Zen</a>
+                </small>
+            </div>
+        
+        </footer>
+    
+        </div>
+    </body>
+</html>

@@ -1,0 +1,805 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+        <meta name="description" content="Firstyear&#x27;s blog">
+        
+
+        <title>Firstyear&#x27;s blog-a-log</title>
+
+        
+          <link rel="alternate" type="application/rss+xml" title="RSS" href="https://fy.blackhats.net.au/rss.xml">
+        
+
+        
+            <link rel="stylesheet" href="https://fy.blackhats.net.au/theme.css">
+        
+        
+    </head>
+    <body>
+        <div class="content">
+        
+        
+            <header>
+                <div class="header-left">
+                    <a href="https:&#x2F;&#x2F;fy.blackhats.net.au" class="logo">Firstyear&#x27;s blog-a-log</a>
+                </div>
+                <div class="header-right">
+                    <nav itemscope itemtype="http://schema.org/SiteNavigationElement">
+                      <ul>
+                        
+                        
+                            
+                            <li class="nav">
+                                <a itemprop="url" href="https://fy.blackhats.net.au/blog/">
+                                    <span itemprop="name">Blog</span>
+                                </a>
+                            </li>
+                        
+                            
+                            <li class="nav">
+                                <a itemprop="url" href="https://fy.blackhats.net.au/pages/">
+                                    <span itemprop="name">Pages</span>
+                                </a>
+                            </li>
+                        
+                        
+                        <li class="nav">
+                            <a itemprop="url" href="https://github.com/firstyear">
+                                <img class="icon" src="https:&#x2F;&#x2F;fy.blackhats.net.au/icons/github.svg" alt="Github">
+                            </a>
+                        </li>
+                        
+                        <li class="nav">
+                            <a itemprop="url" href="/rss.xml">
+                                <img class="icon" src="https:&#x2F;&#x2F;fy.blackhats.net.au/rss-logo.png" alt="rss">
+                            </a>
+                        </li>
+                      </ul>
+                    </nav>
+                </div>
+            </header>
+        
+        
+        <main>
+            
+<article itemscope itemtype="http://schema.org/BlogPosting">
+    <div itemprop="headline">
+        <h1>Exploring Webauthn Use Cases</h1>
+        <div class="border"></div>
+        <time datetime="2022-06-13" class="date" itemprop="datePublished">
+            13 Jun 2022
+        </time>
+    </div>
+    <div itemprop="articleBody">
+        <h1 id="exploring-webauthn-use-cases">Exploring Webauthn Use Cases</h1>
+<p>Webauthn is viewed by many people and companies as the future of
+authentication on the internet and within our workplaces. It has the
+support of many device manufacturers, browser vendors and authentication
+providers.</p>
+<p>But for Webauthn's lofty goals and promises, as a standard it has many
+fractured parts. Many of the features it claims at best don't work, at
+worst, present possible security risks. The standard itself is quite
+confusing, uses dense and obtuse language, and laid out in a very
+piecemeal way. This makes it hard to see the full picture to construct a
+proper security and use cases analysis.</p>
+<p>As the author of both a relying party (
+<a href="https://github.com/kanidm/kanidm">Kanidm</a> ) and the <a href="https://github.com/kanidm/webauthn-rs">Webauthn Library
+for Rust</a> I want to describe
+these problems.</p>
+<p>To understand the issues, we first need to explore how Webauthn works,
+and then the potential use cases. While not an exhaustive list of all
+the ways Webauthn could be used, I am trying to cover the ways that I
+have seen in the wild, and how people have requested we want to use
+these.</p>
+<p>Generally, I will try to use <em>accessible</em> language versions of terms,
+rather than the Webauthn standard terms, as the language in the standard
+is confusing / misleading - even if you have read the standard multiple
+times.</p>
+<h2 id="use-cases">Use Cases</h2>
+<p>To understand the limitations of Webauthn, we need to examine how
+Webauthn would be used by an identity provider. The identity provider
+takes the pieces from Webauthn and their own elements and creates a work
+flow for the user to interact with. We will turn these into use cases.</p>
+<p>Remember, the goal of webauthn is to enable all people, from various
+cultural, social and educational backgrounds to authenticate securely,
+so it's critical these processes are clear, accessible, and
+transparent.</p>
+<p>For the extremely detailed versions of these use cases, see the end of
+this post.</p>
+<p>A really important part of these use cases is attestation. Attestation
+is the same as the little gold star sticker that you found on Nintendo
+game boxes. It's a &quot;certificate of authenticity&quot;. Without
+attestation, the authenticator that we are communicating with could be
+anything. It could be a yubikey, Apple's touchid, a custom-rolled
+software token, or even a private key you calculated on pen and paper.
+Attestation is a cryptograhic &quot;certificate of authenticity&quot; which
+tells us exactly whom produced that device and if it can be trusted.</p>
+<p>This is really important, because within Webauthn many things are done
+on the authenticator such as user-verification. Rather than just
+touching the token, you may have to enter a PIN or use a fingerprint.
+But the server never sees that PIN or fingerprint - the authenticator
+just sends us a true/false flag if the verification occured and was
+valid. So for us to trust this flag (and many others), we need to know
+that the token is made by someone we trust, so that we know that flag
+<em>means</em> something.</p>
+<p>Without this attestation, all we know is that &quot;there is some kind of
+cryptograhic key that the user can access&quot; and we have no other
+information about where it might be stored, or how it works. With
+attestation we can make stronger informed assertions about the
+properties of the authenticators our users are using.</p>
+<h3 id="security-token-public">Security Token (Public)</h3>
+<p>In this use case, we want our authenticator to be a single factor to
+compliment an existing password. This is the &quot;classic&quot; security key
+use case, that was originally spawned by U2F. Instead of an
+authenticator, a TOTP scheme could alternately be used where either the
+TOTP or authenticator plus the password is sufficient to grant access.</p>
+<p>Generally in this use case, most identity providers do not care about
+attestation of the authenticator, what is more important is that some
+kind of non-password authentication exists and is present.</p>
+<h3 id="security-token-corporate">Security Token (Corporate)</h3>
+<p>This is the same as the public use case, except that in many
+corporations we may want to define a list of trusted providers of
+tokens. It's important to us here that these tokens have a vetted or
+audited supply chain, and we have an understanding of &quot;where&quot; the
+cryptographic material may reside.</p>
+<p>For this example, we likely want attestation, as well as the ability to
+ensure these credentials are not recoverable or transferable between
+authenticators. Resident Key may or may not be required in these cases.</p>
+<p>Since these are guided by policy, we likely want to have our user
+interfaces guide our users to register or use the correct keys since we
+have a stricter list of what is accepted. For example, there is no point
+in the UI showing a prompt for caBLE (phone authenticator) when we know
+that only a USB key is accepted!</p>
+<h3 id="passkey-public">PassKey (Public)</h3>
+<p>A passkey is the &quot;Apple terminology&quot; for a cryptographic credential
+that can exist between multiple devices, and potentially even between
+multiple Apple accounts. This are intended to be a &quot;single factor&quot;
+replacement to passwords. They can be airdropped and moved between
+devices, and at the least in their usage with iOS devices, they <em>can</em>
+perform user verification, but it may not be required for the identity
+provider to verify this. This is because even as a single factor, these
+credentials <em>do</em> resolve many of the weaknesses of passwords even if
+user verification did not occur (and even if it did occur it can not be
+verified, for reasons we will explore in this post).</p>
+<p>It is likely we will see Google and Microsoft develop similar. 1Password
+is already progressing to allow webauthn in their wallets.</p>
+<p>In this scenario, all we care about is having some kind of credential
+that is stronger than a password. It's a single factor, and we don't
+know anything about the make or model of the device. User verification
+might be performed, but we don't intend to verify if it is.</p>
+<p>Nothing is really stopping a U2F style token like a yubikey being a
+passkey, but that relies on the identity provider to allow multiple
+devices and to have work flows to enrol them across different devices.
+It's also unclear how this will work from an identity provider when
+someone has say a Microsoft Surface and an Apple iPhone.</p>
+<h3 id="passwordless-mfa-public">Passwordless MFA (Public)</h3>
+<p>In this example, rather than having our authenticator as a single
+factor, we want it to be truly multifactor. This allows the user to
+login with nothing but their authenticator, and we have a secure
+multifactor work flow. This is a stronger level of authentication, where
+we are verifying not just possession of the private key, but also the
+identity of who is using it.</p>
+<p>As a result, we need to strictly verify that the authenticator did a
+valid user verification.</p>
+<p>Given that the authenticator is now the &quot;sole&quot; authenticator (even if
+multi-factor) we are more likely to want attestation here using privacy
+features granted through indirect attestation. That way we can have a
+broad list of known good security token providers that we accept.
+Without attestation we are unable to know if the user verification
+provided can be trusted.</p>
+<h3 id="passwordless-mfa-corporate">Passwordless MFA (Corporate)</h3>
+<p>Again, this is similar to above. We narrow and focus this use case with
+a stricter attestation list of what is valid. We also again want to
+strictly control and prevent cryptographic material being moved, so we
+want to ensure these are not transferrable. We may want resident keys to
+be used here too since we have a higher level of trust in our devices
+now too. Again, we also will want to be able to strictly guide UI's due
+to our knowledge of exactly what devices we accept.</p>
+<h3 id="usernameless">Usernameless</h3>
+<p>Usernameless is similar to passwordless but <em>requires</em> resident keys as
+the username of the account is bound to the key and discovered by the
+client. Otherwise many of the features of passwordless apply.</p>
+<p>It's worth noting that due to the complexity and limitations of
+resident key management <em>it is not feasible</em> for any public service
+provider to currently use usernameless credentials on a broad scale
+without significant risk of credential loss. As a result, we limit our
+use case to corporate only, as they are the only entities in the
+position to effectively manage these issues.</p>
+<p>Due to the implementation of passkeys and passwordless in the broader
+world, the line is blurred between these, so we will assume that
+passkeys and passwordless may sometimes attempt to be used in a
+usernameless workflow (for example conditional UI)</p>
+<h3 id="summary">Summary</h3>
+<p>Let's assemble a score card now. We'll define the use cases, the
+features, and what they require and if webauthn can provide them.</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>                         Security Token   Sec Tok (Corp)   PassKey       Passwordless     PwLess (Corp)
+</span></code></pre>
+<hr />
+<p><strong>User Verification</strong>      no / ???         no / ???         no / ???      required / ???   required / ???
+<strong>UV Policy</strong>              no / ???         no / ???         no / ???      no / ???         maybe / ???
+<strong>Attestation</strong>            no / ???         required / ???   no / ???      required / ???   required / ???
+<strong>Bound to Device / HW</strong>   no / ???         required / ???   no / ???      required / ???   required / ???
+<strong>Resident Key</strong>           no / ???         maybe / ???      no / ???      maybe / ???      maybe / ???
+<strong>UI Selection</strong>           maybe / ???      maybe / ???      no / ???      maybe / ???      required / ???
+<strong>Update PII</strong>             no / ???         no / ???         maybe / ???   maybe / ???      maybe / ???
+<strong>Result</strong>                 ???              ???              ???           ???              ???</p>
+<p>: Webauthn Score Card</p>
+<p>Now, I already know some of the answers to these, so lets fill in what
+we DO know.</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>                            Security Token   Sec Tok (Corp)   PassKey       Passwordless     PwLess (Corp)
+</span></code></pre>
+<hr />
+<p><strong>User Verification</strong>         no / ???         no / ???         no / ???      required / ???   required / ???
+<strong>UV Policy</strong>                 no / ???         no / ???         no / ???      no / ???         maybe / ???
+<strong>Attestation</strong>               no / ✅          required / ???   no / ???      required / ???   required / ???
+<strong>Bound to Device / HW</strong>      no / ✅          required / ???   no / ✅       required / ???   required / ???
+<strong>Resident Key</strong>              no / ✅          maybe / ???      no / ✅       no / ✅          maybe / ???
+<strong>Authenticator Selection</strong>   maybe / ???      maybe / ???      no / ???      maybe / ???      required / ???
+<strong>Update PII</strong>                no / ✅          no / ✅          maybe / ???   maybe / ???      maybe / ???
+<strong>Result</strong>                    ???              ???              ???           ???              ???</p>
+<p>: Webauthn Score Card</p>
+<h2 id="the-problems">The Problems</h2>
+<p>Now lets examine the series of issues that exist within Webauthn, and
+how they impact our ability to successfully implement the above.</p>
+<h3 id="authenticator-selection">Authenticator Selection</h3>
+<p>Today, there is no features in Webauthn that allow an identity provider
+at registration to pre-indicate what transports are known to be valid
+for authenticators that are registering. This is contrast to
+authentication, where a complete list of valid transports can be
+provided to help the browser select the correct device to use in the
+authentication.</p>
+<p>As a result, the only toggle you have is &quot;platform&quot; vs
+&quot;cross-platform&quot;. Consider we have company issued yubikeys. We know
+these can only work via USB because that is the model we have chosen.</p>
+<p>However, during a registration because we can only indicate
+&quot;cross-platform&quot; it is completely valid for a user to <em>attempt</em> to
+register say their iPhone via caBLE, or use another key via NFC. The
+user may then become &quot;confused&quot; why their other keys didn't work for
+registration - the UI said they were allowed to use it! This is a lack
+of constraint.</p>
+<p>This process could be easily streamlined by allowing transports to be
+specified in registration, but there is resistance to this <a href="https://github.com/w3c/webauthn/issues/1716">from the
+working group.</a></p>
+<p>A real world example of this has already occurred, where the email
+provider <a href="https://www.fastmail.com/">FastMail</a> used specific language
+around &quot;Security Tokens&quot; including graphics of usb security keys in
+their documentation. Because of this lack of ability to specify
+transports in the registration process, once caBLE was released this
+means that FastMail now has to &quot;rush&quot; to respond to update their
+UI/Docs to work out how to communicate this to users. They don't have a
+choice in temporarily excluding this either which may lead to user
+confusion.</p>
+<h3 id="user-verification-inconsistent-confusing">User Verification Inconsistent / Confusing</h3>
+<p>For our security key work flows we would like to construct a situation
+where the authenticator is a single factor, and the users password or
+something else is the other factor. This means the authenticator should
+only require interaction to touch it, and no PIN or biometric is needed.</p>
+<p>There are some major barriers here sadly. Remember, we want to create a
+<em>consistent</em> user experience so that people can become confident in the
+process they are using.</p>
+<p>The problem is CTAP2.1 - this changes the behaviour of user verification
+'discouraged' so that even when you are registering a credential, you
+always need to enter a PIN or biometrics. However, when authenticating,
+you never need the PIN or biometric.</p>
+<p>There is <em>no communication</em> of the fact that the verification is only
+needed due to it being registration.</p>
+<p>Surveying users showed about 60% expect when you need to enter your
+PIN/biometric at registration that it will be <em>required</em> during future
+authentication. When it is not present during future authentications
+this confuses people, and trains them that the PIN/biometrics is an
+inconsistent and untrustworthy dialog. Sometimes it is there - sometimes
+it is not.</p>
+<p>When you combine this with the fact that UV=preferred on most RP's is
+not validating the UV status, we now have effectively trained all our
+users that user verification can appear and disappear and not to worry
+about it, it's fine, it's just <em>inconsistent</em> so they never will
+consider it a threat.</p>
+<p>It also means that when we try to adopt passwordless it will be <em>harder</em>
+to convince users this is safe since they may believe that this
+inconsistent usage of user verification on their authenticators is
+something that can be easily bypassed.</p>
+<p>How can you trust that the PIN/biometric means something, when it is
+sometimes there and sometimes not?</p>
+<p>This forces us even in our security key work flows to force
+UV=preferred, and to <em>go beyond the standard</em> to enforce user
+verification checks are consistent based on their application at
+registration. This means any CTAP2.1 device, even though it does NOT
+need a PIN as a single factor authenticator, will require one as a
+security key to create a consistent user experience and so we can build
+trust in our user base.</p>
+<p>At this point since we are effectively forcing UV to always occur, why
+not just transition to Passwordless?</p>
+<p>It is worth noting that for <em>almost all identity providers</em> today, that
+the use of UV=preferred is bypassable, as the user verification is not
+checked and there is no guidance in the specification to check this.
+This has affected Microsoft Azure, Nextcloud, and others</p>
+<p>As a result, the only trustworthy UV policies are required, or preferred
+with checks that go beyond the standard. As far as I am aware, only
+Webauthn-RS providers these stricter requirement checks.</p>
+<p>Discouraged could be used here, but needs user guidance and training to
+support it due to the inconsistent dialogs with CTAP2.1.</p>
+<h3 id="user-verification-policy">User Verification Policy</h3>
+<p>Especially in our passwordless scenarios, as an identity provider we may
+wish to define policy about what user verification methods we allow from
+users. For example we may wish for PIN only rather than allowing
+biometrics. We may also wish to express the policy on the length of the
+PIN as well.</p>
+<p>However, nothing in the response an authenticator provides you with this
+information about what user verification method was used. Instead
+webauthn defines the <a href="https://www.w3.org/TR/webauthn-3/#sctn-uvm-extension">User Verification Method
+extension</a> which
+can allow an identity provider to request the device to provide what UVM
+was provided.</p>
+<p>Sadly, nothing supports it in the wild. Experience with Webauthn-RS
+shows that it is never honoured or provided when requested. This is true
+of most extensions in Webauthn. For bonus marks did you know all
+extensions only are answered when you request attestation (this is not
+mentioned anywhere in the specification!)</p>
+<p>As a corporate environment, we can kind-of control this through strict
+attestation lists, but as a public identity provider with attestation it
+is potentially not possible to know or enforce this due to extensions
+being widely unsupported and not implemented.</p>
+<p>The reason this is &quot;kind-of&quot; is that yubikeys support PIN and some
+models also support biometrics, but there is no distinction in their
+attestation. This means if we only wanted PIN auth, we could not use
+yubikeys since there is no way to distinguish these. Additionally,
+things like minimum PIN length can't be specified since we don't know
+what manufacturers support this extension. Devices like yubikeys have an
+inbuilt minimum length of 8, but again we don't know if they'll use
+PIN given the availability of biometrics.</p>
+<h3 id="resident-keys-can-t-be-verified">Resident Keys can't be verified</h3>
+<p>Resident Keys is where we know that the key material lives <em>only</em> within
+the cryptographic processor of the authenticator. For example, a yubikey
+by default produces a key wrapped key, where the CredentialID is itself
+the encrypted private key, and only that yubikey can decrypt that
+CredentialID to use it as the private key. In very strict security
+environments, this may present a risk because an attacker <em>could</em>
+bruteforce the CredentialID to decrypt the private key, allowing the
+attacker to then use the credential. (It would take millions of years,
+but you know, some people have to factor that into their risk models).</p>
+<p>To avoid this, you can request the device create a resident key - a
+private key that never leaves the device. The CredentialID is just a
+&quot;reference&quot; to allow the device to look up the Credential but it does
+not contain the private key itself.</p>
+<p>The problem is that there is no <em>signal</em> in the attestation or response
+that indicates if a resident key was created by the device.</p>
+<p>You can request to find out if this was created with the <a href="https://www.w3.org/TR/webauthn-3/#sctn-authenticator-credential-properties-extension">Credential
+Properties</a>
+extension.</p>
+<p>The devil however, is in the details. Notably:</p>
+<p><em>&quot;This client registration extension facilitates reporting certain
+credential properties known by the client&quot;</em></p>
+<p>A client extension means that this extension is processed by the web
+browser, and exists in a section of the response that is unsigned, and
+can not be verified. This means it is open to client side JS tampering
+and forgery. This means we <em>can not</em> trust the output of this property.</p>
+<p>As a result, there is <em>no simple way to verify a resident key was
+created</em>.</p>
+<p>To make this better, the request to create the resident key <em>is not
+signed and can be stripped by client side javascript</em>.</p>
+<p>So any compromised javascript (which Webauthn assumes is trusted) can
+strip a registration request for a resident key, cause a key-wrapped-key
+to be created, and then &quot;assert&quot; pretty promise I swear it's resident
+by faking the response to the extension.</p>
+<p>The only way to guarantee you have a resident key, is to validate
+attestation from an authenticator that <em>exclusively</em> makes resident keys
+(e.g. Apple iOS). Anything else, you can not assert is a true resident
+key. Even if you subsequently attempt client side discovery of
+credentials, that is not the same property as the key being resident.
+This is a trap that many identity providers may not know they are
+exposed to.</p>
+<h3 id="resident-keys-can-t-be-administered">Resident Keys can't be administered</h3>
+<p>To compound the inability to verify creation of a resident key, the
+behaviour of resident keys (RK) for most major devices is undefined. For
+example a Yubikey has limited storage for RKs but I have been unable to
+find documenation about:</p>
+<ul>
+<li>How many RKs can exist on an authenticator.</li>
+<li>If the maximum number is created and we attempt to create more, does
+it act like a ring buffer and remove the oldest, or simply fail to
+create more?</li>
+<li>If it is possible to update usernames or other personal information
+related to the RKs in this device?</li>
+<li>Any API's or tooling to list, audit, delete or manage RK's on the
+device.</li>
+</ul>
+<p>These are <em>basic</em> things that are critical for users and administrators,
+and they simply do not exist. This complete absence of tooling makes
+RK's effectively useless to most users and deployments since we have no
+method to manage, audit, modify or delete RK's.</p>
+<h3 id="bound-to-device-hardware">Bound to Device / Hardware</h3>
+<p>For the years leading up to 2022, Webauthn and it's design generally
+assumed a one to one relationship between the hardware of an
+authenticator, and the public keys it produced. However, that has now
+changed with the introduction of Apple Passkeys.</p>
+<p>What is meant by &quot;bound to device&quot; is that given a public key, only a
+single hardware authenticator exists that has access to the private key
+to sign something. This generally means that the cryptographic
+operations, and the private key itself, are only ever known to the
+secure enclave of the account.</p>
+<p>Apple's Passkeys change this, allowing a private key to be distributed
+between multiple devices of an Apple account, but also the ability to
+transfer the private key to other nearby devices via airdrop. This means
+the private key is no longer bound to a single physical device.</p>
+<p>When we design a security policy this kind of detail matters, where some
+identity providers can accept the benefits of a cryptographic
+authentication even if the private key is not hardware backed, but other
+identity providers must require that private keys are securely stored in
+hardware.</p>
+<p>The major issue in Webauthn is that the specification does not really
+have the necessary parts in place to manage these effectively.</p>
+<p>As an identity provider there is no way to currently indicate that you
+require a hardware bound credential (or perhaps you want to require
+passkeys only!). Because of this lack of control, Apple's
+implementation relies on another signal - a request for attestation.</p>
+<p>If you do <em>not</em> request attestation, a passkey is created.</p>
+<p>If you do request attestation (direct or indirect), a hardware bound key
+is created.</p>
+<p>When the credential is created, there are a new set of &quot;backup state&quot;
+bits that can indicate if the credential can be moved between devices.
+These are stored in the same set of bits that stores user verification
+bits, meaning that to trust them, you need attestation (which Apple
+can't provide!). At the very least, the attested Apple credentials that
+are hardware bound, do correctly show they are <em>not</em> backup capable and
+are still resident keys.</p>
+<p>Because of this, I expect to see that passkeys and related technology is
+treated in the manner as initially described - a single-factor
+replacement to passwords. Where you need stronger MFA in the style of a
+passwordless credential, it will not currently be possible to achieve
+this with Apple Passkeys.</p>
+<p>It's worth noting that it's unclear how other vendors will act here.
+Some may produce passkeys that are attested, meaning that reliance on
+the backup state bits will become more important, but there is also a
+risk that vendors will not implement this correctly.</p>
+<p>Importantly some testing in pre-release versions showed that if passkeys
+are enabled, and you request an attested credential, the registration
+fails blocking the bound credential creation. This will need retesting
+to be sure of the behaviour in the final iOS 16 release, but this could
+be a show stopper for BYOD users if not fixed. (20220614: We have
+confirmed that passkeys do block the creation of attested device bound
+credentials).</p>
+<h2 id="conclusion">Conclusion</h2>
+<ul>
+<li>
+<p>⚠️ - risks exist</p>
+</li>
+<li>
+<p>✅ - works</p>
+</li>
+<li>
+<p>❌ - broken/untrustworthy</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>                        Security Token   Sec Tok (Corp)        PassKey      Passwordless    PwLess (Corp)
+</span></code></pre>
+</li>
+</ul>
+<hr />
+<p><strong>User Verification</strong>         no / ⚠️          no / ⚠️               no / ⚠️      required / ✅   required / ✅
+<strong>UV Policy</strong>                 no / ✅          no / ✅               no / ✅      no / ✅         maybe / ❌
+<strong>Attestation</strong>               no / ✅          required / ⚠️         no / ✅      required / ⚠️   required / ⚠️
+<strong>Bound to Device / HW</strong>      no / ✅          required / ⚠️         no / ✅      required / ⚠️   required / ⚠️
+<strong>Resident Key</strong>              no / ✅          maybe / ❌            no / ✅      no / ✅         maybe / ❌
+<strong>Authenticator Selection</strong>   maybe / ❌       maybe / ❌            no / ✅      maybe / ❌      required / ❌
+<strong>Update PII</strong>                no / ✅          no / ✅               maybe / ❌   maybe / ❌      maybe / ❌
+<strong>Result</strong>                    ⚠️ 1, 2, 7       ⚠️ 1, 2, 4, 5, 6, 7   ⚠️ 1, 2, 8   ⚠️ 4, 5, 7, 8   ⚠️ 4, 5, 6, 7, 8</p>
+<p>: Webauthn Score Card</p>
+<ol>
+<li>User Verification in discouraged may incorrectly request UV,
+training users that UV prompts are &quot;optional&quot;.</li>
+<li>UV preferred, is bypassable in almost all implementations.</li>
+<li>No method to request a UV policy including min PIN length or UV
+classes.</li>
+<li>Existence of PassKeys on the device account, WILL prevent attested
+credentials from being created.</li>
+<li>Currently relies on vendor specific attestation behaviour.</li>
+<li>No way to validate a resident key is created without assumed vendor
+specific behaviours, or other out of band checks.</li>
+<li>Unable to request constraints for authenticators that are used in
+the interaction.</li>
+<li>Vendors often do not provide the ability to update PII on resident
+keys if used in these contexts</li>
+</ol>
+<p>A very interesting take away from this however, is that &quot;Passkeys&quot;
+that Apple have created, are actually identical to &quot;Security Tokens&quot;
+in how they operate and are validated, meaning that for all intents and
+purposes they are the same scenario just with or without a password as
+the MFA element.</p>
+<p>As we can see, from our use cases all of the scenarios have some kind of
+issues. They vary in severity and whom the issue affects, but they
+generally are all subtle and may have implications on identity
+providers. Generally the &quot;trend&quot; from these issues though, is that it
+feels like the Webauthn WG have abandoned authenticators as &quot;security
+tokens&quot; and are pushing more toward Passkeys as Single Factor or
+Passwordless scenarios. This is probably &quot;a good thing&quot;, but it's not
+been communicated clearly and there are still issues that exist in the
+Passkey and Passwordless scenarios.</p>
+<h2 id="bonus-other-skeletons">Bonus - Other Skeletons</h2>
+<h3 id="javascript-is-considered-trusted">Javascript is considered trusted</h3>
+<p>Because Javascript is considered trusted, a large number of properties
+of Webauthn in its communication are open to tampering which means that
+they infact, can not be trusted. Because we can't trust the JS or the
+user not to tamper with their environment, we need to only trust
+properties that are from the browser or authenticator, and then signed.
+As a result, regardless of whom we are, we need to assume this in our
+threat models that anything on a webpage, can and will be altered. If
+the browser or authenticator are compromised, we have different issues,
+and different defences.</p>
+<h3 id="insecure-crypto">Insecure Crypto</h3>
+<p>Windows Hello especially relies on TPM's that have their attestation
+signed with sha1. Sha1 is considered broken, meaning that it could be
+possible to forge attestations trivially of these credentials. Newer
+TPM's may not have this limitation.</p>
+<h3 id="unclear-what-is-is-not-security-property">Unclear what is / is not security property</h3>
+<p>A large limitation of Webauthn is that it is unclear what <em>is</em> or <em>is
+not</em> a security property within the registration and authentication
+messages. For now, we'll focus on the registration. This is presented
+with all the options and structures expanded that are relevant. Imagine
+you are an identity provider implementing a webauthn library and you see
+the following.</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>PublicKeyCredentialCreationOptions {
+</span><span>    rp = &quot;relying party identifier&quot;
+</span><span>    user {
+</span><span>        id = &quot;user id&quot;
+</span><span>        displayName = &quot;user display name&quot;
+</span><span>    }
+</span><span>    challenge = [0xAB, 0xCD, ... ]
+</span><span>    PublicKeyCredentialParameters = [
+</span><span>        {
+</span><span>            type = &quot;public-key&quot;;
+</span><span>            alg =&quot;ECDSA w/ SHA-256&quot; | ... | &quot;RSASSA-PKCS1-v1_5 using SHA-1&quot;
+</span><span>        }, ...
+</span><span>    ]
+</span><span>    timeout = 60000
+</span><span>    excludeCredentials = [
+</span><span>        {
+</span><span>            type = &quot;public-key&quot;
+</span><span>            id = [0x00, 0x01, ... ]
+</span><span>            transports = [ &quot;usb&quot; | &quot;ble&quot; | &quot;internal&quot; | &quot;nfc&quot;, ... ]
+</span><span>        }
+</span><span>    ]
+</span><span>    authenticatorSelection = {
+</span><span>        authenticatorAttachment = &quot;platform&quot; | &quot;cross-platform&quot;
+</span><span>        userVerification = &quot;discouraged&quot; | default=&quot;preferred&quot; | &quot;required&quot;
+</span><span>        requireResidentKey = boolean
+</span><span>    };
+</span><span>    attestation = default=&quot;none&quot; | &quot;indirect&quot; | &quot;direct&quot; | &quot;enterprise&quot;
+</span><span>    extensions = ...
+</span><span>};
+</span></code></pre>
+<p>Now, reading this structure, which elements do you think are security
+properties that you can rely upon to be strictly enforced, and have
+cryptographic acknowledgement of that being enforced?</p>
+<p>Well, only the following are signed cryptographically by the
+authenticator:</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>PublicKeyCredentialCreationOptions {
+</span><span>    rp = &quot;relying party identifier&quot;
+</span><span>    challenge = [0xAB, 0xCD, ... ]
+</span><span>}
+</span></code></pre>
+<p>We can assert the credential algorithm used by checking it (provided we
+are webauthn level 2 compliant or greater). And we can only check if the
+userVerification happened or not through the returned attestation. This
+means the following aren't signed (for the aware, extensions are
+something we'll cover seperately).</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>PublicKeyCredentialCreationOptions {
+</span><span>    user {
+</span><span>        id = &quot;user id&quot;
+</span><span>        displayName = &quot;user display name&quot;
+</span><span>    }
+</span><span>    timeout = 60000
+</span><span>    excludeCredentials = [
+</span><span>        {
+</span><span>            type = &quot;public-key&quot;
+</span><span>            id = [0x00, 0x01, ... ]
+</span><span>            transports = [ &quot;usb&quot; | &quot;ble&quot; | &quot;internal&quot; | &quot;nfc&quot;, ... ]
+</span><span>        }
+</span><span>    ]
+</span><span>    authenticatorSelection = {
+</span><span>        authenticatorAttachment = &quot;platform&quot; | &quot;cross-platform&quot;
+</span><span>        requireResidentKey = boolean
+</span><span>    };
+</span><span>};
+</span></code></pre>
+<p>This means that from our registration we can not know or assert:</p>
+<ul>
+<li>If an excluded credential was used or not</li>
+<li>If a resident key was really created</li>
+<li>If the created credential is platform or cross platform</li>
+</ul>
+<h3 id="extensions">Extensions</h3>
+<p>Most extensions are not implemented at all in the wild, making them flat
+out useless.</p>
+<p>Many others are client extensions, meaning they are run in your browser
+and are not signed, and can be freely tampered with without verification
+as javascript is trusted.</p>
+<h2 id="extremely-detailed-use-cases">Extremely Detailed Use Cases</h2>
+<p>The use cases we detail here are significantly richer and more detailed
+than the ones in the
+<a href="https://www.w3.org/TR/webauthn-3/#sctn-use-cases">specification</a>
+(2022-04-13).</p>
+<p>Each workflow has two parts. A registration (on-boarding) and
+authentication. Most of the parameters for webauthn revolve around the
+behaviour at registration, with authentication being a much more similar
+work flow regardless of credential type.</p>
+<h3 id="security-token-public-1">Security Token (Public)</h3>
+<p>Registration:</p>
+<ol>
+<li>The user indicates they wish to enroll a security token</li>
+<li>The identity provider issues a challenge</li>
+<li>The browser lists which authenticators attached to the device
+<em>could</em> be registered</li>
+<li>The user interacts with the authenticator (<em>note</em> a pin should not
+be requested, but fingerprint is okay since it's &quot;transparent&quot;)</li>
+<li>The authenticator releases the signed public key</li>
+<li>The authenticator is added to the users account</li>
+</ol>
+<p>Authentication:</p>
+<ol>
+<li>The user enters their username</li>
+<li>The user provides their password and it is validated (<em>note</em> we
+could do this after webauthn)</li>
+<li>The user indicates they wish to use a security token</li>
+<li>The identity provider issues a webauthn challenge, limited by the
+list of authenticators and transports we know are valid for the
+authenticators associated.</li>
+<li>The browser offers the list of authenticators that can proceed</li>
+<li>The user interacts with the authenticator (<em>note</em> a pin should not
+be requested, but fingerprint is okay since it's &quot;transparent&quot;)</li>
+<li>The authenticator releases the signature</li>
+</ol>
+<h3 id="security-token-corporate-1">Security Token (Corporate)</h3>
+<p>Registration:</p>
+<ol>
+<li>The user indicates they wish to enroll a security token</li>
+<li>The identity provider issues a challenge, with a list of what
+transports of <em>known</em> approved authenticators exist that could be
+used.</li>
+<li>The browser lists which authenticators attached to the device
+<em>could</em> be registered, per the transport list</li>
+<li>The user interacts with the authenticator (<em>note</em> a pin should not
+be requested, but fingerprint is okay since it's &quot;transparent&quot;)</li>
+<li>The authenticator releases the signed public key</li>
+<li>The identity provider examines the attestation and asserts it is
+from a trusted manufacturer</li>
+<li>The identity provider examines the enrollment, and asserts it is
+bound to the hardware (IE not a passkey/backup)</li>
+<li>The authenticator is added to the users account</li>
+</ol>
+<p>Authentication:</p>
+<ol>
+<li>As per Security Token (public)</li>
+</ol>
+<h3 id="passkey-public-1">PassKey (Public)</h3>
+<p>Registration:</p>
+<ol>
+<li>The user indicates they wish to enroll a token</li>
+<li>The identity provider issues a challenge</li>
+<li>The browser lists which authenticators attached to the device
+<em>could</em> be registered</li>
+<li>The user interacts with the authenticator (<em>note</em> a pin should not
+be requested, but fingerprint is okay since it's &quot;transparent&quot;)</li>
+<li>The authenticator releases the signed public key</li>
+<li>The authenticator is added to the users account</li>
+</ol>
+<p>Authentication:</p>
+<ol>
+<li>The user enters their username</li>
+<li>The identity provider issues a webauthn challenge, limited by the
+list of authenticators and transports we know are valid for the
+authenticators associated.</li>
+<li>The browser offers the list of authenticators that can proceed</li>
+<li>The user interacts with the authenticator (<em>note</em> a pin should not
+be requested, but fingerprint is okay since it's &quot;transparent&quot;)</li>
+<li>The authenticator releases the signature</li>
+</ol>
+<h3 id="passwordless-public">Passwordless (Public)</h3>
+<p>Registration:</p>
+<ol>
+<li>The user indicates they wish to enroll a security token</li>
+<li>The identity provider issues a challenge</li>
+<li>The browser lists which authenticators attached to the device
+<em>could</em> be registered</li>
+<li>The user interacts with the authenticator - user verification MUST
+be provided i.e. pin or biometric.</li>
+<li>The authenticator releases the signed public key</li>
+<li>The identity provider asserts that user verification occured</li>
+<li>(Optional) The identity provider examines the attestation and
+asserts it is from a trusted manufacturer</li>
+<li>The authenticator is added to the users account</li>
+</ol>
+<p>Authentication:</p>
+<ol>
+<li>The user enters their username</li>
+<li>The identity provider issues a webauthn challenge</li>
+<li>The browser offers the list of authenticators that can proceed</li>
+<li>The user interacts with the authenticator - user verification MUST
+be provided i.e. pin or biometric.</li>
+<li>The authenticator releases the signature</li>
+<li>The identity provider asserts that user verification occured</li>
+</ol>
+<h3 id="passwordless-corporate">Passwordless (Corporate)</h3>
+<p>Registration:</p>
+<ol>
+<li>The user indicates they wish to enroll a security token</li>
+<li>The identity provider issues a challenge, with a list of what
+transports of <em>known</em> approved authenticators exist that could be
+used.</li>
+<li>The browser lists which authenticators attached to the device
+<em>could</em> be registered, per the transport list</li>
+<li>The user interacts with the authenticator - user verification MUST
+be provided i.e. pin or biometric.</li>
+<li>The authenticator releases the signed public key</li>
+<li>The identity provider examines the attestation and asserts it is
+from a trusted manufacturer</li>
+<li>(Optional) The identity provider asserts that a resident key was
+created</li>
+<li>The identity provider examines the enrollment, and asserts it is
+bound to the hardware (IE not a passkey/backup)</li>
+<li>The identity provider asserts that user verification occured</li>
+<li>(Optional) The identity provider asserts the verification method
+complies to policy</li>
+<li>The authenticator is added to the users account</li>
+</ol>
+<p>Authentication:</p>
+<ol>
+<li>As per Passwordless (public)</li>
+</ol>
+<h3 id="usernameless-1">Usernameless</h3>
+<p>Registration</p>
+<ol>
+<li>The user indicates they wish to enroll a security token</li>
+<li>The identity provider issues a challenge, with a list of what
+transports of <em>known</em> approved authenticators exist that could be
+used.</li>
+<li>The browser lists which authenticators attached to the device
+<em>could</em> be registered, per the transport list</li>
+<li>The user interacts with the authenticator - user verification MUST
+be provided i.e. pin or biometric.</li>
+<li>The authenticator releases the signed public key</li>
+<li>The identity provider examines the attestation and asserts it is
+from a trusted manufacturer</li>
+<li>The identity provider asserts that a resident key was created</li>
+<li>The identity provider examines the enrollment, and asserts it is
+bound to the hardware (IE not a passkey/backup)</li>
+<li>The identity provider asserts that user verification occured</li>
+<li>(Optional) The identity provider asserts the verification method
+complies to policy</li>
+<li>The authenticator is added to the users account</li>
+</ol>
+<p>Authentication:</p>
+<ol>
+<li>The identity provider issues a webauthn challenge</li>
+<li>The browser offers the list of authenticators that can proceed</li>
+<li>The user interacts with the authenticator - user verification MUST
+be provided i.e. pin or biometric.</li>
+<li>The authenticator releases the signature</li>
+<li>The identity provider asserts that user verification occured</li>
+<li>The identity provider extracts and uses the provided username that
+was supplied</li>
+</ol>
+
+    </div>
+</article>
+
+        </main>
+        
+        <footer>
+            
+            <div class="border"></div>
+            <div class="footer">
+                <small class="footer-left">
+                    Copyright &copy; William Brown
+                </small>
+                <small class="footer-right">
+                    Powered by <a href="https://www.getzola.org">Zola</a> | Theme <a href="https://github.com/barlog-m/oceanic-zen">Oceanic Zen</a>
+                </small>
+            </div>
+        
+        </footer>
+    
+        </div>
+    </body>
+</html>

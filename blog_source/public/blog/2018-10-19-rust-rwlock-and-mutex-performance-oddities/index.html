@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+        <meta name="description" content="Firstyear&#x27;s blog">
+        
+
+        <title>Firstyear&#x27;s blog-a-log</title>
+
+        
+          <link rel="alternate" type="application/rss+xml" title="RSS" href="https://fy.blackhats.net.au/rss.xml">
+        
+
+        
+            <link rel="stylesheet" href="https://fy.blackhats.net.au/theme.css">
+        
+        
+    </head>
+    <body>
+        <div class="content">
+        
+        
+            <header>
+                <div class="header-left">
+                    <a href="https:&#x2F;&#x2F;fy.blackhats.net.au" class="logo">Firstyear&#x27;s blog-a-log</a>
+                </div>
+                <div class="header-right">
+                    <nav itemscope itemtype="http://schema.org/SiteNavigationElement">
+                      <ul>
+                        
+                        
+                            
+                            <li class="nav">
+                                <a itemprop="url" href="https://fy.blackhats.net.au/blog/">
+                                    <span itemprop="name">Blog</span>
+                                </a>
+                            </li>
+                        
+                            
+                            <li class="nav">
+                                <a itemprop="url" href="https://fy.blackhats.net.au/pages/">
+                                    <span itemprop="name">Pages</span>
+                                </a>
+                            </li>
+                        
+                        
+                        <li class="nav">
+                            <a itemprop="url" href="https://github.com/firstyear">
+                                <img class="icon" src="https:&#x2F;&#x2F;fy.blackhats.net.au/icons/github.svg" alt="Github">
+                            </a>
+                        </li>
+                        
+                        <li class="nav">
+                            <a itemprop="url" href="/rss.xml">
+                                <img class="icon" src="https:&#x2F;&#x2F;fy.blackhats.net.au/rss-logo.png" alt="rss">
+                            </a>
+                        </li>
+                      </ul>
+                    </nav>
+                </div>
+            </header>
+        
+        
+        <main>
+            
+<article itemscope itemtype="http://schema.org/BlogPosting">
+    <div itemprop="headline">
+        <h1>Rust RwLock and Mutex Performance Oddities</h1>
+        <div class="border"></div>
+        <time datetime="2018-10-19" class="date" itemprop="datePublished">
+            19 Oct 2018
+        </time>
+    </div>
+    <div itemprop="articleBody">
+        <h1 id="rust-rwlock-and-mutex-performance-oddities">Rust RwLock and Mutex Performance Oddities</h1>
+<p>Recently I have been working on Rust datastructures once again. In the
+process I wanted to test how my work performed compared to a standard
+library RwLock and Mutex. On my home laptop the RwLock was 5 times
+faster, the Mutex 2 times faster than my work.</p>
+<p>So checking out my code on my workplace workstation and running my bench
+marks I noticed the Mutex was the same - 2 times faster. However, the
+RwLock was 4000 times slower.</p>
+<h2 id="what-s-a-rwlock-and-mutex-anyway">What's a RwLock and Mutex anyway?</h2>
+<p>In a multithreaded application, it's important that data that needs to
+be shared between threads is consistent when accessed. This consistency
+is not just logical consistency of the data, but affects hardware
+consistency of the memory in cache. As a simple example, let's examine
+an update to a bank account done by two threads:</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>acc = 10
+</span><span>deposit = 3
+</span><span>withdrawl = 5
+</span><span>
+</span><span>[ Thread A ]            [ Thread B ]
+</span><span>acc = load_balance()    acc = load_balance()
+</span><span>acc = acc + deposit     acc = acc - withdrawl
+</span><span>store_balance(acc)      store_balance(acc)
+</span></code></pre>
+<p>What will the account balance be at the end? The answer is &quot;it
+depends&quot;. Because threads are working in parallel these operations
+could happen:</p>
+<ul>
+<li>At the same time</li>
+<li>Interleaved (various possibilities)</li>
+<li>Sequentially</li>
+</ul>
+<p>This isn't very healthy for our bank account. We could lose our
+deposit, or have invalid data. Valid outcomes at the end are that acc
+could be 13, 5, 8. Only one of these is correct.</p>
+<p>A mutex protects our data in multiple ways. It provides hardware
+consistency operations so that our cpus cache state is valid. It also
+allows only a single thread inside of the mutex at a time so we can
+linearise operations. Mutex comes from the word &quot;Mutual Exclusion&quot;
+after all.</p>
+<p>So our example with a mutex now becomes:</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>acc = 10
+</span><span>deposit = 3
+</span><span>withdrawl = 5
+</span><span>
+</span><span>[ Thread A ]            [ Thread B ]
+</span><span>mutex.lock()            mutex.lock()
+</span><span>acc = load_balance()    acc = load_balance()
+</span><span>acc = acc + deposit     acc = acc - withdrawl
+</span><span>store_balance(acc)      store_balance(acc)
+</span><span>mutex.unlock()          mutex.unlock()
+</span></code></pre>
+<p>Now only one thread will access our account at a time: The other thread
+will block until the mutex is released.</p>
+<p>A RwLock is a special extension to this pattern. Where a mutex
+guarantees single access to the data in a read and write form, a RwLock
+(Read Write Lock) allows multiple read-only views OR single read and
+writer access. Importantly when a writer wants to access the lock, all
+readers must complete their work and &quot;drain&quot;. Once the write is
+complete readers can begin again. So you can imagine it as:</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>Time -&gt;
+</span><span>
+</span><span>T1: -- read --&gt; x
+</span><span>T3:     -- read --&gt; x                x -- read --&gt;
+</span><span>T3:     -- read --&gt; x                x -- read --&gt;
+</span><span>T4:                   | -- write -- |
+</span><span>T5:                                  x -- read --&gt;
+</span></code></pre>
+<h2 id="test-case-for-the-rwlock">Test Case for the RwLock</h2>
+<p>My test case is simple. Given a set of 12 threads, we spawn:</p>
+<ul>
+<li>8 readers. Take a read lock, read the value, release the read lock.
+If the value == target then stop the thread.</li>
+<li>4 writers. Take a write lock, read the value. Add one and write.
+Continue until value == target then stop.</li>
+</ul>
+<p>Other conditions:</p>
+<ul>
+<li>The test code is identical between Mutex/RwLock (beside the locking
+costruct)</li>
+<li>--release is used for compiler optimisations</li>
+<li>The test hardware is as close as possible (i7 quad core)</li>
+<li>The tests are run multiple time to construct averages of the
+performance</li>
+</ul>
+<p>The idea being that X target number of writes must occur, while many
+readers contend as fast as possible on the read. We are pressuring the
+system of choice between &quot;many readers getting to read fast&quot; or
+&quot;writers getting priority to drain/block readers&quot;.</p>
+<p>On OSX given a target of 500 writes, this was able to complete in 0.01
+second for the RwLock. (MBP 2011, 2.8GHz)</p>
+<p>On Linux given a target of 500 writes, this completed in 42 seconds.
+This is a 4000 times difference. (i7-7700 CPU @ 3.60GHz)</p>
+<p>All things considered the Linux machine should have an advantage - it's
+a desktop processor, of a newer generation, and much faster clock speed.
+So why is the RwLock performance so much different on Linux?</p>
+<h2 id="to-the-source-code">To the source code!</h2>
+<p>Examining the <a href="https://github.com/rust-lang/rust/blob/master/src/libstd/sys/unix/rwlock.rs">Rust source
+code</a>
+, many OS primitives come from libc. This is because they require OS
+support to function. RwLock is an example of this as is mutex and many
+more. The unix implementation for Rust consumes the pthread_rwlock
+primitive. This means we need to read man pages to understand the
+details of each.</p>
+<p>OSX uses FreeBSD userland components, so we can assume they follow the
+BSD man pages. In the FreeBSD man page for pthread_rwlock_rdlock we see:</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>IMPLEMENTATION NOTES
+</span><span>
+</span><span> To prevent writer starvation, writers are favored over readers.
+</span></code></pre>
+<p>Linux however, uses different constructs. Looking at the Linux man page:</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>PTHREAD_RWLOCK_PREFER_READER_NP
+</span><span>  This is the default.  A thread may hold multiple read locks;
+</span><span>  that is, read locks are recursive.  According to The Single
+</span><span>  Unix Specification, the behavior is unspecified when a reader
+</span><span>  tries to place a lock, and there is no write lock but writers
+</span><span>  are waiting.  Giving preference to the reader, as is set by
+</span><span>  PTHREAD_RWLOCK_PREFER_READER_NP, implies that the reader will
+</span><span>  receive the requested lock, even if a writer is waiting.  As
+</span><span>  long as there are readers, the writer will be starved.
+</span></code></pre>
+<h2 id="reader-vs-writer-preferences">Reader vs Writer Preferences?</h2>
+<p>Due to the policy of a RwLock having multiple readers OR a single
+writer, a preference is given to one or the other. The preference
+basically boils down to the choice of:</p>
+<ul>
+<li>Do you respond to write requests and have new readers block?</li>
+<li>Do you favour readers but let writers block until reads are
+complete?</li>
+</ul>
+<p>The difference is that on a <em>read</em> heavy workload, a write will continue
+to be delayed so that readers can begin <em>and</em> complete (up until some
+threshold of time). However, on a writer focused workload, you allow
+readers to stall so that writes can complete sooner.</p>
+<p>On Linux, they choose a reader preference. On OSX/BSD they choose a
+writer preference.</p>
+<p>Because our test is about how fast can a target of write operations
+complete, the writer preference of BSD/OSX causes this test to be much
+faster. Our readers still &quot;read&quot; but are giving way to writers, which
+completes our test sooner.</p>
+<p>However, the linux &quot;reader favour&quot; policy means that our readers
+(designed for creating conteniton) are allowed to skip the queue and
+block writers. This causes our writers to starve. Because the test is
+only concerned with writer completion, the result is (correctly) showing
+our writers are heavily delayed - even though many more readers are
+completing.</p>
+<p>If we were to track the number of reads that completed, I am sure we
+would see a large factor of difference where Linux has allow many more
+readers to complete than the OSX version.</p>
+<p>Linux pthread_rwlock does allow you to change this policy
+(PTHREAD_RWLOCK_PREFER_WRITER_NP) but this isn't exposed via Rust. This
+means today, you accept (and trust) the OS default. Rust is just unaware
+at compile time and run time that such a different policy exists.</p>
+<h2 id="conclusion">Conclusion</h2>
+<p>Rust like any language consumes operating system primitives. Every OS
+implements these differently and these differences in OS policy can
+cause real performance differences in applications between development
+and production.</p>
+<p>It's well worth understanding the constructions used in programming
+languages and how they affect the performance of your application - and
+the decisions behind those tradeoffs.</p>
+<p>This isn't meant to say &quot;don't use RwLock in Rust on Linux&quot;. This is
+meant to say &quot;choose it when it makes sense - on read heavy loads,
+understanding writers will delay&quot;. For my project (A copy on write
+cell) I will likely conditionally compile rwlock on osx, but mutex on
+linux as I require a writer favoured behaviour. There are certainly
+applications that will benefit from the reader priority in linux
+(especially if there is low writer volume and low penalty to delayed
+writes).</p>
+
+    </div>
+</article>
+
+        </main>
+        
+        <footer>
+            
+            <div class="border"></div>
+            <div class="footer">
+                <small class="footer-left">
+                    Copyright &copy; William Brown
+                </small>
+                <small class="footer-right">
+                    Powered by <a href="https://www.getzola.org">Zola</a> | Theme <a href="https://github.com/barlog-m/oceanic-zen">Oceanic Zen</a>
+                </small>
+            </div>
+        
+        </footer>
+    
+        </div>
+    </body>
+</html>

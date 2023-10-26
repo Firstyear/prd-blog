@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+        <meta name="description" content="Firstyear&#x27;s blog">
+        
+
+        <title>Firstyear&#x27;s blog-a-log</title>
+
+        
+          <link rel="alternate" type="application/rss+xml" title="RSS" href="https://fy.blackhats.net.au/rss.xml">
+        
+
+        
+            <link rel="stylesheet" href="https://fy.blackhats.net.au/theme.css">
+        
+        
+    </head>
+    <body>
+        <div class="content">
+        
+        
+            <header>
+                <div class="header-left">
+                    <a href="https:&#x2F;&#x2F;fy.blackhats.net.au" class="logo">Firstyear&#x27;s blog-a-log</a>
+                </div>
+                <div class="header-right">
+                    <nav itemscope itemtype="http://schema.org/SiteNavigationElement">
+                      <ul>
+                        
+                        
+                            
+                            <li class="nav">
+                                <a itemprop="url" href="https://fy.blackhats.net.au/blog/">
+                                    <span itemprop="name">Blog</span>
+                                </a>
+                            </li>
+                        
+                            
+                            <li class="nav">
+                                <a itemprop="url" href="https://fy.blackhats.net.au/pages/">
+                                    <span itemprop="name">Pages</span>
+                                </a>
+                            </li>
+                        
+                        
+                        <li class="nav">
+                            <a itemprop="url" href="https://github.com/firstyear">
+                                <img class="icon" src="https:&#x2F;&#x2F;fy.blackhats.net.au/icons/github.svg" alt="Github">
+                            </a>
+                        </li>
+                        
+                        <li class="nav">
+                            <a itemprop="url" href="/rss.xml">
+                                <img class="icon" src="https:&#x2F;&#x2F;fy.blackhats.net.au/rss-logo.png" alt="rss">
+                            </a>
+                        </li>
+                      </ul>
+                    </nav>
+                </div>
+            </header>
+        
+        
+        <main>
+            
+<article itemscope itemtype="http://schema.org/BlogPosting">
+    <div itemprop="headline">
+        <h1>Rust 2020 - helping to get rust deployed</h1>
+        <div class="border"></div>
+        <time datetime="2019-11-28" class="date" itemprop="datePublished">
+            28 Nov 2019
+        </time>
+    </div>
+    <div itemprop="articleBody">
+        <h1 id="rust-2020-helping-to-get-rust-deployed">Rust 2020 - helping to get rust deployed</h1>
+<p>This is my contribution to Rust 2020, where community members put
+forward ideas on what they thing Rust should aim to achieve in 2020.</p>
+<p>In my view, Rust has had an amazing adoption by developers, and is great
+if you are in a position to deploy it in your own infrastructure, but we
+have yet to really see Rust make it to broad low-level components (IE in
+a linux distro or other infrastructure).</p>
+<p>As someone who works on &quot;enterprise&quot; software (389-ds) and my own IDM
+project (kanidm), there is a need to have software packaged and
+distributed. We can not ask our consumers to build and compile these
+tools. One could view it as a chain, where I develop software in a
+language, it's packaged for a company (like SUSE), and then consumed by
+a customer (could be anyone!) who provides a service to others (indirect
+users).</p>
+<p>Rust however has always been modeled that there is no &quot;middle&quot;
+section. You have either a developer who's intent is to develop for
+other developers. This is where Rust ideas like crates.io becomes
+involved. Alternately, you have a larger example in firefox, where
+developers build a project and can &quot;bundle&quot; everything into a whole
+unit that is then distributed directly to customers.</p>
+<p>The major difference is that in the intermediate distribution case, we
+have to take on different responsibilities such as security auditing,
+building, ensuring dependencies exist etc.</p>
+<p>So this leads me to:</p>
+<h2 id="1-cargo-vendor-needs-some-love">1: Cargo Vendor Needs Some Love</h2>
+<p>Cargo vendor today is quite confusing in some scenarios, and it's not
+clear how to have it work for projects that require offline builds. I
+have raised issues about this, but largely they have been un-acted upon.</p>
+<h2 id="2-cargo-is-difficult-to-use-in-mixed-language-projects">2: Cargo is Difficult to Use in Mixed Language Projects</h2>
+<p>A large value proposition of Rust is the ability to use it with FFI and
+C. This is great if you say have cargo compile your C code for you.</p>
+<p>But most major existing projects don't. They use autotools, cmake, or
+maybe even meson or more esoteric, waf (looking at you samba). Cargo's
+extreme opinionation in this area makes it extremely difficult to
+integrate Rust into an existing build system reliably. It's hard to
+point to one fault, as much as a broader &quot;lack of concern&quot; in the
+space, and I think cargo needs to evolve improvements to help allow Rust
+to be used from other build tools.</p>
+<h2 id="3-rust-moves-too-fast">3: Rust Moves Too Fast</h2>
+<p>A lot of &quot;slower&quot; enterprise companies want to move slowly, including
+compiler versions. Admittedly, this conservative behaviour is because of
+the historical instability of gcc versions and how it can change or
+affect your code between releases. Rust doesn't suffer this, but people
+are still wary of fast version changes. This means Rustc + Cargo will
+get pinned to some version that may be 6 months old.</p>
+<p>However crate authors don't consider this - they will use the latest
+and greatest features from stable (and sometimes still nightly ...
+grrr) in releases. Multiple times I have found that on my development
+environment even with a 3 month old compiler, dependencies won't build.</p>
+<p>Compounding this, crates.io doesn't distinguish a security release from
+a feature one. Crates also encourages continuall version bumping, rather
+than maintenence of versioned branches. IE version 0.4.3 of a crate with
+a security fix will become 0.4.4, but then a feature update to include
+try_from may go to 0.4.5 as it &quot;adds&quot; to the api, or they use it
+internally as a cleanup.</p>
+<p>Part of this issue is that Rust applications need to be treated closer
+to docker, as static whole units where only the resulting binary is
+supported rather than the toolchain that built it. But that only works
+on pure Rust applications - any mixed C + Rust application will hit this
+issue due to the difference between a system Rust version and what crate
+dependencies publish.</p>
+<p>So I think that from this it leads to:</p>
+<h2 id="3-1-crates-need-to-indicate-a-minimum-supported-compiler-version">3.1: Crates need to indicate a minimum supported compiler version</h2>
+<p>Rust has &quot;toyed&quot; with the idea of editions, but within 2018 we've
+seen new features like maybeuninit and try_from land, which within an
+&quot;edition&quot; caused crates to stop worked on older compilers.</p>
+<p>As a result, editions I think is &quot;too broad&quot; and people will fear
+incrementing it, and Rust will add features without changing edition
+anyway. Instead Rust needs to consider following up on the minimum
+supported rust version flag RFC. Rust has made it pretty clear the only
+&quot;edition&quot; flag that matters is the rust compiler version based on
+crate developers and what they are releasing.</p>
+<h2 id="3-2-rust-needs-to-think-what-s-our-end-goal">3.2: Rust Needs to Think &quot;What's Our End Goal&quot;</h2>
+<p>Rust is still moving incredibly fast, and I think in a way we need to
+ask ... when will Rust be finished? When will it as a language go from
+continually rapid growth to stable and known feature sets? The idea of
+Rust editions acts as though this has happened (saying we change only
+every few years) when this is clearly not the case. Rust is evolving
+release-on-release, every 6 weeks.</p>
+<h2 id="4-zero-cost-needs-to-factor-in-human-cost">4: Zero Cost Needs to Factor in Human Cost</h2>
+<p>My final wish for Rust is that sometimes we are so obsessed with the
+technical desire for zero cost abstraction, that we forget the high
+human cost and barriers that can exist as a result making feature
+adoption challenging. Rust has had a great community that treats people
+very well, and I think sometimes we need to extend that into feature
+development, to really consider the human cognitive cost of a feature.</p>
+<p>Summarised - what's the benefit of a zero cost abstraction if people
+can not work out how to use it?</p>
+<h2 id="summary">Summary</h2>
+<p>I want to see Rust become a major part of operating systems and how we
+build computer systems, but I think that we need to pace ourselves,
+improve our tooling, and have some better ideas around what Rust should
+look like.</p>
+
+    </div>
+</article>
+
+        </main>
+        
+        <footer>
+            
+            <div class="border"></div>
+            <div class="footer">
+                <small class="footer-left">
+                    Copyright &copy; William Brown
+                </small>
+                <small class="footer-right">
+                    Powered by <a href="https://www.getzola.org">Zola</a> | Theme <a href="https://github.com/barlog-m/oceanic-zen">Oceanic Zen</a>
+                </small>
+            </div>
+        
+        </footer>
+    
+        </div>
+    </body>
+</html>

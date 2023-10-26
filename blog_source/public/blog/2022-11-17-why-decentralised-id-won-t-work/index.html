@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+        <meta name="description" content="Firstyear&#x27;s blog">
+        
+
+        <title>Firstyear&#x27;s blog-a-log</title>
+
+        
+          <link rel="alternate" type="application/rss+xml" title="RSS" href="https://fy.blackhats.net.au/rss.xml">
+        
+
+        
+            <link rel="stylesheet" href="https://fy.blackhats.net.au/theme.css">
+        
+        
+    </head>
+    <body>
+        <div class="content">
+        
+        
+            <header>
+                <div class="header-left">
+                    <a href="https:&#x2F;&#x2F;fy.blackhats.net.au" class="logo">Firstyear&#x27;s blog-a-log</a>
+                </div>
+                <div class="header-right">
+                    <nav itemscope itemtype="http://schema.org/SiteNavigationElement">
+                      <ul>
+                        
+                        
+                            
+                            <li class="nav">
+                                <a itemprop="url" href="https://fy.blackhats.net.au/blog/">
+                                    <span itemprop="name">Blog</span>
+                                </a>
+                            </li>
+                        
+                            
+                            <li class="nav">
+                                <a itemprop="url" href="https://fy.blackhats.net.au/pages/">
+                                    <span itemprop="name">Pages</span>
+                                </a>
+                            </li>
+                        
+                        
+                        <li class="nav">
+                            <a itemprop="url" href="https://github.com/firstyear">
+                                <img class="icon" src="https:&#x2F;&#x2F;fy.blackhats.net.au/icons/github.svg" alt="Github">
+                            </a>
+                        </li>
+                        
+                        <li class="nav">
+                            <a itemprop="url" href="/rss.xml">
+                                <img class="icon" src="https:&#x2F;&#x2F;fy.blackhats.net.au/rss-logo.png" alt="rss">
+                            </a>
+                        </li>
+                      </ul>
+                    </nav>
+                </div>
+            </header>
+        
+        
+        <main>
+            
+<article itemscope itemtype="http://schema.org/BlogPosting">
+    <div itemprop="headline">
+        <h1>Why Decentralised ID Won&#x27;t Work</h1>
+        <div class="border"></div>
+        <time datetime="2022-11-17" class="date" itemprop="datePublished">
+            17 Nov 2022
+        </time>
+    </div>
+    <div itemprop="articleBody">
+        <h1 id="why-decentralised-id-won-t-work">Why Decentralised ID Won't Work</h1>
+<p>Thanks to a number of <a href="https://www.abc.net.au/news/2022-09-27/optus-data-breach-cyber-attack-hacker-ransom-sorry/101476316">high
+profile</a>
+and damaging <a href="https://www.abc.net.au/news/2022-11-09/medibank-data-release-dark-web-hackers/101632088">security
+incidents</a>
+in Australia people have once again been discussing Decentralised ID
+(DID). As someone who has spent most of the career working on identity
+management, I'm here to tell you why <em>it will not work</em>.</p>
+<h2 id="what-is-decentralised-id-trying-to-do">What Is Decentralised ID Trying To Do?</h2>
+<p>To understand what DID is trying to achieve we have to look at what a
+&quot;centralised&quot; system is doing.</p>
+<p>Lets consider an account holder like Google. You create an account with
+them, and you store your name and some personal data, as well as a
+method of authentication, such as a password and OTP, or Webauthn.</p>
+<p>Now you go to some other website and it says &quot;login with Google&quot;. That
+site redirects to Google, who authenticates you, and then the website
+trusts Google to say &quot;yes or no&quot; that &quot;you are who you say you are&quot;.
+You can consent to this website seeing details about you like an email
+address or name.</p>
+<p>A decentralised system works differently. You present a signed metadata
+statement about yourself to the website, and that cryptograhic signature
+can be traced back to your signing private key. This cryptograhic proof
+attests that you are the profile/account holder.</p>
+<h2 id="what-does-did-claim-to-achieve">What Does DID Claim To Achieve?</h2>
+<ul>
+<li>That you are the only authority who can modify your own identity and
+data.</li>
+<li>You control who can access (view) that data.</li>
+<li>Cryptographic verification that an identity is who they claim to be.</li>
+</ul>
+<h2 id="this-will-never-work">This Will Never Work</h2>
+<h3 id="no-consideration-of-human-behaviour">No Consideration Of Human Behaviour</h3>
+<p>DID systems do not consider human behaviour in their design.</p>
+<p>I can not put it better, than <a href="https://bradleymonk.com/w/images/9/91/The_truth_about_Unix_Don_Norman.pdf">Don Norman, in his paper &quot;The Truth
+about
+Unix&quot;</a>.</p>
+<p><em>System designers take note. Design the system for the person, not for
+the computer, not even for yourself. People are also information
+processing systems, with varying degrees of knowledge, varying degrees
+of experience. Friendly systems treat users as intelligent adults who,
+like normal adults, are forgetful, distracted, thinking of other things,
+and not quite as knowledgeable about the world as they themselves would
+like to be.</em></p>
+<p>People are not &quot;stupid&quot;. They are distracted and busy. This means they
+will lose their keys. They will be affected by <a href="https://www.abc.net.au/news/2022-02-28/qld-flood-brisbane-residents-assess-damage/100869034">events out of their
+control</a>.</p>
+<p>In a centralised system there are ways to recover your account when you
+lose your password/keys. There are systems to verify you, and help you
+restore from damage.</p>
+<p>In a DID system, if you lose your key, you lose everything. There is no
+recovery process.</p>
+<h3 id="gpg-already-failed">GPG Already Failed</h3>
+<p>DID is effectively a modern rehash of GPG - including it's problems.
+<a href="https://latacora.micro.blog/2019/07/16/the-pgp-problem.html">Many others
+have</a>
+lamented <a href="https://words.filippo.io/giving-up-on-long-term-pgp/">at length
+about</a>. These
+people have spent their lives studying cryptograhpic systems, and they
+have given up on it. Pretty much every issue they report here, applies
+to DID and all it's topics.</p>
+<h3 id="long-term-keys">Long Term Keys</h3>
+<p>One of the biggest issues in DID is that the identity is rooted in a
+private key that is held by an individual. This encourages long-term
+keys, which have a large blast radius (complete take over of your
+identity). This causes dramatic failure modes. To further this, it also
+prevents improvement of the cryptograhic quality of the key. When I
+started in IT RSA 1024 bit was secure. Now it's not. Keys need to be
+short lived and disposable.</p>
+<h3 id="you-won-t-own-your-own-data">You Won't Own Your Own Data</h3>
+<p>When you send a DID signed document to a provider, lets say your Bank to
+open a new account, what do you think they will do with that data?</p>
+<p>They won't destroy it and ask you for it every time you need it. They
+will store a copy on their servers for their records. There are often
+<em>extremely good reasons</em> they need to store that data as well.</p>
+<p>Which means that your signed document of data is performative, and the
+data will just be used and extracted as usual.</p>
+<p>DID does not solve the problem of data locality or retention. Regulation
+and oversight does.</p>
+<h3 id="trust-is-a-social-problem">Trust Is A Social Problem</h3>
+<p>You can't solve social problems with technology.</p>
+<p>The whole point of DID is about solving <em>trust</em>. Who do you <em>trust</em> to
+store (modify) or view your personal information?</p>
+<p>In a DID world, you need to be &quot;your own personal central data
+authority&quot; (because apparently you can't trust anyone else). That
+means you need to store your data, protect it from destruction and
+secure it from compromise.</p>
+<p>In the current world, for all of Google's and many other companies
+flaws, they still have dedicated security teams, specialists in risk
+analysis, and people who have dedicated themselves to protecting your
+accounts and your data.</p>
+<p>The problem is that most software engineers fall into the fallacy that
+because they are an expert in their subject matter, they are now an
+expert on identity and computer security. They are likely not security
+experts (the same people love to mansplain authentication to me
+frequently, and generally this only serves to inform me that they
+actually do not understand authentication).</p>
+<p>Why should anyone trust your DID account, when you likely have no data
+hygiene and insecure key storage? Why should a Bank? Why should Google?
+Your workplace? No one has a reason to trust you and your signatures.</p>
+<p>Yes there are problems with centralised identity systems - but DID does
+not address them, and actually may make them significantly worse.</p>
+<h3 id="your-verification-mark-means-nothing">Your Verification Mark Means Nothing</h3>
+<p>Some DID sites claim things like &quot;being able to prove ownership of an
+account&quot;.</p>
+<p>How does this proof work? Can people outside of the DID community
+explain these proofs? Can your accountant? You Taxi driver?</p>
+<p>What this will boil down to a green tick that people will trust. It
+doesn't take a lot of expertise to realise that the source code for
+this tick can be faked pretty easily since it's simply a boolean check.</p>
+<p>These verification marks come back to &quot;trust&quot;, which DID does not
+solve. You need to <em>trust</em> the site you are viewing to render things in
+a certain way, the same way you have to <em>trust</em> them not to go and
+impersonate you.</p>
+<p>Even if you made a DID private key with ED25519 and signed some toots,
+Mastodon instance owners could still impersonate you if they wanted.</p>
+<p>And to further this, how is the average person expected to verify your
+signatures? HTTPS has already shown that the majority of the public does
+not have the specific indepth knowledge to assess the legitimacy of a
+certificate authority. How are we expecting people to now verify every
+other person as their own CA?</p>
+<p>The concept of web of trust is a performative act.</p>
+<p>Even <a href="https://xkcd.com/1181/">XKCD nailed this</a>.</p>
+<h2 id="conclusion">Conclusion</h2>
+<p>DID won't work.</p>
+<p>There are certainly issues with central authorities, and DID solves none
+of them.</p>
+<p>It is similar to <a href="/blog/html/2021/05/12/compiler_bootstrapping_can_we_trust_rust.html">bootstraping
+compilers</a>.
+It is a problem that is easy to articulate, emotionally catchy, requires
+widespread boring social solutions, but tech bros try to solve it
+unendingly with hyper-complex-technical solutions that won't work.</p>
+<p>You're better off just adding FIDO2 keys to your accounts and moving
+on.</p>
+
+    </div>
+</article>
+
+        </main>
+        
+        <footer>
+            
+            <div class="border"></div>
+            <div class="footer">
+                <small class="footer-left">
+                    Copyright &copy; William Brown
+                </small>
+                <small class="footer-right">
+                    Powered by <a href="https://www.getzola.org">Zola</a> | Theme <a href="https://github.com/barlog-m/oceanic-zen">Oceanic Zen</a>
+                </small>
+            </div>
+        
+        </footer>
+    
+        </div>
+    </body>
+</html>

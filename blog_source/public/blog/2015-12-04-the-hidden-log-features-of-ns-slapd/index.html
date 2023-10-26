@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+        <meta name="description" content="Firstyear&#x27;s blog">
+        
+
+        <title>Firstyear&#x27;s blog-a-log</title>
+
+        
+          <link rel="alternate" type="application/rss+xml" title="RSS" href="https://fy.blackhats.net.au/rss.xml">
+        
+
+        
+            <link rel="stylesheet" href="https://fy.blackhats.net.au/theme.css">
+        
+        
+    </head>
+    <body>
+        <div class="content">
+        
+        
+            <header>
+                <div class="header-left">
+                    <a href="https:&#x2F;&#x2F;fy.blackhats.net.au" class="logo">Firstyear&#x27;s blog-a-log</a>
+                </div>
+                <div class="header-right">
+                    <nav itemscope itemtype="http://schema.org/SiteNavigationElement">
+                      <ul>
+                        
+                        
+                            
+                            <li class="nav">
+                                <a itemprop="url" href="https://fy.blackhats.net.au/blog/">
+                                    <span itemprop="name">Blog</span>
+                                </a>
+                            </li>
+                        
+                            
+                            <li class="nav">
+                                <a itemprop="url" href="https://fy.blackhats.net.au/pages/">
+                                    <span itemprop="name">Pages</span>
+                                </a>
+                            </li>
+                        
+                        
+                        <li class="nav">
+                            <a itemprop="url" href="https://github.com/firstyear">
+                                <img class="icon" src="https:&#x2F;&#x2F;fy.blackhats.net.au/icons/github.svg" alt="Github">
+                            </a>
+                        </li>
+                        
+                        <li class="nav">
+                            <a itemprop="url" href="/rss.xml">
+                                <img class="icon" src="https:&#x2F;&#x2F;fy.blackhats.net.au/rss-logo.png" alt="rss">
+                            </a>
+                        </li>
+                      </ul>
+                    </nav>
+                </div>
+            </header>
+        
+        
+        <main>
+            
+<article itemscope itemtype="http://schema.org/BlogPosting">
+    <div itemprop="headline">
+        <h1>The hidden log features of ns-slapd</h1>
+        <div class="border"></div>
+        <time datetime="2015-12-04" class="date" itemprop="datePublished">
+            04 Dec 2015
+        </time>
+    </div>
+    <div itemprop="articleBody">
+        <h1 id="the-hidden-log-features-of-ns-slapd">The hidden log features of ns-slapd</h1>
+<p>This week I discovered (Or dug up: ns-slapd is old) that we have two
+hidden logging features. In fact searching for one of them yields no
+results, searching the other shows a document that says it's
+undocumented.</p>
+<p>This post hopes to rectify that.</p>
+<p>In ns-slapd, during a normal operation you can see what a connected
+client is searching in the access log, or what they are changing based
+on the audit log.</p>
+<p>If on a configuration for a plugin you need to diagnose these operations
+you can't do this... At least that's what the documentation tells
+you.</p>
+<p>You can enable logging for search operations on a plugin through the
+value:</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>nsslapd-logAccess: on
+</span></code></pre>
+<p>You can enabled logging for mod/modrdn/del/add operations on a plugin
+through the value:</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>nsslapd-logAudit: on
+</span></code></pre>
+<p>This will yield logs such as:</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>time: 20151204143353
+</span><span>dn: uid=test1,ou=People,dc=example,dc=com
+</span><span>result: 0
+</span><span>changetype: modify
+</span><span>delete: memberOf
+</span><span>-
+</span><span>replace: modifiersname
+</span><span>modifiersname: cn=MemberOf Plugin,cn=plugins,cn=config
+</span><span>-
+</span><span>replace: modifytimestamp
+</span><span>modifytimestamp: 20151204043353Z
+</span><span>-
+</span><span>
+</span><span>time: 20151204143353
+</span><span>dn: cn=Test Managers,ou=Groups,dc=example,dc=com
+</span><span>result: 0
+</span><span>changetype: modify
+</span><span>delete: member
+</span><span>member: uid=test1,ou=People,dc=example,dc=com
+</span><span>-
+</span><span>replace: modifiersname
+</span><span>modifiersname: cn=directory manager
+</span><span>-
+</span><span>replace: modifytimestamp
+</span><span>modifytimestamp: 20151204043353Z
+</span><span>-
+</span></code></pre>
+<p>Finally, a new option has been added that will enable both on all
+plugins in the server.</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>nsslapd-plugin-logging: on
+</span></code></pre>
+<p>All of these configurations are bound by and respect the following
+settings:</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>nsslapd-accesslog-logging-enabled
+</span><span>nsslapd-auditlog-logging-enabled
+</span><span>nsslapd-auditfaillog-logging-enabled
+</span></code></pre>
+
+    </div>
+</article>
+
+        </main>
+        
+        <footer>
+            
+            <div class="border"></div>
+            <div class="footer">
+                <small class="footer-left">
+                    Copyright &copy; William Brown
+                </small>
+                <small class="footer-right">
+                    Powered by <a href="https://www.getzola.org">Zola</a> | Theme <a href="https://github.com/barlog-m/oceanic-zen">Oceanic Zen</a>
+                </small>
+            </div>
+        
+        </footer>
+    
+        </div>
+    </body>
+</html>

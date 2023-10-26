@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+        <meta name="description" content="Firstyear&#x27;s blog">
+        
+
+        <title>Firstyear&#x27;s blog-a-log</title>
+
+        
+          <link rel="alternate" type="application/rss+xml" title="RSS" href="https://fy.blackhats.net.au/rss.xml">
+        
+
+        
+            <link rel="stylesheet" href="https://fy.blackhats.net.au/theme.css">
+        
+        
+    </head>
+    <body>
+        <div class="content">
+        
+        
+            <header>
+                <div class="header-left">
+                    <a href="https:&#x2F;&#x2F;fy.blackhats.net.au" class="logo">Firstyear&#x27;s blog-a-log</a>
+                </div>
+                <div class="header-right">
+                    <nav itemscope itemtype="http://schema.org/SiteNavigationElement">
+                      <ul>
+                        
+                        
+                            
+                            <li class="nav">
+                                <a itemprop="url" href="https://fy.blackhats.net.au/blog/">
+                                    <span itemprop="name">Blog</span>
+                                </a>
+                            </li>
+                        
+                            
+                            <li class="nav">
+                                <a itemprop="url" href="https://fy.blackhats.net.au/pages/">
+                                    <span itemprop="name">Pages</span>
+                                </a>
+                            </li>
+                        
+                        
+                        <li class="nav">
+                            <a itemprop="url" href="https://github.com/firstyear">
+                                <img class="icon" src="https:&#x2F;&#x2F;fy.blackhats.net.au/icons/github.svg" alt="Github">
+                            </a>
+                        </li>
+                        
+                        <li class="nav">
+                            <a itemprop="url" href="/rss.xml">
+                                <img class="icon" src="https:&#x2F;&#x2F;fy.blackhats.net.au/rss-logo.png" alt="rss">
+                            </a>
+                        </li>
+                      </ul>
+                    </nav>
+                </div>
+            </header>
+        
+        
+        <main>
+            
+<article itemscope itemtype="http://schema.org/BlogPosting">
+    <div itemprop="headline">
+        <h1>Deploying sccache on SUSE</h1>
+        <div class="border"></div>
+        <time datetime="2020-11-19" class="date" itemprop="datePublished">
+            19 Nov 2020
+        </time>
+    </div>
+    <div itemprop="articleBody">
+        <h1 id="deploying-sccache-on-suse">Deploying sccache on SUSE</h1>
+<p>sccache is a ccache/icecc-like tool from Mozilla, which in addition to
+working with C and C++, is also able to help with Rust builds.</p>
+<h2 id="adding-the-repo">Adding the Repo</h2>
+<p>A submission to Factory (tumbleweed) has been made, so check if you can
+install from zypper:</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>zypper install sccache
+</span></code></pre>
+<p>If not, sccache is still part of
+<a href="https://build.opensuse.org/package/show/devel:tools:building/sccache">devel:tools:building</a>
+so you will need to add the repo to use sccache.</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>zypper ar -f obs://devel:tools:building devel:tools:building
+</span><span>zypper install sccache
+</span></code></pre>
+<p>It's also important you <em>do not</em> have ccache installed. ccache
+intercepts the gcc command so you end up &quot;double caching&quot; potentially.</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>zypper rm ccache
+</span></code></pre>
+<h2 id="single-host">Single Host</h2>
+<p>To use sccache on your host, you need to set the following environment
+variables:</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>export RUSTC_WRAPPER=sccache
+</span><span>export CC=&quot;sccache /usr/bin/gcc&quot;
+</span><span>export CXX=&quot;sccache /usr/bin/g++&quot;
+</span><span># Optional: This can improve rust caching
+</span><span># export CARGO_INCREMENTAL=false
+</span></code></pre>
+<p>This will allow sccache to wrap your compiler commands. You can show
+your current sccache status with:</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>sccache -s
+</span></code></pre>
+<p>There is more information about using cloud/remote storage for the cache
+on the sccache <a href="https://github.com/mozilla/sccache/blob/master/README.md">project
+site</a></p>
+<h2 id="distributed-compiliation">Distributed Compiliation</h2>
+<p>sccache is also capable of distributed compilation, where a number of
+builder servers can compile items and return the artificats to your
+machine. This can save you time by allowing compilation over a cluster,
+using a faster remote builder, or just to keep your laptop cool.</p>
+<p>Three components are needed to make this work. A scheduler that
+coordinates the activities, one or more builders that provide their CPU,
+and a client that submits compilation jobs.</p>
+<p>The sccache package contains the required elements for all three parts.</p>
+<p>Note that the client does <em>not</em> need to be the same version of SUSE or
+even the same distro as the scheduler or builder. This is because the
+client is able to bundle and submit it's toolchains to the workers on
+the fly. Neat! sccache is capacble of also compiling for macos and
+windows, but in these cases the toolchains can-not be submitted on the
+fly and requires extra <a href="https://github.com/mozilla/sccache/blob/master/docs/DistributedQuickstart.md">work to
+configure.</a></p>
+<h2 id="scheduler">Scheduler</h2>
+<p>The scheduler is configured with
+[/etc/sccache/scheduler.conf]{.title-ref}. You need to define the
+listening ip, client auth, and server (builder) auth methods. The
+example configuration is well commented to help with this:</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span># The socket address the scheduler will listen on. It&#39;s strongly recommended
+</span><span># to listen on localhost and put a HTTPS server in front of it.
+</span><span>public_addr = &quot;127.0.0.1:10600&quot;
+</span><span># public_addr = &quot;[::1]:10600&quot;
+</span><span>
+</span><span>[client_auth]
+</span><span># This is how a client will authenticate to the scheduler.
+</span><span># # sccache-dist auth generate-shared-token --help
+</span><span>type = &quot;token&quot;
+</span><span>token = &quot;token here&quot;
+</span><span>#
+</span><span># type = &quot;jwt_hs256&quot;
+</span><span># secret_key = &quot;&quot;
+</span><span>
+</span><span>[server_auth]
+</span><span># sccache-dist auth --help
+</span><span># To generate the secret_key:
+</span><span># # sccache-dist auth generate-jwt-hs256-key
+</span><span># To generate a key for a builder, use the command:
+</span><span># # sccache-dist auth generate-jwt-hs256-server-token --config /etc/sccache/scheduler.conf --secret-key &quot;...&quot; --server &quot;builderip:builderport&quot;
+</span><span>type = &quot;jwt_hs256&quot;
+</span><span>secret_key = &quot;my secret key&quot;
+</span></code></pre>
+<p>You can start the scheduler with:</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>systemctl start sccache-dist-scheduler.service
+</span></code></pre>
+<p>If you have issues you can increase logging verbosity with:</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span># systemctl edit sccache-dist-scheduler.service
+</span><span>[Service]
+</span><span>Environment=&quot;RUST_LOG=sccache=trace&quot;
+</span></code></pre>
+<h2 id="builder">Builder</h2>
+<p>Similar to the scheduler, the builder is configured with
+[/etc/sccache/builder.conf]{.title-ref}. Most of the defaults should be
+left &quot;as is&quot; but you will need to add the token generated from the
+comments in [scheduler.conf - server_auth]{.title-ref}.</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span># This is where client toolchains will be stored.
+</span><span># You should not need to change this as it is configured to work with systemd.
+</span><span>cache_dir = &quot;/var/cache/sccache-builder/toolchains&quot;
+</span><span># The maximum size of the toolchain cache, in bytes.
+</span><span># If unspecified the default is 10GB.
+</span><span># toolchain_cache_size = 10737418240
+</span><span># A public IP address and port that clients will use to connect to this builder.
+</span><span>public_addr = &quot;127.0.0.1:10501&quot;
+</span><span># public_addr = &quot;[::1]:10501&quot;
+</span><span>
+</span><span># The URL used to connect to the scheduler (should use https, given an ideal
+</span><span># setup of a HTTPS server in front of the scheduler)
+</span><span>scheduler_url = &quot;https://127.0.0.1:10600&quot;
+</span><span>
+</span><span>[builder]
+</span><span>type = &quot;overlay&quot;
+</span><span># The directory under which a sandboxed filesystem will be created for builds.
+</span><span># You should not need to change this as it is configured to work with systemd.
+</span><span>build_dir = &quot;/var/cache/sccache-builder/tmp&quot;
+</span><span># The path to the bubblewrap version 0.3.0+ `bwrap` binary.
+</span><span># You should not need to change this as it is configured for a default SUSE install.
+</span><span>bwrap_path = &quot;/usr/bin/bwrap&quot;
+</span><span>
+</span><span>[scheduler_auth]
+</span><span>type = &quot;jwt_token&quot;
+</span><span># This will be generated by the `generate-jwt-hs256-server-token` command or
+</span><span># provided by an administrator of the sccache cluster. See /etc/sccache/scheduler.conf
+</span><span>token = &quot;token goes here&quot;
+</span></code></pre>
+<p>Again, you can start the builder with:</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>systemctl start sccache-dist-builder.service
+</span></code></pre>
+<p>If you have issues you can increase logging verbosity with:</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span># systemctl edit sccache-dist-builder.service
+</span><span>[Service]
+</span><span>Environment=&quot;RUST_LOG=sccache=trace&quot;
+</span></code></pre>
+<p>You can configure many hosts as builders, and compilation jobs will be
+distributed amongst them.</p>
+<h2 id="client">Client</h2>
+<p>The client is the part that submits compilation work. You need to
+configure your machine the same as single host with regard to the
+environment variables.</p>
+<p>Additionally you need to configure the file
+[~/.config/sccache/config]{.title-ref}. An example of this can be found
+in [/etc/sccache/client.example]{.title-ref}.</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>[dist]
+</span><span># The URL used to connect to the scheduler (should use https, given an ideal
+</span><span># setup of a HTTPS server in front of the scheduler)
+</span><span>scheduler_url = &quot;http://x.x.x.x:10600&quot;
+</span><span># Used for mapping local toolchains to remote cross-compile toolchains. Empty in
+</span><span># this example where the client and build server are both Linux.
+</span><span>toolchains = []
+</span><span># Size of the local toolchain cache, in bytes (5GB here, 10GB if unspecified).
+</span><span># toolchain_cache_size = 5368709120
+</span><span>
+</span><span>cache_dir = &quot;/tmp/toolchains&quot;
+</span><span>
+</span><span>[dist.auth]
+</span><span>type = &quot;token&quot;
+</span><span># This should match the `client_auth` section of the scheduler config.
+</span><span>token = &quot;&quot;
+</span></code></pre>
+<p>You can check the status with:</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>sccache --stop-server
+</span><span>sccache --dist-status
+</span></code></pre>
+<p>If you have issues, you can increase the logging with:</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>sccache --stop-server
+</span><span>SCCACHE_NO_DAEMON=1 RUST_LOG=sccache=trace sccache --dist-status
+</span></code></pre>
+<p>Then begin a compilation job and you will get the extra logging. To undo
+this, run:</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>sccache --stop-server
+</span><span>sccache --dist-status
+</span></code></pre>
+<p>In addition, sccache even in distributed mode can still use cloud or
+remote storage for items, using it's cache first, and the distributed
+complitation second. Anything that can't be remotely complied will be
+run locally.</p>
+<h2 id="verifying">Verifying</h2>
+<p>If you compile something from your client, you should see messages like
+this appear in journald in the builder/scheduler machine:</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>INFO 2020-11-19T22:23:46Z: sccache_dist: Job 140 created and will be assigned to server ServerId(V4(x.x.x.x:10501))
+</span><span>INFO 2020-11-19T22:23:46Z: sccache_dist: Job 140 successfully assigned and saved with state Ready
+</span><span>INFO 2020-11-19T22:23:46Z: sccache_dist: Job 140 updated state to Started
+</span><span>INFO 2020-11-19T22:23:46Z: sccache_dist: Job 140 updated state to Complete
+</span></code></pre>
+
+    </div>
+</article>
+
+        </main>
+        
+        <footer>
+            
+            <div class="border"></div>
+            <div class="footer">
+                <small class="footer-left">
+                    Copyright &copy; William Brown
+                </small>
+                <small class="footer-right">
+                    Powered by <a href="https://www.getzola.org">Zola</a> | Theme <a href="https://github.com/barlog-m/oceanic-zen">Oceanic Zen</a>
+                </small>
+            </div>
+        
+        </footer>
+    
+        </div>
+    </body>
+</html>

@@ -1,0 +1,400 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+        <meta name="description" content="Firstyear&#x27;s blog">
+        
+
+        <title>Firstyear&#x27;s blog-a-log</title>
+
+        
+          <link rel="alternate" type="application/rss+xml" title="RSS" href="https://fy.blackhats.net.au/rss.xml">
+        
+
+        
+            <link rel="stylesheet" href="https://fy.blackhats.net.au/theme.css">
+        
+        
+    </head>
+    <body>
+        <div class="content">
+        
+        
+            <header>
+                <div class="header-left">
+                    <a href="https:&#x2F;&#x2F;fy.blackhats.net.au" class="logo">Firstyear&#x27;s blog-a-log</a>
+                </div>
+                <div class="header-right">
+                    <nav itemscope itemtype="http://schema.org/SiteNavigationElement">
+                      <ul>
+                        
+                        
+                            
+                            <li class="nav">
+                                <a itemprop="url" href="https://fy.blackhats.net.au/blog/">
+                                    <span itemprop="name">Blog</span>
+                                </a>
+                            </li>
+                        
+                            
+                            <li class="nav">
+                                <a itemprop="url" href="https://fy.blackhats.net.au/pages/">
+                                    <span itemprop="name">Pages</span>
+                                </a>
+                            </li>
+                        
+                        
+                        <li class="nav">
+                            <a itemprop="url" href="https://github.com/firstyear">
+                                <img class="icon" src="https:&#x2F;&#x2F;fy.blackhats.net.au/icons/github.svg" alt="Github">
+                            </a>
+                        </li>
+                        
+                        <li class="nav">
+                            <a itemprop="url" href="/rss.xml">
+                                <img class="icon" src="https:&#x2F;&#x2F;fy.blackhats.net.au/rss-logo.png" alt="rss">
+                            </a>
+                        </li>
+                      </ul>
+                    </nav>
+                </div>
+            </header>
+        
+        
+        <main>
+            
+<article itemscope itemtype="http://schema.org/BlogPosting">
+    <div itemprop="headline">
+        <h1>Webauthn UserVerificationPolicy Curiosities</h1>
+        <div class="border"></div>
+        <time datetime="2020-11-21" class="date" itemprop="datePublished">
+            21 Nov 2020
+        </time>
+    </div>
+    <div itemprop="articleBody">
+        <h1 id="webauthn-userverificationpolicy-curiosities">Webauthn UserVerificationPolicy Curiosities</h1>
+<p>Recently I received a
+<a href="https://github.com/kanidm/webauthn-rs/issues/32">pair</a>
+<a href="https://github.com/kanidm/webauthn-rs/issues/34">of</a> interesting bugs
+in <a href="https://github.com/kanidm/webauthn-rs/">Webauthn RS</a> where certain
+types of authenticators would not work in Firefox, but did work in
+Chromium. This confused me, and I couldn't reproduce the behaviour. So
+like any obsessed person I ordered myself one of the affected devices
+and waited for Australia Post to lose it, find it, lose it again, and
+then finally deliver the device 2 months later.</p>
+<p>In the meantime I swapped browsers from Firefox to Edge and started to
+notice some odd behaviour when logging into my corporate account - my
+yubikey began to ask me for my pin on every authentication, even though
+the key was registered to the corp servers <em>without</em> a pin. Yet the key
+kept working on Edge with a pin - and confusingly <em>without</em> a pin on
+Firefox.</p>
+<h2 id="some-background-on-webauthn">Some background on Webauthn</h2>
+<p>Before we dive into the issue, we need to understand some details about
+Webauthn. <a href="https://www.w3.org/TR/webauthn/">Webauthn</a> is a standard that
+allows a client (commonly a web browser) to cryptographically
+authenticate to a server (commonly a web site). Webauthn defines how
+different types of hardware cryptographic authenticators may communicate
+between the client and the server.</p>
+<p>An example of some types of authenticator devices are U2F tokens
+(yubikeys), TouchID (Apple Mac, iPhone, iPad), Trusted Platform Modules
+(Windows Hello) and many more. Webauthn has to account for differences
+in these hardware classes and how they communicate, but in the end each
+device performs a set of <a href="https://en.wikipedia.org/wiki/Public-key_cryptography">asymmetric
+cryptographic</a>
+(public/private key) operations.</p>
+<p>Webauthn defines the structures of how a client and server communicate
+to both register new authenticators and subsequently authenticate with
+those authenticators.</p>
+<p>For the first step of registration, the server provides a registration
+challenge to the client. The structure of this (which is important for
+later) looks like:</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>dictionary PublicKeyCredentialCreationOptions {
+</span><span>    required PublicKeyCredentialRpEntity         rp;
+</span><span>    required PublicKeyCredentialUserEntity       user;
+</span><span>
+</span><span>    required BufferSource                             challenge;
+</span><span>    required sequence&lt;PublicKeyCredentialParameters&gt;  pubKeyCredParams;
+</span><span>
+</span><span>    unsigned long                                timeout;
+</span><span>    sequence&lt;PublicKeyCredentialDescriptor&gt;      excludeCredentials = [];
+</span><span>    AuthenticatorSelectionCriteria               authenticatorSelection = {
+</span><span>        AuthenticatorAttachment      authenticatorAttachment;
+</span><span>        boolean                      requireResidentKey = false;
+</span><span>        UserVerificationRequirement  userVerification = &quot;preferred&quot;;
+</span><span>    };
+</span><span>    AttestationConveyancePreference              attestation = &quot;none&quot;;
+</span><span>    AuthenticationExtensionsClientInputs         extensions;
+</span><span>};
+</span></code></pre>
+<p>The client then takes this structure, and creates a number of hashes
+from it which the authenticator then signs. This signed data and options
+are returned to the server as a
+<a href="https://w3c.github.io/webauthn/#iface-pkcredential">PublicKeyCredential</a>
+containing an <a href="https://www.w3.org/TR/webauthn/#iface-authenticatorattestationresponse">Authenticator Attestation
+Response</a>.</p>
+<p>Next is authentication. The server sends a challenge to the client which
+has the structure:</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>dictionary PublicKeyCredentialRequestOptions {
+</span><span>    required BufferSource                challenge;
+</span><span>    unsigned long                        timeout;
+</span><span>    USVString                            rpId;
+</span><span>    sequence&lt;PublicKeyCredentialDescriptor&gt; allowCredentials = [];
+</span><span>    UserVerificationRequirement          userVerification = &quot;preferred&quot;;
+</span><span>    AuthenticationExtensionsClientInputs extensions;
+</span><span>};
+</span></code></pre>
+<p>Again, the client takes this structure, takes a number of hashes and the
+authenticator signs this to prove it is the holder of the private key.
+The signed response is sent to the server as a PublicKeyCredential
+containing an <a href="https://www.w3.org/TR/webauthn/#iface-authenticatorassertionresponse">Authenticator Assertion
+Response</a>.</p>
+<p>Key to this discussion is the following field:</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>UserVerificationRequirement          userVerification = &quot;preferred&quot;;
+</span></code></pre>
+<p>This is present in both PublicKeyCredentialRequestOptions and
+PublicKeyCredentialCreationOptions. This informs what level of
+interaction assurance should be provided during the signing process.
+These are discussed in <a href="https://pages.nist.gov/800-63-3/sp800-63b.html">NIST SP800-64b (5.1.7,
+5.1.9)</a> (which is just
+an excellent document anyway, so read it).</p>
+<p>One aspect of these authenticators is that they must provide tamper
+proof evidence that a person is physically present and interacting with
+the device for the signature to proceed. This is important as it means
+that if someone is able to gain remote code execution on your system,
+they are unable to use your authenticator devices (even if it's part of
+the device, like touch id) as they are not physically present at the
+machine.</p>
+<p>Some authenticators are able to go beyond to strengthen this assurance,
+by verifying the identity of the person interacting with the
+authenticator. This means that the interaction <em>also</em> requires say a PIN
+(something you know), or a biometric (something you are). This allows
+the authenticator to assert not just that <em>someone</em> is present but that
+it is a specific person who is present.</p>
+<p>All authenticators are capable of asserting user presence but only some
+are capable of asserting user verification. This creates two classes of
+authenticators as defined by NIST SP800-64b.</p>
+<p>Single-Factor Cryptographic Devices (5.1.7) which only assert presence
+(the device becomes something you have) and Multi-Factor Cryptographic
+Devices (5.1.9) which assert the identity of the holder (something you
+have + something you know/are).</p>
+<p>Webauthn is able to request the use of a Single-Factor Device or
+Multi-Factor Device through it's UserVerificationRequirement option.
+The levels are:</p>
+<ul>
+<li>Discouraged - Only use Single-Factor Devices</li>
+<li>Required - Only use Multi-Factor Devices</li>
+<li>Preferred - Request Multi-Factor if possible, but allow
+Single-Factor devices.</li>
+</ul>
+<h2 id="back-to-the-mystery">Back to the mystery ...</h2>
+<p>When I initially saw these reports - of devices that did not work in
+Firefox but did in Chromium, and of devices asking for PINs on some
+browsers but not others -I was really confused. The breakthrough came as
+I was developing <a href="https://github.com/kanidm/webauthn-authenticator-rs">Webauthn Authenticator
+RS</a>. This is the
+client half of Webauthn, so that I could have the
+<a href="https://github.com/kanidm/kanidm">Kanidm</a> CLI tools use Webauthn for
+multi-factor authentication (MFA). In the process, I have been using the
+<a href="https://crates.io/crates/authenticator">authenticator</a> crate made by
+Mozilla and used by Firefox.</p>
+<p>The authenticator crate is what communicates to authenticators by NFC,
+Bluetooth, or USB. Due to the different types of devices, there are
+multiple different protocols involved. For U2F devices, the protocol is
+CTAP over USB. There are two versions of the CTAP protocol - CTAP1, and
+CTAP2.</p>
+<p>In the authenticator crate, only CTAP1 is supported. CTAP1 devices are
+unable to accept a PIN, so user verification must be performed
+internally to the device (such as a fingerprint reader built into the
+U2F device).</p>
+<p>Chromium, however, is able to use CTAP2 - CTAP2 <em>does</em> allow a PIN to be
+provided from the host machine to the device as a user verification
+method.</p>
+<h2 id="why-would-devices-fail-in-firefox">Why would devices fail in Firefox?</h2>
+<p>Once I had learnt this about CTAP1/CTAP2, I realised that my example
+code in Webauthn RS was hardcoding Required as the user verification
+level. Since Firefox can only use CTAP1, it was unable to use PINs to
+U2F devices, so they would not respond to the challenge. But on Chromium
+with CTAP2 they <em>are</em> able to have PINs so Required can be satisfied and
+the devices work.</p>
+<h2 id="okay-but-the-corp-account">Okay but the corp account?</h2>
+<p>This one is subtle. The corp identity system uses user verification of
+'Preferred'. That meant that on Firefox, no PIN was requested since
+CTAP1 can't provide them, but on Edge/Chromium a PIN <em>can</em> be provided
+as they use CTAP2.</p>
+<p>What's more curious is that the same authenticator device is flipping
+between Single Factor and Multi Factor, with the same Private/Public Key
+pair just based on what protocol is used! So even though the
+'Preferred' request can be satisfied on Chromium/Edge, it's not on
+Firefox. To further extend my confusion, the device was originally
+registered to the corp identity system in Firefox so it would have <em>not</em>
+had user verification available, but now that I use Edge it has <em>gained</em>
+this requirement during authentication.</p>
+<h2 id="that-seems-wrong">That seems ... wrong.</h2>
+<p>I agree. But Webauthn fully allows this. This is because user
+verification is a property of the <em>request/response</em> flow, not a
+property of the <em>device</em>.</p>
+<p>This creates some interesting side effects that become an opportunity
+for user confusion. (<em>I</em> was confused about what the behaviour was and I
+write a webauthn server and client library - imagine how other people
+feel ...).</p>
+<h2 id="devices-change-behaviour">Devices change behaviour</h2>
+<p>This means that during registration one policy can be requested (i.e.
+Required) but subsequently it may not be used (Preferred + Firefox +
+U2F, or Discouraged). Another example of a change in behaviour occurs
+when a device is used on Chromium with Preferred user verification is
+required, but when used on Firefox the device may <em>not</em> require
+verification. It also means that a site that implements Required can
+have devices that simply don't work in other browsers.</p>
+<p>Because this is changing behaviour it can confuse users. For examples:</p>
+<ul>
+<li>Why do I need a PIN now but not before?</li>
+<li>Why did I need a PIN before but not now?</li>
+<li>Why does my authenticator work on this computer but not on another?</li>
+</ul>
+<h2 id="preferred-becomes-discouraged">Preferred becomes Discouraged</h2>
+<p>This opens up a security risk where since Preferred &quot;attempts&quot;
+verification but allows it to not be present, a U2F device can be
+&quot;downgraded&quot; from Multi-Factor to Single-Factor by using it with CTAP1
+instead of CTAP2. Since it's also per <em>request/response</em>, a compromised
+client could also tamper with the communication to the authenticator
+removing the requested userverification parameter silently and the
+server would allow it.</p>
+<p>This means that in reality, Preferred is policy and security wise
+equivalent to Discouraged, but with a more annoying UI/UX for users who
+have to conduct a verification that doesn't actually help identify
+them.</p>
+<p>Remember - if unspecified, 'Preferred' is the default user
+verification policy in Webauthn!</p>
+<h2 id="lock-out-abuse-vectors">Lock Out / Abuse Vectors</h2>
+<p>There is also a potential abuse vector here. Many devices such as U2F
+tokens perform a &quot;trust on first use&quot; for their PIN setup. This means
+that the first time a user verification is requested you configure the
+pin at that point in time.</p>
+<p>A potential abuse vector here is a token that is always used on Firefox,
+a malicious person could connect the device to Chromium, and setup the
+PIN without the knowledge of the owner. The owner could continue to use
+the device, and when Firefox eventually supports CTAP2, or they swap
+computer or browser, they would <em>not</em> know the PIN, and their token
+would effectively be unusable at that point. They would need to reset
+it, potentially causing them to be locked out from accounts, but more
+likely causing them to need to conduct a <em>lot</em> of password/credential
+resets.</p>
+<h2 id="unable-to-implement-authenticator-policy">Unable to implement Authenticator Policy</h2>
+<p>One of the greatest issues here though is that because user verification
+is part of the <em>request/response</em> flow and not <em>per device</em> attributes,
+authenticator policy, and mixed credentials are unable to exist in the
+current implementation of Webauthn.</p>
+<p>Consider a user who has enrolled say their laptop's U2F device +
+password, and their iPhone's touchID to a server. Both of these are
+Multi Factor credentials. The U2F is a Single Factor Device and becomes
+Multi-Factor in combination with the password. The iPhone touchID is a
+Multi-Factor Device on it's due to the biometric verification it is
+capable of.</p>
+<p>We <em>should</em> be able to have a website request webauthn and based on the
+device used we can flow to the next required step. If the device was the
+iPhone, we would be authenticated as we have authenticated a Multi
+Factor credentials. If we saw the U2F device we would then move to
+request the password since we have only received a Single Factor.
+However Webauthn is unable to express this authentication flow.</p>
+<p>If we requested Required, we would exclude the U2F device.</p>
+<p>If we requested Discouraged, we would exclude the iPhone.</p>
+<p>If we request Preferred, the U2F device could be used on a different
+browser with CTAP2, either:</p>
+<ul>
+<li>bypassing the password, since the device is now a self contained
+Multi-Factor; or</li>
+<li>the U2F device could prompt for the PIN needlessly and we progress
+to setting a password</li>
+</ul>
+<p>The request to an iPhone could be tampered with, preventing the
+verification occurring and turning it into a single factor device
+(presence only).</p>
+<p>Today, these mixed device scenarios can not exist in Webauthn. We are
+unable to create the policy around Single-Factor and Multi-Factor
+devices as defined by NIST because these require us to assert the
+verification requirements per credential, but Webauthn can not satisfy
+this.</p>
+<p>We would need to pre-ask the user <em>how</em> they want to authenticate on
+that device and then only send a Webauthn challenge that can satisfy the
+authentication policy we have decided on for those credentials.</p>
+<h2 id="how-to-fix-this">How to fix this</h2>
+<p>The solution here is to change PublicKeyCredentialDescriptor in the
+Webauthn standard to contain an optional UserVerificationRequirement
+field. This would allow a &quot;global&quot; default set by the server and then
+per-credential requirements to be defined. This would allow the user
+verification properties during registration to be associated to that
+credential, which can then be enforced by the server to guarantee the
+behaviour of a webauthn device. It would also allow the 'Preferred'
+option to have a valid and useful meaning during registration, where
+devices capable of verification can provide that or not, and then that
+verification boolean can be then transformed to a Discouraged or
+Required setting for that credential for future authentications.</p>
+<p>The second change would be to disallow 'Preferred' as a valid value in
+the &quot;global&quot; default during authentications. The new &quot;default&quot;
+global value should be 'Discouraged' and then only credentials that
+registered with verification would indicate that in their
+PublicKeyCredentialDescriptor.</p>
+<p>This would resolve the issues above by:</p>
+<ul>
+<li>Making the use of an authenticator consistent after registration.
+For example, authenticators registered with CTAP1 would stay
+'Discouraged' even when used with CTAP2</li>
+<li>If PIN/Verification abuse occurred, the credentials registered on
+CTAP1 without verification would continue to be 'presence only'
+preventing the lockout</li>
+<li>Allowing the server to proceed with the authentication flow based on
+which credential authenticated and provide logic about further
+factors if needed.</li>
+<li>Allowing true Single Factor and Multi Factor device policies to be
+expressed in line with NIST SP800-63b, so users can have a mix of
+Single and Multi Factor devices associated with a single account.</li>
+</ul>
+<p>I have since opened <a href="https://github.com/w3c/webauthn/issues/1510">this
+issue</a> with the webauthn
+specification about this, but early comments seem to be highly focused
+on the current expression of the standard rather than the issues around
+the user experience and ability for identity systems to accurately
+express credential policy.</p>
+<p>In the meantime, I am going to make changes to Webauthn RS to help avoid
+some of these issues:</p>
+<ul>
+<li>Preferred will be renamed to Preferred_Is_Equivalent_To_Discouraged
+(it will still emit 'Preferred' in the JSON, this only changes the
+Rust API enum)</li>
+<li>Credential structures persisted by applications will contain the
+boolean of user-verification if it occurred during registration</li>
+<li>During an authentication, if the set of credentials contains
+inconsistent user-verification booleans, an error will be raised</li>
+<li>Authentication User Verification Policy is derived from the set of
+credentials having a consistent user-verification boolean</li>
+</ul>
+<p>While not perfect, it will mean that it's &quot;hard to hold it wrong&quot;
+with Webauthn RS.</p>
+<h2 id="acknowledgements">Acknowledgements</h2>
+<p>Thanks to both @Charcol0x89 and @JuxhinDB for reviewing this post.</p>
+
+    </div>
+</article>
+
+        </main>
+        
+        <footer>
+            
+            <div class="border"></div>
+            <div class="footer">
+                <small class="footer-left">
+                    Copyright &copy; William Brown
+                </small>
+                <small class="footer-right">
+                    Powered by <a href="https://www.getzola.org">Zola</a> | Theme <a href="https://github.com/barlog-m/oceanic-zen">Oceanic Zen</a>
+                </small>
+            </div>
+        
+        </footer>
+    
+        </div>
+    </body>
+</html>

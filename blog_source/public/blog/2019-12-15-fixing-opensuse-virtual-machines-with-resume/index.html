@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+        <meta name="description" content="Firstyear&#x27;s blog">
+        
+
+        <title>Firstyear&#x27;s blog-a-log</title>
+
+        
+          <link rel="alternate" type="application/rss+xml" title="RSS" href="https://fy.blackhats.net.au/rss.xml">
+        
+
+        
+            <link rel="stylesheet" href="https://fy.blackhats.net.au/theme.css">
+        
+        
+    </head>
+    <body>
+        <div class="content">
+        
+        
+            <header>
+                <div class="header-left">
+                    <a href="https:&#x2F;&#x2F;fy.blackhats.net.au" class="logo">Firstyear&#x27;s blog-a-log</a>
+                </div>
+                <div class="header-right">
+                    <nav itemscope itemtype="http://schema.org/SiteNavigationElement">
+                      <ul>
+                        
+                        
+                            
+                            <li class="nav">
+                                <a itemprop="url" href="https://fy.blackhats.net.au/blog/">
+                                    <span itemprop="name">Blog</span>
+                                </a>
+                            </li>
+                        
+                            
+                            <li class="nav">
+                                <a itemprop="url" href="https://fy.blackhats.net.au/pages/">
+                                    <span itemprop="name">Pages</span>
+                                </a>
+                            </li>
+                        
+                        
+                        <li class="nav">
+                            <a itemprop="url" href="https://github.com/firstyear">
+                                <img class="icon" src="https:&#x2F;&#x2F;fy.blackhats.net.au/icons/github.svg" alt="Github">
+                            </a>
+                        </li>
+                        
+                        <li class="nav">
+                            <a itemprop="url" href="/rss.xml">
+                                <img class="icon" src="https:&#x2F;&#x2F;fy.blackhats.net.au/rss-logo.png" alt="rss">
+                            </a>
+                        </li>
+                      </ul>
+                    </nav>
+                </div>
+            </header>
+        
+        
+        <main>
+            
+<article itemscope itemtype="http://schema.org/BlogPosting">
+    <div itemprop="headline">
+        <h1>Fixing opensuse virtual machines with resume</h1>
+        <div class="border"></div>
+        <time datetime="2019-12-15" class="date" itemprop="datePublished">
+            15 Dec 2019
+        </time>
+    </div>
+    <div itemprop="articleBody">
+        <h1 id="fixing-opensuse-virtual-machines-with-resume">Fixing opensuse virtual machines with resume</h1>
+<p>Today I hit an unexpected issue - after changing a virtual machines root
+disk to scsi, I was unable to boot the machine.</p>
+<p>The host is opensuse leap 15.1, and the vm is the same. What's
+happening!</p>
+<p>The first issue appears to be that opensuse 15.1 doesn't support scsi
+disks from libvirt. I'm honestly not sure what's wrong here.</p>
+<p>The second is that by default opensuse leap configures suspend and
+resume to disk - by it uses the pci path instead of a swap volume UUID.
+So when you change the bus type, it renames the path making the volume
+inaccessible. This causes boot to fail.</p>
+<p>To work around you can remove &quot;resume=/disk/path&quot; from the cli. Then
+to fix it permanently you need:</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>transactional-update shell
+</span><span>vim /etc/default/grub
+</span><span># Edit this line to remove &quot;resume&quot;
+</span><span>GRUB_CMDLINE_LINUX_DEFAULT=&quot;console=ttyS0,115200 resume=/dev/disk/by-path/pci-0000:00:07.0-part3 splash=silent quiet showopts&quot;
+</span><span>
+</span><span>vim /etc/default/grub_installdevice
+</span><span># Edit the path to the correct swap location as by ls -al /dev/disk/by-path
+</span><span>/dev/disk/by-path/pci-0000:00:07.0-part3
+</span></code></pre>
+<p>I have reported these issues, and I hope they are resolved.</p>
+
+    </div>
+</article>
+
+        </main>
+        
+        <footer>
+            
+            <div class="border"></div>
+            <div class="footer">
+                <small class="footer-left">
+                    Copyright &copy; William Brown
+                </small>
+                <small class="footer-right">
+                    Powered by <a href="https://www.getzola.org">Zola</a> | Theme <a href="https://github.com/barlog-m/oceanic-zen">Oceanic Zen</a>
+                </small>
+            </div>
+        
+        </footer>
+    
+        </div>
+    </body>
+</html>

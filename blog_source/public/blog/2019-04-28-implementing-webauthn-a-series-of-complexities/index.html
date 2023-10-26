@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+        <meta name="description" content="Firstyear&#x27;s blog">
+        
+
+        <title>Firstyear&#x27;s blog-a-log</title>
+
+        
+          <link rel="alternate" type="application/rss+xml" title="RSS" href="https://fy.blackhats.net.au/rss.xml">
+        
+
+        
+            <link rel="stylesheet" href="https://fy.blackhats.net.au/theme.css">
+        
+        
+    </head>
+    <body>
+        <div class="content">
+        
+        
+            <header>
+                <div class="header-left">
+                    <a href="https:&#x2F;&#x2F;fy.blackhats.net.au" class="logo">Firstyear&#x27;s blog-a-log</a>
+                </div>
+                <div class="header-right">
+                    <nav itemscope itemtype="http://schema.org/SiteNavigationElement">
+                      <ul>
+                        
+                        
+                            
+                            <li class="nav">
+                                <a itemprop="url" href="https://fy.blackhats.net.au/blog/">
+                                    <span itemprop="name">Blog</span>
+                                </a>
+                            </li>
+                        
+                            
+                            <li class="nav">
+                                <a itemprop="url" href="https://fy.blackhats.net.au/pages/">
+                                    <span itemprop="name">Pages</span>
+                                </a>
+                            </li>
+                        
+                        
+                        <li class="nav">
+                            <a itemprop="url" href="https://github.com/firstyear">
+                                <img class="icon" src="https:&#x2F;&#x2F;fy.blackhats.net.au/icons/github.svg" alt="Github">
+                            </a>
+                        </li>
+                        
+                        <li class="nav">
+                            <a itemprop="url" href="/rss.xml">
+                                <img class="icon" src="https:&#x2F;&#x2F;fy.blackhats.net.au/rss-logo.png" alt="rss">
+                            </a>
+                        </li>
+                      </ul>
+                    </nav>
+                </div>
+            </header>
+        
+        
+        <main>
+            
+<article itemscope itemtype="http://schema.org/BlogPosting">
+    <div itemprop="headline">
+        <h1>Implementing Webauthn - a series of complexities ...</h1>
+        <div class="border"></div>
+        <time datetime="2019-04-28" class="date" itemprop="datePublished">
+            28 Apr 2019
+        </time>
+    </div>
+    <div itemprop="articleBody">
+        <h1 id="implementing-webauthn-a-series-of-complexities">Implementing Webauthn - a series of complexities ...</h1>
+<p>I have recently started to work on a rust webauthn library, to allow
+servers to be implemented. However, in this process I have noticed a few
+complexities to an API that should have so much promise for improving
+the state of authentication. So far I can say I have not found any
+cryptographic issues, but the design of the standard does raise
+questions about the ability for people to correctly implement Webauthn
+servers.</p>
+<h2 id="odd-structure-decisions">Odd structure decisions</h2>
+<p>Webauth is made up of multiple encoding standards. There is a good
+reason for this, which is that the json parts are for the webbrowser,
+and the cbor parts are for ctap and the authenticator device.</p>
+<p>However, I quickly noticed an issue in the Attestation Object, as
+described here <a href="https://w3c.github.io/webauthn/#sctn-attestation">https://w3c.github.io/webauthn/#sctn-attestation</a> . Can
+you see the problem?</p>
+<p>The problem is that the Authenticator Data relies on hand-parsing bytes,
+and has two structures that are concatenated with no length. This means:</p>
+<ul>
+<li>You have to hand parse bytes 0 -&gt; 36</li>
+<li>You then have to CBOR deserialise the Attested Cred Data (if
+present)</li>
+<li>You then need to serialise the ACD back to bytes and record that
+length (if your library doesn't tell you how long the amount of
+data is parsed was).</li>
+<li>Then you need to CBOR deserialise the Extensions.</li>
+</ul>
+<p>What's more insulting about this situation is that the Authenticator
+Data literally is part of the AttestationObject which is already
+provided as CBOR! There seems to be no obvious reason for this to
+require hand-parsing, as the Authenticator Data which will be signature
+checked, has it's byte form checked, so you could have the
+AttestationObject store authDataBytes, then you can CBOR decode the
+nested structure (allowing the hashing of the bytes later).</p>
+<p>There are many risks here because now you have requirements to length
+check all the parameters which people could get wrong - when CBOR would
+handle this correctly for you you and provides a good level of
+correctness that the structure is altered. I also trust the CBOR parser
+authors to do proper length checks too compared to my crappy byte
+parsing code!</p>
+<h2 id="confusing-naming-conventions-and-layout">Confusing Naming Conventions and Layout</h2>
+<p>The entire standard is full of various names and structures, which are
+complex, arbitrarily nested and hard to see why they are designed this
+way. Perhaps it's a legacy compatability issue? More likely I think
+it's object-oriented programming leaking into the specification, which
+is a paradigm that is not universally applicable.</p>
+<p>Regardless, it would be good if the structures were flatter, and named
+better. There are many confusing structure names throughout the
+standard, and it can sometimes be hard to identify what you require and
+don't require.</p>
+<p>Additionally, naming of fields and their use, uses abbrivations to save
+bandwidth, but makes it hard to follow. I did honestly get confused
+about the difference between rp (the relying party name) and rp_id,
+where the challenge provides rp, and the browser response use rp_id.</p>
+<p>It can be easy to point fingers and say &quot;ohh William, you're just not
+reading it properly and are stupid&quot;. Am I? Or is it that humans find it
+really hard to parse data like this, and our brains are better suited to
+other tasks? Human factors are important to consider in specification
+design both in naming of values, consistency of their use, and
+appropriate communication as to how they are used properly. I'm finding
+this to be a barrier to correct implementation now (especially as the
+signature verification section is very fragmented and hard to follow
+...).</p>
+<h2 id="crypto-steps-seem-complex-or-too-static">Crypto Steps seem complex or too static</h2>
+<p>There are a lot of possible choices here - there are 6 attestation
+formats and 5 attestation types. As some formats only do some types,
+there are then 11 verification paths you need to implement for all
+possible authenticators. I think this level of complexity will lead to
+mistakes over a large number of possible code branch paths, or lacking
+support for some device types which people may not have access to.</p>
+<p>I think it may have been better to limit the attestation format to one,
+well defined format, and within that to limit the attestation types
+available to suit a more broad range of uses.</p>
+<p>It feels a lot like these choice are part of some internal
+Google/MS/Other internal decisions for high security devices, or custom
+deviges, which will be internally used. It's leaked into the spec and
+it raises questions about the ability for people to meaningfully
+implement the full specification for all possible devices, let alone
+correctly.</p>
+<p>Some parts even omit details in a cryptographic operation, such as
+<a href="https://w3c.github.io/webauthn/#fido-u2f-attestation">here</a> in
+verification step 2, it doesn't even list what format the bytes are.
+(Hint: it's DER x509).</p>
+<h2 id="what-would-i-change">What would I change?</h2>
+<ul>
+<li>Be more specific</li>
+</ul>
+<p>There should be no assumptions about format types, what is in bytes. Be
+verbose, detailed and without ambiguity.</p>
+<ul>
+<li>Use type safe, length checked structures.</li>
+</ul>
+<p>I would probably make the entire thing a single CBOR structure which
+contains other nested structures as required. We should never have to
+hand-parse bytes in 2019, especially when there is a great deal of
+evidence to show the risks of expecting people to do this.</p>
+<ul>
+<li>Don't assume object orientation</li>
+</ul>
+<p>I think simpler, flatter structures in the json/cbor would have helped,
+and been clearer to implement, rather than the really complex maze of
+types currently involved.</p>
+<h2 id="summary">Summary</h2>
+<p>Despite these concerns, I still think webauthn is a really good
+standard, and I really do think it will become the future of
+authentication. I'm hoping to help make that a reality in opensource
+and I hope that in the future I can contribute to further development
+and promotion of webauthn.</p>
+
+    </div>
+</article>
+
+        </main>
+        
+        <footer>
+            
+            <div class="border"></div>
+            <div class="footer">
+                <small class="footer-left">
+                    Copyright &copy; William Brown
+                </small>
+                <small class="footer-right">
+                    Powered by <a href="https://www.getzola.org">Zola</a> | Theme <a href="https://github.com/barlog-m/oceanic-zen">Oceanic Zen</a>
+                </small>
+            </div>
+        
+        </footer>
+    
+        </div>
+    </body>
+</html>

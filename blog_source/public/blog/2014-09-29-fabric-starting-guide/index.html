@@ -1,0 +1,570 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+        <meta name="description" content="Firstyear&#x27;s blog">
+        
+
+        <title>Firstyear&#x27;s blog-a-log</title>
+
+        
+          <link rel="alternate" type="application/rss+xml" title="RSS" href="https://fy.blackhats.net.au/rss.xml">
+        
+
+        
+            <link rel="stylesheet" href="https://fy.blackhats.net.au/theme.css">
+        
+        
+    </head>
+    <body>
+        <div class="content">
+        
+        
+            <header>
+                <div class="header-left">
+                    <a href="https:&#x2F;&#x2F;fy.blackhats.net.au" class="logo">Firstyear&#x27;s blog-a-log</a>
+                </div>
+                <div class="header-right">
+                    <nav itemscope itemtype="http://schema.org/SiteNavigationElement">
+                      <ul>
+                        
+                        
+                            
+                            <li class="nav">
+                                <a itemprop="url" href="https://fy.blackhats.net.au/blog/">
+                                    <span itemprop="name">Blog</span>
+                                </a>
+                            </li>
+                        
+                            
+                            <li class="nav">
+                                <a itemprop="url" href="https://fy.blackhats.net.au/pages/">
+                                    <span itemprop="name">Pages</span>
+                                </a>
+                            </li>
+                        
+                        
+                        <li class="nav">
+                            <a itemprop="url" href="https://github.com/firstyear">
+                                <img class="icon" src="https:&#x2F;&#x2F;fy.blackhats.net.au/icons/github.svg" alt="Github">
+                            </a>
+                        </li>
+                        
+                        <li class="nav">
+                            <a itemprop="url" href="/rss.xml">
+                                <img class="icon" src="https:&#x2F;&#x2F;fy.blackhats.net.au/rss-logo.png" alt="rss">
+                            </a>
+                        </li>
+                      </ul>
+                    </nav>
+                </div>
+            </header>
+        
+        
+        <main>
+            
+<article itemscope itemtype="http://schema.org/BlogPosting">
+    <div itemprop="headline">
+        <h1>Fabric starting guide</h1>
+        <div class="border"></div>
+        <time datetime="2014-09-29" class="date" itemprop="datePublished">
+            29 Sep 2014
+        </time>
+    </div>
+    <div itemprop="articleBody">
+        <h1 id="fabric-starting-guide">Fabric starting guide</h1>
+<p>After the BB14 conf, I am posting some snippets of fabric tasks. Good
+luck! Feel free to email me if you have questions.</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span># Fabric snippets post BB14 conf
+</span><span>
+</span><span># It should be obvious, but no warranty, expressed or otherwise is provided
+</span><span># with this code. Use at your own risk. Always read and understand code before
+</span><span># running it in your environment. Test test test.
+</span><span>
+</span><span># William Brown, Geraint Draheim and others: University of Adelaide
+</span><span># william at adelaide.edu.au
+</span><span>
+</span><span>####################################################################
+</span><span>#### WARNING: THIS CODE MAY NOT RUN DUE TO LACK OF IMPORT, DEPENDENCIES.
+</span><span>#### OR OTHER ENVIRONMENTAL CHANGES. THIS IS INTENTIONAL. YOU SHOULD
+</span><span>#### ADAPT SOME OF THESE TO YOUR OWN ENVIRONMENT AND UNDERSTAND THE CODE
+</span><span>####################################################################
+</span><span>
+</span><span>## Decorators. These provide wrappers to functions to allow you to enforce state
+</span><span># checks and warnings to users before they run. Here are some of the most useful
+</span><span># we have developed.
+</span><span>
+</span><span>
+</span><span>def rnt_verbose(func):
+</span><span>    &quot;&quot;&quot;
+</span><span>    When added to a function, this will add implementation of a global VERBOSE
+</span><span>    flag. The reason it&#39;s not a default, is because not every function is
+</span><span>    converted to use it yet. Just run command:verbose=1
+</span><span>    &quot;&quot;&quot;
+</span><span>    @wraps(func)
+</span><span>    def inner(*args, **kwargs):
+</span><span>        if kwargs.pop(&quot;verbose&quot;, None) is not None:
+</span><span>            global VERBOSE
+</span><span>            VERBOSE = True
+</span><span>        return func(*args, **kwargs)
+</span><span>    return inner
+</span><span>
+</span><span>
+</span><span>## IMPORTANT NOTE: This decorator MUST be before @parallel
+</span><span>def rnt_imsure(warning=None):
+</span><span>    &quot;&quot;&quot;
+</span><span>    This is a useful decorator that enforces the user types a message into
+</span><span>    the console before the task will run. This is invaluable for high risk
+</span><span>    tasks, essentially forcing that the user MUST take responsibility for their
+</span><span>    actions.
+</span><span>    &quot;&quot;&quot;
+</span><span>    def decorator(func):
+</span><span>        @wraps(func)
+</span><span>        def inner(*args, **kwargs):
+</span><span>            # pylint: disable=global-statement
+</span><span>            global IMSURE_WARNING
+</span><span>            print(&quot;Forcing task to run in serial&quot;)
+</span><span>            if kwargs.pop(&quot;imsure&quot;, None) is None and IMSURE_WARNING is False:
+</span><span>                if warning is not None:
+</span><span>                    print(warning)
+</span><span>                cont = getpass(&#39;If you are sure, type &quot;I know what I am doing.&quot; #&#39;)
+</span><span>                if cont == &#39;I know what I am doing.&#39;:
+</span><span>                    IMSURE_WARNING = True
+</span><span>                    print(&#39;continuing in 5 seconds ...&#39;)
+</span><span>                    time.sleep(5)
+</span><span>                    print(&quot;Starting ...&quot;)
+</span><span>                else:
+</span><span>                    print(&#39;Exiting : No actions were taken&#39;)
+</span><span>                    sys.exit(1)
+</span><span>            return func(*args, **kwargs)
+</span><span>        inner.parallel = False
+</span><span>        inner.serial = True
+</span><span>        return inner
+</span><span>    return decorator
+</span><span>
+</span><span>def rnt_untested(func):
+</span><span>    &quot;&quot;&quot;
+</span><span>    This decorator wraps functions that we consider new and untested. It gives
+</span><span>    a large, visual warning to the user that this is the case, and allows
+</span><span>    5 seconds for them to ctrl+c before continuing.
+</span><span>    &quot;&quot;&quot;
+</span><span>    @wraps(func)
+</span><span>    def inner(*args, **kwargs):
+</span><span>        dragon = &quot;&quot;&quot;
+</span><span> ____________________________________
+</span><span>/ THIS IS AN UNTESTED TASK. THERE    \\
+</span><span>\\ ARE DRAGONS IN THESE PARTS         /
+</span><span> ------------------------------------
+</span><span>      \\                   / \\  //\\
+</span><span>       \\    |\\___/|      /   \\//  \\\\
+</span><span>            /0  0  \\__  /    //  | \\ \\
+</span><span>           /     /  \\/_/    //   |  \\  \\
+</span><span>           @_^_@&#39;/   \\/_   //    |   \\   \\
+</span><span>           //_^_/     \\/_ //     |    \\    \\
+</span><span>        ( //) |        \\///      |     \\     \\
+</span><span>      ( / /) _|_ /   )  //       |      \\     _\\
+</span><span>    ( // /) &#39;/,_ _ _/  ( ; -.    |    _ _\\.-~        .-~~~^-.
+</span><span>  (( / / )) ,-{        _      `-.|.-~-.           .~         `.
+</span><span> (( // / ))  &#39;/\\      /                 ~-. _ .-~      .-~^-.  \\
+</span><span> (( /// ))      `.   {            }                   /      \\  \\
+</span><span>  (( / ))     .----~-.\\        \\-&#39;                 .~         \\  `. \\^-.
+</span><span>             ///.----..&gt;        \\             _ -~             `.  ^-`  ^-_
+</span><span>               ///-._ _ _ _ _ _ _}^ - - - - ~                     ~-- ,.-~
+</span><span>                                                                  /.-~
+</span><span>&quot;&quot;&quot;
+</span><span>        # pylint: disable=global-statement
+</span><span>        global DRAGON_WARNING
+</span><span>        if not DRAGON_WARNING:
+</span><span>            print(dragon)
+</span><span>            if kwargs.pop(&quot;dragon&quot;, None) is None:
+</span><span>                time.sleep(5)
+</span><span>            print(&quot;RAWR: Your problem now!!!&quot;)
+</span><span>            DRAGON_WARNING = True
+</span><span>        return func(*args, **kwargs)
+</span><span>    return inner
+</span><span>
+</span><span>#################################################
+</span><span># Atomic locking functions. Provides a full lock, and a read lock. This is so 
+</span><span># that multiple systems, users etc can access servers, but the servers allow
+</span><span># one and only one action to be occuring.
+</span><span>
+</span><span>ATOMIC_LOCK = &quot;/tmp/fsm_atomic.lock&quot;
+</span><span>ATOMIC_FLOCK = &quot;/tmp/fsm_atomic.flock&quot;
+</span><span>ATOMIC_LOCK_HOSTS = {}
+</span><span>LOCAL_HOSTNAME = socket.gethostname()
+</span><span>
+</span><span>class AtomicException(Exception):
+</span><span>    pass
+</span><span>
+</span><span>@task
+</span><span>def lock():
+</span><span>    &quot;&quot;&quot;
+</span><span>    usage: lock
+</span><span>
+</span><span>    WARNING: DO NOT RUN THIS BY HAND UNLESS YOU KNOW WHAT YOU ARE DOING!!!
+</span><span>
+</span><span>    Will create the atomic FSM lock. This prevents any other atomic function 
+</span><span>    from being able to run.
+</span><span>    &quot;&quot;&quot;
+</span><span>    ### I cannot stress enough, do not change this. 
+</span><span>    result = run(&quot;&quot;&quot;
+</span><span>        (
+</span><span>            flock -n 9 || exit 1
+</span><span>            touch {lock}
+</span><span>            echo {hostname} &gt; {lock}
+</span><span>        ) 9&gt;{flock}
+</span><span>    &quot;&quot;&quot;.format(lock=ATOMIC_LOCK, flock=ATOMIC_FLOCK, hostname=LOCAL_HOSTNAME)  )
+</span><span>    if result.return_code == 0:
+</span><span>        return True
+</span><span>    return False
+</span><span>
+</span><span>@task
+</span><span>def unlock():
+</span><span>    &quot;&quot;&quot;
+</span><span>    usage: unlock
+</span><span>
+</span><span>    WARNING: DO NOT RUN THIS BY HAND UNLESS YOU KNOW WHAT YOU ARE DOING!!!
+</span><span>
+</span><span>    Will remove the atomic FSM lock. This allows any other atomic function 
+</span><span>    from to run.
+</span><span>
+</span><span>    Only run this if you are sure that it needs to clean out a stale lock. The 
+</span><span>    fsm atomic wrapper is VERY GOOD at cleaning up after itself. Only a kill -9
+</span><span>    to the fabric job will prevent it removing the atomic lock. Check what 
+</span><span>    you are doing! Look inside of /tmp/fsm_atomic.lock to see who holds the lock right now! 
+</span><span>    &quot;&quot;&quot;
+</span><span>    ### I cannot stress enough, do not change this. 
+</span><span>    result = run(&quot;&quot;&quot;
+</span><span>            rm {lock}
+</span><span>        &quot;&quot;&quot;.format(lock=ATOMIC_LOCK))
+</span><span>    if result == 0:
+</span><span>        return True
+</span><span>    return False
+</span><span>
+</span><span>def _lock_check():
+</span><span>    # pylint: disable=global-statement
+</span><span>    global ATOMIC_LOCK_HOSTS
+</span><span>    atomic_lock = False
+</span><span>    t_owner = False
+</span><span>    if ATOMIC_LOCK_HOSTS.has_key(env.host_string):
+</span><span>        atomic_lock = ATOMIC_LOCK_HOSTS[env.host_string]
+</span><span>        t_owner = True
+</span><span>    if not atomic_lock:
+</span><span>        with hide(&#39;warnings&#39;, &#39;running&#39;):
+</span><span>            result = get(ATOMIC_LOCK, local_path=&quot;/tmp/{host}/{page}&quot;.format(
+</span><span>                page=&quot;fsm_atomic.lock&quot;, host=env.host))
+</span><span>            if len(result) != 0:
+</span><span>                atomic_lock = True
+</span><span>    return atomic_lock, t_owner
+</span><span>
+</span><span>def noop(*args, **kwargs):
+</span><span>    log_local(&#39;No-op for %s&#39; % env.host_string, &#39;NOTICE&#39;)
+</span><span>
+</span><span>def rnt_fsm_atomic_r(func):
+</span><span>    &quot;&quot;&quot;
+</span><span>    This decorator wraps functions that relate to the FSM and changing of state. 
+</span><span>    It triggers an atomic lock in the FSM to prevent other state changes occuring
+</span><span>
+</span><span>    Fsm atomic tasks can be nested, only the top level task will manage the lock.
+</span><span>
+</span><span>    If the lock is already taken, we will NOT allow the task to run.
+</span><span>    &quot;&quot;&quot;
+</span><span>    @wraps(func)
+</span><span>    def inner(*args, **kwargs):
+</span><span>        #If ATOMIC_LOCK_HOSTS then we own the lock, so we can use it.
+</span><span>        # ELSE if we don&#39;t hold ATOMIC_LOCK_HOSTS we should check. 
+</span><span>        # Really, only the outer most wrapper should check .... 
+</span><span>        with settings(warn_only=True):
+</span><span>            # pylint: disable=global-statement
+</span><span>            global ATOMIC_LOCK_HOSTS
+</span><span>            #We DO care about the thread owner. Consider an exclusive lock above
+</span><span>            # a read lock. If we didn&#39;t check that we own that exclusive lock,
+</span><span>            # we wouldn&#39;t be able to run.
+</span><span>            (atomic_lock, t_owner) = _lock_check()
+</span><span>            allow_run = False
+</span><span>            if not atomic_lock or (atomic_lock and t_owner):
+</span><span>                ### We can run
+</span><span>                allow_run = True
+</span><span>                pass
+</span><span>            elif atomic_lock and not t_owner:
+</span><span>                ### We can&#39;t run. The lock is held, and we don&#39;t own it.
+</span><span>                log_local(&#39;ATOMIC LOCK EXISTS, CANNOT RUN %s&#39; % env.host_string, &#39;NOTICE&#39;)
+</span><span>            elif atomic_lock and t_owner:
+</span><span>                #### THIS SHOULDN&#39;T HAPPEN EVER
+</span><span>                log_local(&#39;ATOMIC LOCK STATE IS INVALID PLEASE CHECK&#39;, &#39;CRITICAL&#39;)
+</span><span>                raise AtomicException(&quot;CRITICAL: ATOIC LOCK STATE IS INVALID PLEASE CHECK, CANNOT RUN %s&quot; % env.host_string)
+</span><span>            elif not atomic_lock and not t_owner:
+</span><span>                ### This means there is no lock, and we don&#39;t own one. We can run.
+</span><span>                pass
+</span><span>            try:
+</span><span>                if allow_run:
+</span><span>                    return func(*args, **kwargs)
+</span><span>                else:
+</span><span>                    return noop(*args, **kwargs)
+</span><span>            finally:
+</span><span>                pass
+</span><span>    return inner
+</span><span>
+</span><span>
+</span><span>def rnt_fsm_atomic_exc(func):
+</span><span>    &quot;&quot;&quot;
+</span><span>    This decorator wraps functions that relate to the FSM and changing of state. 
+</span><span>    It triggers an atomic lock in the FSM to prevent other state changes occuring
+</span><span>    until the task is complete.
+</span><span>
+</span><span>    Fsm atomic tasks can be nested, only the top level task will manage the lock.
+</span><span>
+</span><span>    If the lock is already taken, we will NOT allow the task to run.
+</span><span>
+</span><span>    State is passed to nested calls that also need an atomic lock.
+</span><span>    &quot;&quot;&quot;
+</span><span>    @wraps(func)
+</span><span>    def inner(*args, **kwargs):
+</span><span>        with settings(warn_only=True):
+</span><span>            # pylint: disable=global-statement
+</span><span>            global ATOMIC_LOCK_HOSTS
+</span><span>            (atomic_lock, t_owner) = _lock_check()
+</span><span>            atomic_lock_owner = False
+</span><span>            allow_run = False
+</span><span>            if atomic_lock and t_owner:
+</span><span>                #We have the lock, do nothing.
+</span><span>                pass
+</span><span>                allow_run = True
+</span><span>            elif atomic_lock and not t_owner:
+</span><span>                #Someone else has it, error.
+</span><span>                log_local(&#39;ATOMIC LOCK EXISTS, CANNOT RUN %s&#39; % env.host_string, &#39;IMPORTANT&#39;)
+</span><span>            elif not atomic_lock and t_owner:
+</span><span>                #Error, can&#39;t be in this state.
+</span><span>                log_local(&#39;ATOMIC LOCK STATE IS INVALID PLEASE CHECK&#39;, &#39;CRITICAL&#39;)
+</span><span>                raise AtomicException(&quot;CRITICAL: ATOMIC LOCK STATE IS INVALID PLEASE CHECK, CANNOT RUN %s&quot; % env.host_string)
+</span><span>            elif not atomic_lock and not t_owner:
+</span><span>                # Create the lock.
+</span><span>                if not lock():
+</span><span>                    log_local(&#39;LOCK TAKEN BY ANOTHER PROCESS&#39;, &#39;IMPORTANT&#39;)
+</span><span>                    raise AtomicException(&quot;CRITICAL: LOCK TAKEN BY ANOTHER PROCESS&quot;)
+</span><span>                ATOMIC_LOCK_HOSTS[env.host_string] = True
+</span><span>                atomic_lock_owner = True
+</span><span>                allow_run = True
+</span><span>            try:
+</span><span>                if allow_run:
+</span><span>                    return func(*args, **kwargs)
+</span><span>                else:
+</span><span>                    return noop(*args, **kwargs)
+</span><span>            finally:
+</span><span>                if atomic_lock_owner:
+</span><span>                    unlock()
+</span><span>                    ATOMIC_LOCK_HOSTS[env.host_string] = False
+</span><span>    return inner
+</span><span>
+</span><span>##################################################
+</span><span># Basic service management.
+</span><span>#
+</span><span>## This is how you should start. Basic start, stop, and status commands.
+</span><span>
+</span><span>
+</span><span>@task
+</span><span>@parallel
+</span><span>def start():
+</span><span>    &quot;&quot;&quot;
+</span><span>    usage: start
+</span><span>
+</span><span>    Start the MapleTA database, tomcat and webserver
+</span><span>    &quot;&quot;&quot;
+</span><span>    sudo(&#39;service postgresql start&#39;)
+</span><span>    sudo(&#39;service tomcat6 start&#39;)
+</span><span>    sudo(&#39;service httpd start&#39;)
+</span><span>
+</span><span>
+</span><span>@task
+</span><span>@parallel
+</span><span>def stop():
+</span><span>    &quot;&quot;&quot;
+</span><span>    usage: stop
+</span><span>
+</span><span>    Stop the MapleTA webserver, tomcat and database
+</span><span>    &quot;&quot;&quot;
+</span><span>    sudo(&#39;service httpd stop&#39;)
+</span><span>    sudo(&#39;service tomcat6 stop&#39;)
+</span><span>    sudo(&#39;service postgresql stop&#39;)
+</span><span>
+</span><span>
+</span><span>@task
+</span><span>def restart():
+</span><span>    &quot;&quot;&quot;
+</span><span>    usage: restart
+</span><span>
+</span><span>    Restart the MapleTA database, tomcat and webserver
+</span><span>    &quot;&quot;&quot;
+</span><span>    stop()
+</span><span>    start()
+</span><span>
+</span><span>
+</span><span>@task
+</span><span>def status():
+</span><span>    &quot;&quot;&quot;
+</span><span>    usage: status
+</span><span>
+</span><span>    Check the status of MapleTA
+</span><span>    &quot;&quot;&quot;
+</span><span>    sudo(&#39;service postgresql status&#39;)
+</span><span>    sudo(&#39;service tomcat6 status&#39;)
+</span><span>    sudo(&#39;service httpd status&#39;)
+</span><span>
+</span><span>##################################
+</span><span># Some blackboard tasks. These rely on some of the above decorators.
+</span><span>#
+</span><span>### These are well developed, and sometimes rely on code not provided here. This
+</span><span># in very intentional so that you can read it and get ideas of HOW you should 
+</span><span># build code that works in your environment.
+</span><span>
+</span><span># Also shows the usage of decorators and how you should use them to protent tasks
+</span><span>
+</span><span>###################################
+</span><span># Helpers
+</span><span>###################################
+</span><span>
+</span><span>def config_key(key):
+</span><span>    if key.endswith(&#39;=&#39;) is False:
+</span><span>        key += &#39;=&#39;
+</span><span>    return run(&quot;egrep &#39;{key}&#39; {bbconfig} | cut -f2 -d\= &quot;.format(key=key, bbconfig=BB_CONFIG))
+</span><span>
+</span><span># return blackboard database instance
+</span><span>@task
+</span><span>@rnt_help
+</span><span>def get_db_instance():
+</span><span>    &quot;&quot;&quot;
+</span><span>    usage: get_db_instance
+</span><span>
+</span><span>    Display the servers current DB instance / SID
+</span><span>    &quot;&quot;&quot;
+</span><span>    x = config_key(&#39;bbconfig.database.server.instancename&#39;)
+</span><span>    return x
+</span><span>
+</span><span>@task
+</span><span>def get_db_credentials():
+</span><span>    &quot;&quot;&quot;
+</span><span>    usage: get_db_credentials
+</span><span>
+</span><span>    This will retrieve the DB username and password from the BB server, and 
+</span><span>    return them as a dict {hostname:X, sid:X, username:X, password:X}
+</span><span>    &quot;&quot;&quot;
+</span><span>    creds = {&#39;hostname&#39; : None,
+</span><span>             &#39;sid&#39; : None,
+</span><span>             &#39;username&#39; : None,
+</span><span>             &#39;password&#39; : None}
+</span><span>    with hide(&#39;everything&#39;):
+</span><span>        creds[&#39;hostname&#39;] = config_key(&#39;bbconfig.database.server.fullhostname&#39;)
+</span><span>        #TODO: Remove this sid appending line
+</span><span>        creds[&#39;sid&#39;] = config_key(&#39;bbconfig.database.server.instancename&#39;) + &#39;.blackboard.inc&#39;
+</span><span>        creds[&#39;username&#39;] = config_key(&#39;antargs.default.vi.db.name&#39;)
+</span><span>        creds[&#39;password&#39;] = config_key(&#39;antargs.default.vi.db.password&#39;)
+</span><span>    return creds
+</span><span>
+</span><span>
+</span><span>@task
+</span><span>@parallel
+</span><span>@rnt_fsm_atomic_exc
+</span><span>def force_stop():
+</span><span>    &quot;&quot;&quot;
+</span><span>    usage: force_stop -&gt; atomic
+</span><span>
+</span><span>    Stop blackboard services on hosts in PARALLEL. This WILL bring down all
+</span><span>    hosts FAST. This does NOT gracefully remove from the pool. This DOES NOT
+</span><span>    check the sis integration queue.
+</span><span>    &quot;&quot;&quot;
+</span><span>    log_blackboard(&quot;Stopping BB&quot;, level=&#39;NOTICE&#39;)
+</span><span>    if test_processes(quit=False) is True:
+</span><span>        sudo(&#39;/data/blackboard/bbctl stop&#39;)
+</span><span>        time.sleep(30)
+</span><span>        cleanup_processes()
+</span><span>        test_processes()
+</span><span>    log_blackboard(&quot;Stopped&quot;, level=&#39;SUCCESS&#39;)
+</span><span>
+</span><span>@task
+</span><span>@serial
+</span><span>@rnt_fsm_atomic_exc
+</span><span>def force_restart():
+</span><span>    &quot;&quot;&quot;
+</span><span>    usage: restart -&gt; atomic
+</span><span>
+</span><span>    Restart blackboard systems in SERIAL. This is a dumb rolling restart. This
+</span><span>    DOES NOT remove from the pool and DOES NOT check the SIS queue
+</span><span>    &quot;&quot;&quot;
+</span><span>    log_blackboard(&quot;Trying to force restart blackboard&quot;, level=&#39;NOTICE&#39;)
+</span><span>    force_stop()
+</span><span>    time.sleep(60)
+</span><span>    start()
+</span><span>    log_blackboard(&quot;force restart complete&quot;, level=&#39;SUCCESS&#39;)
+</span><span>
+</span><span>
+</span><span>@task
+</span><span>@rnt_imsure()
+</span><span>def pushconfigupdates():
+</span><span>    &quot;&quot;&quot;
+</span><span>    usage: pushconfigupdates
+</span><span>
+</span><span>    Run the pushconfigupdates tool on a system.
+</span><span>Warning! Running PushConfigUpdates.sh deploys changes to bb-config.properties!
+</span><span>* This will result in an outage to the host(s) on which it is run!
+</span><span>* Be careful that bb-config.properties, and the xythos.properties configuration
+</span><span>files point to the correct database before you run this!
+</span><span>    &quot;&quot;&quot;
+</span><span>    sudo(&#39;/data/blackboard/tools/admin/PushConfigUpdates.sh&#39;)
+</span><span>
+</span><span>@rnt_fsm_atomic_exc
+</span><span>def _compress_and_delete(path, fileglob, zipage=7, rmage=3660):
+</span><span>    &quot;&quot;&quot;
+</span><span>    This will compress logs up to 7 days, and delete older than 62 days.
+</span><span>
+</span><span>    The pattern is taken as:
+</span><span>
+</span><span>    /a/b*/c/d.*.txt
+</span><span>
+</span><span>    This is passed to find which will carry out the actions as sudo.
+</span><span>    &quot;&quot;&quot;
+</span><span>    with settings(warn_only=True):
+</span><span>        sudo(&quot;find {path} -mtime +{zipage} -name &#39;{fileglob}&#39;  -exec gzip &#39;{{}}&#39; \;&quot;.format(path=path, fileglob=fileglob, zipage=zipage))
+</span><span>        sudo(&quot;find {path} -mtime +{rmage} -name &#39;{fileglob}.gz&#39;  -exec rm &#39;{{}}&#39; \;&quot;.format(path=path, fileglob=fileglob, rmage=rmage))
+</span><span>
+</span><span>@task
+</span><span>@rnt_help
+</span><span>@rnt_fsm_atomic_exc
+</span><span>def rotate_tomcat_logs():
+</span><span>    &quot;&quot;&quot;
+</span><span>    usage: rotate_tomcat_logs -&gt; atomic
+</span><span>
+</span><span>    This will rotate the tomcat logs in /data/blackboard/logs/tomcat.
+</span><span>    &quot;&quot;&quot;
+</span><span>    log_blackboard(level=&quot;NOTICE&quot;)
+</span><span>    with settings(warn_only=True):
+</span><span>        for pattern in [&#39;stdout-stderr-*.log&#39;, &#39;bb-access-log.*.txt&#39;,
+</span><span>                &#39;activemq.txt.*.txt&#39;, &#39;catalina-log.txt.*.txt&#39;, &#39;gc.*.txt&#39;,
+</span><span>                &#39;thread_dump*.txt&#39;, &#39;*.hprof&#39; ]:
+</span><span>            _compress_and_delete(&quot;/data/blackboard/logs/tomcat/&quot;, pattern)
+</span></code></pre>
+
+    </div>
+</article>
+
+        </main>
+        
+        <footer>
+            
+            <div class="border"></div>
+            <div class="footer">
+                <small class="footer-left">
+                    Copyright &copy; William Brown
+                </small>
+                <small class="footer-right">
+                    Powered by <a href="https://www.getzola.org">Zola</a> | Theme <a href="https://github.com/barlog-m/oceanic-zen">Oceanic Zen</a>
+                </small>
+            </div>
+        
+        </footer>
+    
+        </div>
+    </body>
+</html>

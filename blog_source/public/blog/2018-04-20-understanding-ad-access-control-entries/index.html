@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+        <meta name="description" content="Firstyear&#x27;s blog">
+        
+
+        <title>Firstyear&#x27;s blog-a-log</title>
+
+        
+          <link rel="alternate" type="application/rss+xml" title="RSS" href="https://fy.blackhats.net.au/rss.xml">
+        
+
+        
+            <link rel="stylesheet" href="https://fy.blackhats.net.au/theme.css">
+        
+        
+    </head>
+    <body>
+        <div class="content">
+        
+        
+            <header>
+                <div class="header-left">
+                    <a href="https:&#x2F;&#x2F;fy.blackhats.net.au" class="logo">Firstyear&#x27;s blog-a-log</a>
+                </div>
+                <div class="header-right">
+                    <nav itemscope itemtype="http://schema.org/SiteNavigationElement">
+                      <ul>
+                        
+                        
+                            
+                            <li class="nav">
+                                <a itemprop="url" href="https://fy.blackhats.net.au/blog/">
+                                    <span itemprop="name">Blog</span>
+                                </a>
+                            </li>
+                        
+                            
+                            <li class="nav">
+                                <a itemprop="url" href="https://fy.blackhats.net.au/pages/">
+                                    <span itemprop="name">Pages</span>
+                                </a>
+                            </li>
+                        
+                        
+                        <li class="nav">
+                            <a itemprop="url" href="https://github.com/firstyear">
+                                <img class="icon" src="https:&#x2F;&#x2F;fy.blackhats.net.au/icons/github.svg" alt="Github">
+                            </a>
+                        </li>
+                        
+                        <li class="nav">
+                            <a itemprop="url" href="/rss.xml">
+                                <img class="icon" src="https:&#x2F;&#x2F;fy.blackhats.net.au/rss-logo.png" alt="rss">
+                            </a>
+                        </li>
+                      </ul>
+                    </nav>
+                </div>
+            </header>
+        
+        
+        <main>
+            
+<article itemscope itemtype="http://schema.org/BlogPosting">
+    <div itemprop="headline">
+        <h1>Understanding AD Access Control Entries</h1>
+        <div class="border"></div>
+        <time datetime="2018-04-20" class="date" itemprop="datePublished">
+            20 Apr 2018
+        </time>
+    </div>
+    <div itemprop="articleBody">
+        <h1 id="understanding-ad-access-control-entries">Understanding AD Access Control Entries</h1>
+<p>A few days ago I set out to work on making samba 4 my default LDAP
+server. In the process I was forced to learn about Active Directory
+Access controls. I found that while there was significant documentation
+around the syntax of these structures, very little existed explaining
+how to use them effectively.</p>
+<h2 id="what-s-in-an-ace">What's in an ACE?</h2>
+<p>If you look at the the ACL of an entry in AD you'll see something like:</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>O:DAG:DAD:AI
+</span><span>(A;CI;RPLCLORC;;;AN)
+</span><span>(A;;RPWPCRCCDCLCLORCWOWDSDDTSW;;;SY)
+</span><span>(A;;RPWPCRCCDCLCLORCWOWDSW;;;DA)
+</span><span>(OA;;CCDC;bf967aba-0de6-11d0-a285-00aa003049e2;;AO)
+</span><span>(OA;;CCDC;bf967a9c-0de6-11d0-a285-00aa003049e2;;AO)
+</span><span>(OA;;CCDC;bf967aa8-0de6-11d0-a285-00aa003049e2;;PO)
+</span><span>(A;;RPLCLORC;;;AU)
+</span><span>(OA;;CCDC;4828cc14-1437-45bc-9b07-ad6f015e5f28;;AO)
+</span><span>(OA;CIIOID;RP;4c164200-20c0-11d0-a768-00aa006e0529;4828cc14-1437-45bc-9b07-ad6f015e5f28;RU)
+</span><span>(OA;CIIOID;RP;4c164200-20c0-11d0-a768-00aa006e0529;bf967aba-0de6-11d0-a285-00aa003049e2;RU)
+</span><span>(OA;CIIOID;RP;5f202010-79a5-11d0-9020-00c04fc2d4cf;4828cc14-1437-45bc-9b07-ad6f015e5f28;RU)
+</span><span>(OA;CIIOID;RP;5f202010-79a5-11d0-9020-00c04fc2d4cf;bf967aba-0de6-11d0-a285-00aa003049e2;RU)
+</span><span>(OA;CIIOID;RP;bc0ac240-79a9-11d0-9020-00c04fc2d4cf;4828cc14-1437-45bc-9b07-ad6f015e5f28;RU)
+</span><span>(OA;CIIOID;RP;bc0ac240-79a9-11d0-9020-00c04fc2d4cf;bf967aba-0de6-11d0-a285-00aa003049e2;RU)
+</span><span>(OA;CIIOID;RP;59ba2f42-79a2-11d0-9020-00c04fc2d3cf;4828cc14-1437-45bc-9b07-ad6f015e5f28;RU)
+</span><span>(OA;CIIOID;RP;59ba2f42-79a2-11d0-9020-00c04fc2d3cf;bf967aba-0de6-11d0-a285-00aa003049e2;RU)
+</span><span>(OA;CIIOID;RP;037088f8-0ae1-11d2-b422-00a0c968f939;4828cc14-1437-45bc-9b07-ad6f015e5f28;RU)
+</span><span>(OA;CIIOID;RP;037088f8-0ae1-11d2-b422-00a0c968f939;bf967aba-0de6-11d0-a285-00aa003049e2;RU)
+</span><span>(OA;CIIOID;RP;b7c69e6d-2cc7-11d2-854e-00a0c983f608;bf967a86-0de6-11d0-a285-00aa003049e2;ED)
+</span><span>(OA;CIIOID;RP;b7c69e6d-2cc7-11d2-854e-00a0c983f608;bf967a9c-0de6-11d0-a285-00aa003049e2;ED)
+</span><span>(OA;CIIOID;RP;b7c69e6d-2cc7-11d2-854e-00a0c983f608;bf967aba-0de6-11d0-a285-00aa003049e2;ED)
+</span><span>(OA;CIIOID;RPLCLORC;;4828cc14-1437-45bc-9b07-ad6f015e5f28;RU)
+</span><span>(OA;CIIOID;RPLCLORC;;bf967a9c-0de6-11d0-a285-00aa003049e2;RU)
+</span><span>(OA;CIIOID;RPLCLORC;;bf967aba-0de6-11d0-a285-00aa003049e2;RU)
+</span><span>(OA;CIID;RPWPCR;91e647de-d96f-4b70-9557-d63ff4f3ccd8;;PS)
+</span><span>(A;CIID;RPWPCRCCDCLCLORCWOWDSDDTSW;;;EA)
+</span><span>(A;CIID;LC;;;RU)
+</span><span>(A;CIID;RPWPCRCCLCLORCWOWDSDSW;;;BA)
+</span><span>S:AI
+</span><span>(OU;CIIOIDSA;WP;f30e3bbe-9ff0-11d1-b603-0000f80367c1;bf967aa5-0de6-11d0-a285-00aa003049e2;WD)
+</span><span>(OU;CIIOIDSA;WP;f30e3bbf-9ff0-11d1-b603-0000f80367c1;bf967aa5-0de6-11d0-a285-00aa003049e2;WD)
+</span></code></pre>
+<p>This seems very confusing and complex (and someone should write a tool
+to explain these ... maybe me). But once you can see the structure it
+starts to make sense.</p>
+<p>Most of the access controls you are viewing here are DACLs or
+Discrestionary Access Control Lists. These make up the majority of the
+output after 'O:DAG:DAD:AI'. TODO: What does 'O:DAG:DAD:AI' mean
+completely?</p>
+<p>After that there are many ACEs defined in SDDL or ???. The structure is
+as follows:</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>(type;flags;rights;object_guid;inherit_object_guid;sid(;attribute))
+</span></code></pre>
+<p>Each of these fields can take varies types. These interact to form the
+access control rules that allow or deny access. Thankfully, you don't
+need to adjust many fields to make useful ACE entries.</p>
+<p>MS maintains a document of these <a href="https://msdn.microsoft.com/en-us/library/aa374928(d=printer,v=vs.85).aspx">field values
+here.</a></p>
+<p>They also maintain a list of wellknown <a href="https://msdn.microsoft.com/en-us/library/aa379602(d=printer,v=vs.85).aspx">SID values
+here</a></p>
+<p>I want to cover some common values you may see though:</p>
+<h2 id="type">type</h2>
+<p>Most of the types you'll see are &quot;A&quot; and &quot;OA&quot;. These mean the ACE
+allows an access by the SID.</p>
+<h2 id="flags">flags</h2>
+<p>These change the behaviour of the ACE. Common values you may want to set
+are CI and OI. These determine that the ACE should be inherited to child
+objects. As far as the MS docs say, these behave the same way.</p>
+<p>If you see ID in this field it means the ACE has been inherited from a
+parent object. In this case the inherit_object_guid field will be set to
+the guid of the parent that set the ACE. This is great, as it allows you
+to backtrace the origin of access controls!</p>
+<h2 id="rights">rights</h2>
+<p>This is the important part of the ACE - it determines what access the
+SID has over this object. The MS docs are very comprehensive of what
+this does, but common values are:</p>
+<ul>
+<li>RP: read property</li>
+<li>WP: write property</li>
+<li>CR: control rights</li>
+<li>CC: child create (create new objects)</li>
+<li>DC: delete child</li>
+<li>LC: list child objects</li>
+<li>LO: list objects</li>
+<li>RC: read control</li>
+<li>WO: write owner (change the owner of an object)</li>
+<li>WD: write dac (allow writing ACE)</li>
+<li>SW: self write</li>
+<li>SD: standard delete</li>
+<li>DT: delete tree</li>
+</ul>
+<p>I'm not 100% sure of all the subtle behaviours of these, because they
+are <em>not</em> documented that well. If someone can help explain these to me,
+it would be great.</p>
+<h2 id="sid">sid</h2>
+<p>We will skip some fields and go straight to SID. This is the SID of the
+object that is allowed the rights from the rights field. This field can
+take a GUID of the object, or it can take a &quot;well known&quot; value of the
+SID. For example 'AN' means &quot;anonymous users&quot;, or 'AU' meaning
+authenticated users.</p>
+<h2 id="conclusion">conclusion</h2>
+<p>I won't claim to be an AD ACE expert, but I did find the docs hard to
+interpret at first. Having a breakdown and explanation of the behaviour
+of the fields can help others, and I really want to hear from people who
+know more about this topic on me so that I can expand this resource to
+help others really understand how AD ACE's work.</p>
+
+    </div>
+</article>
+
+        </main>
+        
+        <footer>
+            
+            <div class="border"></div>
+            <div class="footer">
+                <small class="footer-left">
+                    Copyright &copy; William Brown
+                </small>
+                <small class="footer-right">
+                    Powered by <a href="https://www.getzola.org">Zola</a> | Theme <a href="https://github.com/barlog-m/oceanic-zen">Oceanic Zen</a>
+                </small>
+            </div>
+        
+        </footer>
+    
+        </div>
+    </body>
+</html>

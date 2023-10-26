@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+        <meta name="description" content="Firstyear&#x27;s blog">
+        
+
+        <title>Firstyear&#x27;s blog-a-log</title>
+
+        
+          <link rel="alternate" type="application/rss+xml" title="RSS" href="https://fy.blackhats.net.au/rss.xml">
+        
+
+        
+            <link rel="stylesheet" href="https://fy.blackhats.net.au/theme.css">
+        
+        
+    </head>
+    <body>
+        <div class="content">
+        
+        
+            <header>
+                <div class="header-left">
+                    <a href="https:&#x2F;&#x2F;fy.blackhats.net.au" class="logo">Firstyear&#x27;s blog-a-log</a>
+                </div>
+                <div class="header-right">
+                    <nav itemscope itemtype="http://schema.org/SiteNavigationElement">
+                      <ul>
+                        
+                        
+                            
+                            <li class="nav">
+                                <a itemprop="url" href="https://fy.blackhats.net.au/blog/">
+                                    <span itemprop="name">Blog</span>
+                                </a>
+                            </li>
+                        
+                            
+                            <li class="nav">
+                                <a itemprop="url" href="https://fy.blackhats.net.au/pages/">
+                                    <span itemprop="name">Pages</span>
+                                </a>
+                            </li>
+                        
+                        
+                        <li class="nav">
+                            <a itemprop="url" href="https://github.com/firstyear">
+                                <img class="icon" src="https:&#x2F;&#x2F;fy.blackhats.net.au/icons/github.svg" alt="Github">
+                            </a>
+                        </li>
+                        
+                        <li class="nav">
+                            <a itemprop="url" href="/rss.xml">
+                                <img class="icon" src="https:&#x2F;&#x2F;fy.blackhats.net.au/rss-logo.png" alt="rss">
+                            </a>
+                        </li>
+                      </ul>
+                    </nav>
+                </div>
+            </header>
+        
+        
+        <main>
+            
+<article itemscope itemtype="http://schema.org/BlogPosting">
+    <div itemprop="headline">
+        <h1>How CTAP2.0 made UserVerification even more confusing</h1>
+        <div class="border"></div>
+        <time datetime="2022-01-19" class="date" itemprop="datePublished">
+            19 Jan 2022
+        </time>
+    </div>
+    <div itemprop="articleBody">
+        <h1 id="how-ctap2-0-made-userverification-even-more-confusing">How CTAP2.0 made UserVerification even more confusing</h1>
+<p>I have previously written about how <a href="../../../2020/11/21/webauthn_userverificationpolicy_curiosities.html">Webauthn introduces a false sense
+of
+security</a>
+with how it manages UserVerification (UV) by default. To summarise, when
+you request &quot;preferred&quot; which means &quot;perform UV if possible&quot;, it can
+be bypassed since relying parties's (RP) do <em>not</em> check if UV was
+actually performed, and Webauthn makes no recommendations on how to
+store credentials in a manner that allows future checking to ensure UV
+is requested or validated correctly.</p>
+<p>From this, in Webauthn-RS we made the recommendation that you use either
+&quot;required&quot; to enforce all credentials have performed UV, or
+&quot;discouraged&quot; to request that <em>no</em> UV is performed by credentials
+during authentication or registration.</p>
+<p>At the same time, in the Webauthn-RS project we begun to store two
+important pieces of credential metadata beyond the Webauthn
+specification - the result of UV from registration, and the policy that
+was requested at the time of registration. We did this because we had
+noticed there were classes of credentials, that even in &quot;discouraged&quot;
+would always verify themself at registration and authentication. Because
+of this property, we would enforce that since UV was performed at
+registration, we could continue to enforce UV on a per credential basis
+to detect possible credential compromise, and to further strengthen the
+security of credentials used with Webauthn-RS.</p>
+<p>This created 3 workflows:</p>
+<ul>
+<li>Required - At registration and authentication UV is always required</li>
+<li>Discouraged + no UV - At registration and authentication UV is never
+required</li>
+<li>Discouraged + always UV - At registration and authentication UV is
+always required</li>
+</ul>
+<h2 id="a-bug-report">A bug report ...</h2>
+<p>We recieved a bug that an authenticator was failing to work with
+Webauthn-RS, because at registration it would always force UV, but
+during authentication it would <em>never</em> request UV. This was triggering
+our inconsistent credential detection, indicating the credential was
+possibly compromised.</p>
+<p>In this situation, the authenticator used an open-source firmware, so I
+was able to look at the source and identify the programming issue.
+During registration UV is <em>always</em> required, but during &quot;discouraged&quot;
+in authentication it's <em>never</em> required matching the reported bug.</p>
+<p>The author of the library then directed me to the fact that in
+<a href="https://fidoalliance.org/specs/fido-v2.0-ps-20190130/fido-client-to-authenticator-protocol-v2.0-ps-20190130.html#authenticatorMakeCredential">CTAP2.0</a>
+this behaviour is <em>enshrined in the specification</em>.</p>
+<h2 id="why-is-this-behaviour-bad">Why is this behaviour bad?</h2>
+<p>I performed a quick poll on twitter, and asked about 5 non-technical
+friends about this. The question I asked was:</p>
+<p><em>You go to a website, and you're asked to setup a yubikey. When you
+register the key you're asked for a pin. Do you now expect the pin to be
+required when you authenticate to that website with that yubikey now?</em></p>
+<p>From the 31 votes on twitter, the result was 60% (21 / 30) that &quot;yes&quot;
+this PIN will always be required. From the people I asked directly, they
+all responded &quot;yes&quot;. (This is in no way an official survey or
+significant numbers, but it's an initial indication)</p>
+<p>Humans expect things to behave in a <em>consistent</em> manner. When you take
+an action one time, something will always continue to behave in that
+way. The issue we are presented with in this situation is that CTAP2.0
+fundamentally breaks this association by changing the behaviour between
+registration and authentication. It also is not communicated that the
+different is registration vs authentication, or even <em>why</em> this
+behaviour is changed.</p>
+<p>As a result, this confuses users (&quot;Why is my pin not always
+required?!&quot;) and this can at worst cause users to be apathetic about
+the UV check, where it could be downgraded from &quot;required/preferred&quot;
+to &quot;discouraged&quot; and the user would not notice or care about &quot;why is
+this different?&quot;. Because RP's that strictly follow the Webauthn
+specification are open to UV bypass, CTAP2.0 in this case has helped to
+open the door for users to be tricked into this.</p>
+<p>The other issue is that for a library like Webauthn-RS we lose the
+ability to detect credential compromise or attempts to bypass UV when in
+discouraged, since now UV is not consistently enforced across all
+classes of authenticators.</p>
+<h2 id="can-it-be-fixed">Can it be fixed?</h2>
+<p>No. There are changes in CTAP2.1 that can set the token to be &quot;always
+verified&quot; and for extensions to be sent that always enforce UV of that
+credential, but none of these assist the CTAP2.0 case where none of
+these elements exist.</p>
+<p>As an RP library author we have to assume and work out ways to interact
+with credentials that are CTAP2.0_pre, CTAP2.0, CTAP2.1, vendor
+developed and more. We have to find a way to use the elements at hand to
+create a consistent user interface, that also embed security elements
+that can not be bypassed or downgraded.</p>
+<p>I spent a lot of time thinking about how to resolve this, but I can only
+conclude that CTAP2.0 has made &quot;discouraged&quot; less meaningful by adding
+in this confusing behaviour.</p>
+<h2 id="is-this-the-end-of-the-world">Is this the end of the world?</h2>
+<p>Not at all. But it does undermine users trust in the systems we are
+building, where people may end up believing that UV is pointless and
+never checked. There are a lot of smart bad-people out there and they
+may utilise this in attacks (especially when combined with the fact that
+RP's who strictly follow the Webauthn standard are already open to UV
+bypass in many cases).</p>
+<p>If the goal we have is to move to a passwordless world, we need people
+to trust their devices behave in a manner that is predictable and that
+they understand. By making UV sometimes there, sometimes not, it will be
+a much higher barrier to convince people they can trust these devices as
+a self contained multifactor authenticator.</p>
+<h2 id="i-use-an-authentication-provider-what-can-i-do">I use an authentication provider, what can I do?</h2>
+<p>If possible, setup your authentication provider to have UV required.
+This will cause some credentials to no longer work in your environment,
+but it will ensure that every authenticator has a consistent experience.
+In most cases, your authentication provider is likely to be standards
+compliant, and will not perform the extended verification discussed
+below meaning that &quot;preferred&quot; is bypassable, and &quot;discouraged&quot; can
+have inconsistent UV requests from users.</p>
+<h2 id="what-can-an-rp-do">What can an RP do?</h2>
+<p>Because of this change, there are really only three workflows now that
+are actually consistent for users where we can enforce UV properties are
+observed correctly.</p>
+<ul>
+<li>Required - At registration and authentication UV is always required</li>
+<li>Preferred + with UV - At registration and authentication UV is
+always required</li>
+<li>Preferred + no UV - At registration and authentication UV should not
+be required</li>
+</ul>
+<p>The way that this is achieved is an extension to the Webauthn
+specification. When you register a credential you <em>must</em> store the state
+of the UV boolean at registration, and you <em>must</em> store the policy that
+was requested at registration. During authentication the following is
+checked in place of the webauthn defined UV check:</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>if credential.registration_policy == required OR authentication.policy == required {
+</span><span>    assert(authentication.uv == true)
+</span><span>} else if credential.registration_policy == preferred AND credential.registration_uv == true {
+</span><span>    // We either sent authentication.policy preferred or discouraged, but the user registered
+</span><span>    // with UV so we enforce that behaviour.
+</span><span>    assert(authentication.uv == true)
+</span><span>} else {
+</span><span>    // Do not check uv.
+</span><span>}
+</span></code></pre>
+<p>There is a single edge case in this work flow - since we now send
+&quot;preferred&quot; it's possible that a credential that registered without
+UV (IE via Firefox which doesn't support CTAP2.0_pre or greater) will
+be moved to using a platform that does support CTAP2.0_pre or greater,
+and it will begin to request UV. It is however possible in this scenario
+that once the credential begins to provide UV we can then store the
+credential.uv as true and enforce that for future authentications.</p>
+<p>The primary issue with this is that we will begin to ask for the user's
+PIN more often with credentials which may lead to frustration.
+Biometrics this is less of a concern as the &quot;touch&quot; action is always
+required anyway. However I think this is acceptable since it's more
+important for a consistent set of behaviours to exist.</p>
+<p>Previously I have stated that &quot;preferred&quot; should not be used since it
+is bypassable, but with the extensions to Webauthn above where policy
+and uv at registration are stored and validated, preferred gains a
+proper meaning and can be checked and enforced.</p>
+<h2 id="conclusion">Conclusion</h2>
+<p>In the scenarioes where &quot;discouraged&quot; and &quot;preferred&quot; may be used,
+UV is meaningless in the current definition of the Webauthn
+specification when paired with the various versions of CTAP. It's
+merely a confusing annoyance that we present to users seemingly at
+random, that is trivially bypassed, adds little to no security value and
+at worst undermines user trust in the systems we are trying to build.</p>
+<p>When we are building authentication systems, we must always think about
+and consider the humans who will be using these systems, and the
+security properties that we actually provide in these systems.</p>
+
+    </div>
+</article>
+
+        </main>
+        
+        <footer>
+            
+            <div class="border"></div>
+            <div class="footer">
+                <small class="footer-left">
+                    Copyright &copy; William Brown
+                </small>
+                <small class="footer-right">
+                    Powered by <a href="https://www.getzola.org">Zola</a> | Theme <a href="https://github.com/barlog-m/oceanic-zen">Oceanic Zen</a>
+                </small>
+            </div>
+        
+        </footer>
+    
+        </div>
+    </body>
+</html>

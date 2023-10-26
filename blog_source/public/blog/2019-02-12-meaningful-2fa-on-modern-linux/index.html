@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+        <meta name="description" content="Firstyear&#x27;s blog">
+        
+
+        <title>Firstyear&#x27;s blog-a-log</title>
+
+        
+          <link rel="alternate" type="application/rss+xml" title="RSS" href="https://fy.blackhats.net.au/rss.xml">
+        
+
+        
+            <link rel="stylesheet" href="https://fy.blackhats.net.au/theme.css">
+        
+        
+    </head>
+    <body>
+        <div class="content">
+        
+        
+            <header>
+                <div class="header-left">
+                    <a href="https:&#x2F;&#x2F;fy.blackhats.net.au" class="logo">Firstyear&#x27;s blog-a-log</a>
+                </div>
+                <div class="header-right">
+                    <nav itemscope itemtype="http://schema.org/SiteNavigationElement">
+                      <ul>
+                        
+                        
+                            
+                            <li class="nav">
+                                <a itemprop="url" href="https://fy.blackhats.net.au/blog/">
+                                    <span itemprop="name">Blog</span>
+                                </a>
+                            </li>
+                        
+                            
+                            <li class="nav">
+                                <a itemprop="url" href="https://fy.blackhats.net.au/pages/">
+                                    <span itemprop="name">Pages</span>
+                                </a>
+                            </li>
+                        
+                        
+                        <li class="nav">
+                            <a itemprop="url" href="https://github.com/firstyear">
+                                <img class="icon" src="https:&#x2F;&#x2F;fy.blackhats.net.au/icons/github.svg" alt="Github">
+                            </a>
+                        </li>
+                        
+                        <li class="nav">
+                            <a itemprop="url" href="/rss.xml">
+                                <img class="icon" src="https:&#x2F;&#x2F;fy.blackhats.net.au/rss-logo.png" alt="rss">
+                            </a>
+                        </li>
+                      </ul>
+                    </nav>
+                </div>
+            </header>
+        
+        
+        <main>
+            
+<article itemscope itemtype="http://schema.org/BlogPosting">
+    <div itemprop="headline">
+        <h1>Meaningful 2fa on modern linux</h1>
+        <div class="border"></div>
+        <time datetime="2019-02-12" class="date" itemprop="datePublished">
+            12 Feb 2019
+        </time>
+    </div>
+    <div itemprop="articleBody">
+        <h1 id="meaningful-2fa-on-modern-linux">Meaningful 2fa on modern linux</h1>
+<p>Recently I heard of someone asking the question:</p>
+<p>&quot;I have an AD environment connected with &lt;product&gt; IDM. I want to
+have 2fa/mfa to my linux machines for ssh, that works when the central
+servers are offline. What's the best way to achieve this?&quot;</p>
+<p>Today I'm going to break this down - but the conclusion for the lazy
+is:</p>
+<p><em>This is not realistically possible today: use ssh keys with ldap
+distribution, and mfa on the workstations, with full disk encryption</em>.</p>
+<h2 id="background">Background</h2>
+<p>So there are a few parts here. AD is for intents and purposes an LDAP
+server. The &lt;product&gt; is also an LDAP server, that syncs to AD. We
+don't care if that's 389-ds, freeipa or vendor solution. The results
+are basically the same.</p>
+<p>Now the linux auth stack is, and will always use pam for the
+authentication, and nsswitch for user id lookups. Today, we assume that
+most people run sssd, but pam modules for different options are
+possible.</p>
+<p>There are a stack of possible options, and they all have various flaws.</p>
+<ul>
+<li>FreeIPA + 2fa</li>
+<li>PAM TOTP modules</li>
+<li>PAM radius to a TOTP server</li>
+<li>Smartcards</li>
+</ul>
+<h2 id="freeipa-2fa">FreeIPA + 2fa</h2>
+<p>Now this is the one most IDM people would throw out. The issue here is
+the person already has AD and a vendor product. They don't need a third
+solution.</p>
+<p>Next is the fact that FreeIPA stores the TOTP in the LDAP, which means
+FreeIPA has to be online for it to work. So this is eliminated by the
+&quot;central servers offline&quot; requirement.</p>
+<h2 id="pam-radius-to-totp-server">PAM radius to TOTP server</h2>
+<p>Same as above: An extra product, and you have a source of truth that can
+go down.</p>
+<h2 id="pam-totp-module-on-hosts">PAM TOTP module on hosts</h2>
+<p>Okay, even if you can get this to scale, you need to send the private
+seed material of every TOTP device that could login to the machine, to
+every machine. That means <em>any</em> compromise, compromises every TOTP token
+on your network. Bad place to be in.</p>
+<h2 id="smartcards">Smartcards</h2>
+<p>Are notoriously difficult to have functional, let alone with SSH. Don't
+bother. (Where the Smartcard does TLS auth to the SSH server this is.)</p>
+<h2 id="come-on-william-why-are-you-so-doom-and-gloom">Come on William, why are you so doom and gloom!</h2>
+<p>Lets back up for a second and think about what we we are trying to
+prevent by having mfa at all. We want to prevent single factor
+compromise from having a large impact <em>and</em> we want to prevent brute
+force attacks. (There are probably more reasons, but these are the ones
+I'll focus on).</p>
+<p>So the best answer: Use mfa on the workstation (password + totp), then
+use ssh keys to the hosts.</p>
+<p>This means the target of the attack is small, and the workstation can be
+protected by things like full disk encryption and group policy. To sudo
+on the host you still need the password. This makes sudo MFA to root as
+you need something know, and something you have.</p>
+<p>If you are extra conscious you can put your ssh keys on smartcards. This
+works on linux and osx workstations with yubikeys as I am aware.
+Apparently you can have ssh keys in TPM, which would give you tighter
+hardware binding, but I don't know how to achieve this (yet).</p>
+<p>To make all this better, you can distributed your ssh public keys in
+ldap, which means you gain the benefits of LDAP account
+locking/revocation, you can remove the keys instantly if they are
+breached, and you have very little admin overhead to configuration of
+this service on the linux server side. Think about how easy onboarding
+is if you only need to put your ssh key in one place and it works on
+every server! Let alone shutting down a compromised account: lock it in
+one place, and they are denied access to every server.</p>
+<p>SSSD as the LDAP client on the server can also cache the passwords
+(hashed) and the ssh public keys, which means a disconnected client will
+still be able to be authenticated to.</p>
+<p>At this point, because you have ssh key auth working, you could even
+<em>deny</em> password auth as an option in ssh altogether, eliminating an
+entire class of bruteforce vectors.</p>
+<p>For bonus marks: You can use AD as the generic LDAP server that stores
+your SSH keys. No additional vendor products needed, you already have
+everything required today, for free. Everyone loves free.</p>
+<h2 id="conclusion">Conclusion</h2>
+<p>If you want strong, offline capable, distributed mfa on linux servers,
+the only choice today is LDAP with SSH key distribution.</p>
+<p>Want to know more? This blog contains how-tos on SSH key distribution
+for AD, SSH keys on smartcards, and how to configure SSSD to use SSH
+keys from LDAP.</p>
+
+    </div>
+</article>
+
+        </main>
+        
+        <footer>
+            
+            <div class="border"></div>
+            <div class="footer">
+                <small class="footer-left">
+                    Copyright &copy; William Brown
+                </small>
+                <small class="footer-right">
+                    Powered by <a href="https://www.getzola.org">Zola</a> | Theme <a href="https://github.com/barlog-m/oceanic-zen">Oceanic Zen</a>
+                </small>
+            </div>
+        
+        </footer>
+    
+        </div>
+    </body>
+</html>

@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+        <meta name="description" content="Firstyear&#x27;s blog">
+        
+
+        <title>Firstyear&#x27;s blog-a-log</title>
+
+        
+          <link rel="alternate" type="application/rss+xml" title="RSS" href="https://fy.blackhats.net.au/rss.xml">
+        
+
+        
+            <link rel="stylesheet" href="https://fy.blackhats.net.au/theme.css">
+        
+        
+    </head>
+    <body>
+        <div class="content">
+        
+        
+            <header>
+                <div class="header-left">
+                    <a href="https:&#x2F;&#x2F;fy.blackhats.net.au" class="logo">Firstyear&#x27;s blog-a-log</a>
+                </div>
+                <div class="header-right">
+                    <nav itemscope itemtype="http://schema.org/SiteNavigationElement">
+                      <ul>
+                        
+                        
+                            
+                            <li class="nav">
+                                <a itemprop="url" href="https://fy.blackhats.net.au/blog/">
+                                    <span itemprop="name">Blog</span>
+                                </a>
+                            </li>
+                        
+                            
+                            <li class="nav">
+                                <a itemprop="url" href="https://fy.blackhats.net.au/pages/">
+                                    <span itemprop="name">Pages</span>
+                                </a>
+                            </li>
+                        
+                        
+                        <li class="nav">
+                            <a itemprop="url" href="https://github.com/firstyear">
+                                <img class="icon" src="https:&#x2F;&#x2F;fy.blackhats.net.au/icons/github.svg" alt="Github">
+                            </a>
+                        </li>
+                        
+                        <li class="nav">
+                            <a itemprop="url" href="/rss.xml">
+                                <img class="icon" src="https:&#x2F;&#x2F;fy.blackhats.net.au/rss-logo.png" alt="rss">
+                            </a>
+                        </li>
+                      </ul>
+                    </nav>
+                </div>
+            </header>
+        
+        
+        <main>
+            
+<article itemscope itemtype="http://schema.org/BlogPosting">
+    <div itemprop="headline">
+        <h1>Enable caBLE on your iPhone for testing</h1>
+        <div class="border"></div>
+        <time datetime="2022-04-04" class="date" itemprop="datePublished">
+            04 Apr 2022
+        </time>
+    </div>
+    <div itemprop="articleBody">
+        <h1 id="enable-cable-on-your-iphone-for-testing">Enable caBLE on your iPhone for testing</h1>
+<p>caBLE allows a nearby device (such as your iPhone) to be used an a
+webauthn authenticator. Given my work on
+<a href="https://github.com/kanidm/webauthn-rs">WebauthnRS</a> I naturally wanted
+to test this! When I initially tried to test caBLE with webauthn via my
+iPhone, I recieved an error that the operation wasn't available at this
+time. There was no other information available.</p>
+<h2 id="debugging">Debugging</h2>
+<p>After some digging into Console.app, I found the log message from
+AuthenticationServicesAgent which stated:</p>
+<p><em>&quot;Syncing platform authenticator must be enabled to register a platform
+public key credential; this can be enabled in Settings &gt; Developer.&quot;</em></p>
+<h2 id="enabling-developer-settings">Enabling Developer Settings</h2>
+<p>Run Xcode.app on your mac. On your iPhone close and reopen settings.
+Then search for &quot;developer&quot;.</p>
+<p>Inside of that menu enable [Syncing Platform Authenticator]{.title-ref}
+and [Additional Logging]{.title-ref} under [PassKit]{.title-ref}.</p>
+<p>After that you should be able to test caBLE!</p>
+
+    </div>
+</article>
+
+        </main>
+        
+        <footer>
+            
+            <div class="border"></div>
+            <div class="footer">
+                <small class="footer-left">
+                    Copyright &copy; William Brown
+                </small>
+                <small class="footer-right">
+                    Powered by <a href="https://www.getzola.org">Zola</a> | Theme <a href="https://github.com/barlog-m/oceanic-zen">Oceanic Zen</a>
+                </small>
+            </div>
+        
+        </footer>
+    
+        </div>
+    </body>
+</html>

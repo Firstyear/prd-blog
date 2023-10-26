@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+        <meta name="description" content="Firstyear&#x27;s blog">
+        
+
+        <title>Firstyear&#x27;s blog-a-log</title>
+
+        
+          <link rel="alternate" type="application/rss+xml" title="RSS" href="https://fy.blackhats.net.au/rss.xml">
+        
+
+        
+            <link rel="stylesheet" href="https://fy.blackhats.net.au/theme.css">
+        
+        
+    </head>
+    <body>
+        <div class="content">
+        
+        
+            <header>
+                <div class="header-left">
+                    <a href="https:&#x2F;&#x2F;fy.blackhats.net.au" class="logo">Firstyear&#x27;s blog-a-log</a>
+                </div>
+                <div class="header-right">
+                    <nav itemscope itemtype="http://schema.org/SiteNavigationElement">
+                      <ul>
+                        
+                        
+                            
+                            <li class="nav">
+                                <a itemprop="url" href="https://fy.blackhats.net.au/blog/">
+                                    <span itemprop="name">Blog</span>
+                                </a>
+                            </li>
+                        
+                            
+                            <li class="nav">
+                                <a itemprop="url" href="https://fy.blackhats.net.au/pages/">
+                                    <span itemprop="name">Pages</span>
+                                </a>
+                            </li>
+                        
+                        
+                        <li class="nav">
+                            <a itemprop="url" href="https://github.com/firstyear">
+                                <img class="icon" src="https:&#x2F;&#x2F;fy.blackhats.net.au/icons/github.svg" alt="Github">
+                            </a>
+                        </li>
+                        
+                        <li class="nav">
+                            <a itemprop="url" href="/rss.xml">
+                                <img class="icon" src="https:&#x2F;&#x2F;fy.blackhats.net.au/rss-logo.png" alt="rss">
+                            </a>
+                        </li>
+                      </ul>
+                    </nav>
+                </div>
+            </header>
+        
+        
+        <main>
+            
+<article itemscope itemtype="http://schema.org/BlogPosting">
+    <div itemprop="headline">
+        <h1>tracking down insane memory leaks</h1>
+        <div class="border"></div>
+        <time datetime="2016-07-13" class="date" itemprop="datePublished">
+            13 Jul 2016
+        </time>
+    </div>
+    <div itemprop="articleBody">
+        <h1 id="tracking-down-insane-memory-leaks">tracking down insane memory leaks</h1>
+<p>One of the best parts of AddressSanitizer is the built in leak
+sanitiser. However, sometimes it's not as clear as you might wish!</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>I0&gt; /opt/dirsrv/bin/pwdhash hello                            
+</span><span>{SSHA}s16epVgkKenDHQqG8hrCGhmzqkgx0H1984ttYg==
+</span><span>
+</span><span>=================================================================
+</span><span>==388==ERROR: LeakSanitizer: detected memory leaks
+</span><span>
+</span><span>Direct leak of 72 byte(s) in 1 object(s) allocated from:
+</span><span>    #0 0x7f5f5f94dfd0 in calloc (/lib64/libasan.so.3+0xc6fd0)
+</span><span>    #1 0x7f5f5d7f72ae  (/lib64/libnss3.so+0x752ae)
+</span><span>
+</span><span>SUMMARY: AddressSanitizer: 72 byte(s) leaked in 1 allocation(s).
+</span></code></pre>
+<p>&quot;Where is /lib64/libnss3.so+0x752ae&quot; and what can I do with it? I have
+debuginfo and devel info installed, but I can't seem to see what line
+that's at.</p>
+
+    </div>
+</article>
+
+        </main>
+        
+        <footer>
+            
+            <div class="border"></div>
+            <div class="footer">
+                <small class="footer-left">
+                    Copyright &copy; William Brown
+                </small>
+                <small class="footer-right">
+                    Powered by <a href="https://www.getzola.org">Zola</a> | Theme <a href="https://github.com/barlog-m/oceanic-zen">Oceanic Zen</a>
+                </small>
+            </div>
+        
+        </footer>
+    
+        </div>
+    </body>
+</html>

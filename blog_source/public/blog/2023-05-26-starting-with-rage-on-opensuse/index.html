@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+        <meta name="description" content="Firstyear&#x27;s blog">
+        
+
+        <title>Firstyear&#x27;s blog-a-log</title>
+
+        
+          <link rel="alternate" type="application/rss+xml" title="RSS" href="https://fy.blackhats.net.au/rss.xml">
+        
+
+        
+            <link rel="stylesheet" href="https://fy.blackhats.net.au/theme.css">
+        
+        
+    </head>
+    <body>
+        <div class="content">
+        
+        
+            <header>
+                <div class="header-left">
+                    <a href="https:&#x2F;&#x2F;fy.blackhats.net.au" class="logo">Firstyear&#x27;s blog-a-log</a>
+                </div>
+                <div class="header-right">
+                    <nav itemscope itemtype="http://schema.org/SiteNavigationElement">
+                      <ul>
+                        
+                        
+                            
+                            <li class="nav">
+                                <a itemprop="url" href="https://fy.blackhats.net.au/blog/">
+                                    <span itemprop="name">Blog</span>
+                                </a>
+                            </li>
+                        
+                            
+                            <li class="nav">
+                                <a itemprop="url" href="https://fy.blackhats.net.au/pages/">
+                                    <span itemprop="name">Pages</span>
+                                </a>
+                            </li>
+                        
+                        
+                        <li class="nav">
+                            <a itemprop="url" href="https://github.com/firstyear">
+                                <img class="icon" src="https:&#x2F;&#x2F;fy.blackhats.net.au/icons/github.svg" alt="Github">
+                            </a>
+                        </li>
+                        
+                        <li class="nav">
+                            <a itemprop="url" href="/rss.xml">
+                                <img class="icon" src="https:&#x2F;&#x2F;fy.blackhats.net.au/rss-logo.png" alt="rss">
+                            </a>
+                        </li>
+                      </ul>
+                    </nav>
+                </div>
+            </header>
+        
+        
+        <main>
+            
+<article itemscope itemtype="http://schema.org/BlogPosting">
+    <div itemprop="headline">
+        <h1>Starting with Rage on OpenSUSE</h1>
+        <div class="border"></div>
+        <time datetime="2023-05-26" class="date" itemprop="datePublished">
+            26 May 2023
+        </time>
+    </div>
+    <div itemprop="articleBody">
+        <h1 id="starting-with-rage-on-opensuse">Starting with Rage on OpenSUSE</h1>
+<p>Rage is a rust implementation of Age, a modern, simple and secure file encryption tool. It
+is easier to use than other tools like GPG, and being written in a memory safe language it
+avoids many of the exploits that may occur in C based tools.</p>
+<h2 id="installing-rage">Installing Rage</h2>
+<p>You can install rage on leap or tumbleweed from zypper</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>zypper install rage-encryption
+</span></code></pre>
+<p>Alternately you can install from cargo with</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>cargo install rage
+</span></code></pre>
+<h2 id="key-management">Key management</h2>
+<p>The recipient must generate a key. This can be either a rage key, or an ssh key which is of the
+form <code>ssh-rsa</code> or <code>ssh-ed25519</code>.</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span># The public key is displayed.
+</span><span>rage-keygen -o ~/rage.key
+</span><span># age1y2lc7x59jcqvrpf3ppmnj3f93ytaegfkdnl5vrdyv83l8ekcae4sexgwkg
+</span></code></pre>
+<p>To use ssh keys, you can generate a key with:</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>ssh-keygen -t ed25519
+</span><span># cat /root/.ssh/id_ed25519.pub
+</span><span>ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIE1kWXiYIn/VWzo0DlnIp3cRx/kZd6d9WbwehKJpPx1R
+</span></code></pre>
+<h2 id="encrypting-to-a-public-key">Encrypting to a public key</h2>
+<p>You encrypt a file to the owner of the public key with:</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>rage -e -r &lt;pub key&gt; -o &lt;encrypted output&gt; &lt;input&gt;
+</span><span># With their rage public key.
+</span><span>rage -e -r age1y2lc7x59jcqvrpf3ppmnj3f93ytaegfkdnl5vrdyv83l8ekcae4sexgwkg -o ~/encyrpted.age data
+</span></code></pre>
+<p>Alternately, if you want to allow the content of the encrypted file to be base64 for emailing (note the -a):</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>rage -e -a -r &lt;pub key&gt; -o &lt;encrypted output&gt; &lt;input&gt;
+</span><span># With their rage public key.
+</span><span>rage -e -a -r age1y2lc7x59jcqvrpf3ppmnj3f93ytaegfkdnl5vrdyv83l8ekcae4sexgwkg \
+</span><span>    -o ~/encyrpted.age data
+</span><span>
+</span><span># cat /tmp/encrypted
+</span><span>-----BEGIN AGE ENCRYPTED FILE-----
+</span><span>YWdlLWVuY3J5cHRpb24ub3JnL3YxCi0+IFgyNTUxOSByaDNTNHR0dlI5RkRudmpH
+</span><span>NEUrT1RrQ3pZdjM5alRVYThDeG5xdTBxd1EwCjYxVGkwV05ibXlWeUN3MWVuNTBC
+</span><span>Qk1SdEwyd3J1RjgrNVkxem5pbHJscVEKLT4gTyI7WFQtZ3JlYXNlIEZDXyBiICFV
+</span><span>NgpoTlJ5ME95azMycE5GbS9oS0h6a280RlRTRHNKbE9mMGZjTmFCUjB6aWEwZGxU
+</span><span>Rjg1RkZmdkhBSkU4Y1dZdEM3CjV0VXl4dE5Qd3E0SU1GSXNIejQKLS0tIFhscDBn
+</span><span>MlBiTmxPekthY1RabVcxN0JkQnJsd3RKUkpTKzRkelZ1eDFXSk0KHzCOyBZHPe/P
+</span><span>cV3Fez6yusycXcm83Bt+N2yHTG2utOGxfmIxb5c=
+</span><span>-----END AGE ENCRYPTED FILE-----
+</span></code></pre>
+<p>The ssh public key can be encrypted to if the public key is in a file</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>rage -e -a -R &lt;path to public key&gt; -o &lt;encrypted output&gt; &lt;input&gt;
+</span><span># Using the ssh public key in a file
+</span><span>rage -e -a -R ~/id_ed25519.pub -o /tmp/ssh-encrypted data
+</span></code></pre>
+<h2 id="decrypting-a-file">Decrypting a file</h2>
+<p>The recipient can then decrypt with:</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>rage -d -i &lt;path to private key&gt; -o &lt;decrypted output&gt; &lt;encrypted input&gt;
+</span><span>
+</span><span>rage -d -i ~/rage.key -o /tmp/decrypted /tmp/encrypted
+</span><span>
+</span><span># cat /tmp/decrypted
+</span><span>hello
+</span></code></pre>
+<p>With an ssh private key</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>rage -d -i &lt;path to ssh private key&gt; -o &lt;decrypted output&gt; &lt;encrypted input&gt;
+</span><span>
+</span><span>rage -d -i ~/.ssh/id_ed25519 -o /tmp/ssh-decrypted /tmp/ssh-encrypted
+</span></code></pre>
+<h2 id="encrypt-to-multiple-recipients">Encrypt to multiple recipients</h2>
+<p>Rage can encrypt to multiple identities at a time.</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>rage -e -a -R &lt;first ssh pub key&gt; -R &lt;second pub key&gt; ... -o &lt;encrypted output&gt; &lt;input&gt;
+</span><span>rage -e -a -r &lt;first pub key&gt; -r &lt;second pub key&gt; ... -o &lt;encrypted output&gt; &lt;input&gt;
+</span><span>rage -e -a -R &lt;first ssh pub key&gt; -r &lt;first rage pub key&gt; ... -o &lt;encrypted output&gt; &lt;input&gt;
+</span><span>
+</span><span>rage -e -a -R /root/.ssh/id_ed25519.pub \
+</span><span>    -r age1h8equ4vs5pyp8ykw0z8m9n8m3psy6swme52ztth0v66frgu65ussm8gq0t \
+</span><span>    -r age1y2lc7x59jcqvrpf3ppmnj3f93ytaegfkdnl5vrdyv83l8ekcae4sexgwkg \
+</span><span>    -o /tmp/ssh-encrypted hello
+</span></code></pre>
+<p><em>all</em> of the associated keys can decrypt this file.</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>rage -d -i /root/.ssh/id_ed25519 -o /tmp/ssh-decrypted /tmp/ssh-encrypted
+</span><span>
+</span><span>rage -d -i ~/rage.key -o /tmp/decrypted /tmp/ssh-encrypted
+</span></code></pre>
+<h2 id="using-a-passphrase-instead-of-a-key">Using a passphrase instead of a key</h2>
+<p>Rage can encrypt with a passphrase:</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>rage -e -p -o &lt;encrypted output&gt; &lt;input&gt;
+</span><span>
+</span><span>rage -e -p -o /tmp/passphrase-encrypted data
+</span></code></pre>
+<p>Decrypted with (passphrase is detected and prompted for):</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>rage -d -o &lt;decrypted output&gt; &lt;encrypted input&gt; 
+</span><span>
+</span><span>rage -d -o /tmp/decrypted /tmp/passphrase-encrypted
+</span></code></pre>
+
+    </div>
+</article>
+
+        </main>
+        
+        <footer>
+            
+            <div class="border"></div>
+            <div class="footer">
+                <small class="footer-left">
+                    Copyright &copy; William Brown
+                </small>
+                <small class="footer-right">
+                    Powered by <a href="https://www.getzola.org">Zola</a> | Theme <a href="https://github.com/barlog-m/oceanic-zen">Oceanic Zen</a>
+                </small>
+            </div>
+        
+        </footer>
+    
+        </div>
+    </body>
+</html>

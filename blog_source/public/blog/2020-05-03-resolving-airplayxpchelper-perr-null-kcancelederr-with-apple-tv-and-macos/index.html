@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+        <meta name="description" content="Firstyear&#x27;s blog">
+        
+
+        <title>Firstyear&#x27;s blog-a-log</title>
+
+        
+          <link rel="alternate" type="application/rss+xml" title="RSS" href="https://fy.blackhats.net.au/rss.xml">
+        
+
+        
+            <link rel="stylesheet" href="https://fy.blackhats.net.au/theme.css">
+        
+        
+    </head>
+    <body>
+        <div class="content">
+        
+        
+            <header>
+                <div class="header-left">
+                    <a href="https:&#x2F;&#x2F;fy.blackhats.net.au" class="logo">Firstyear&#x27;s blog-a-log</a>
+                </div>
+                <div class="header-right">
+                    <nav itemscope itemtype="http://schema.org/SiteNavigationElement">
+                      <ul>
+                        
+                        
+                            
+                            <li class="nav">
+                                <a itemprop="url" href="https://fy.blackhats.net.au/blog/">
+                                    <span itemprop="name">Blog</span>
+                                </a>
+                            </li>
+                        
+                            
+                            <li class="nav">
+                                <a itemprop="url" href="https://fy.blackhats.net.au/pages/">
+                                    <span itemprop="name">Pages</span>
+                                </a>
+                            </li>
+                        
+                        
+                        <li class="nav">
+                            <a itemprop="url" href="https://github.com/firstyear">
+                                <img class="icon" src="https:&#x2F;&#x2F;fy.blackhats.net.au/icons/github.svg" alt="Github">
+                            </a>
+                        </li>
+                        
+                        <li class="nav">
+                            <a itemprop="url" href="/rss.xml">
+                                <img class="icon" src="https:&#x2F;&#x2F;fy.blackhats.net.au/rss-logo.png" alt="rss">
+                            </a>
+                        </li>
+                      </ul>
+                    </nav>
+                </div>
+            </header>
+        
+        
+        <main>
+            
+<article itemscope itemtype="http://schema.org/BlogPosting">
+    <div itemprop="headline">
+        <h1>Resolving AirPlayXPCHelper Perr NULL kCanceledErr with Apple TV and MacOS</h1>
+        <div class="border"></div>
+        <time datetime="2020-05-03" class="date" itemprop="datePublished">
+            03 May 2020
+        </time>
+    </div>
+    <div itemprop="articleBody">
+        <h1 id="resolving-airplayxpchelper-perr-null-kcancelederr-with-apple-tv-and-macos">Resolving AirPlayXPCHelper Perr NULL kCanceledErr with Apple TV and MacOS</h1>
+<p>I decided to finally get an Apple TV so that I could use my iPad and
+MacBook Pro to airplay to my projector. So far I've been really
+impressed by it and how well it works with modern amplifiers and my
+iPad.</p>
+<p>Sadly though, when I tried to use my MacBook pro to airplay to the Apple
+TV I recieved an &quot;Unable to connect&quot; error, with no further
+description.</p>
+<h2 id="initial-research">Initial Research</h2>
+<p>The first step was to look in console.app at the local system logs. The
+following item stood out:</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>error 09:24:41.459722+1000 AirPlayXPCHelper ### Error: CID 0xACF10006, Peer NULL, -6723/0xFFFFE5BD kCanceledErr
+</span></code></pre>
+<p>I only found a single result on a search for this, and they resolved the
+problem by disabling their MacOS firewall - attempting this myself did
+not fix the issue. There are also reports of apple service staff
+disabling the firewall to resolve airplay problems too.</p>
+<h2 id="time-to-dig-further">Time to Dig Further ...</h2>
+<p>Now it was time to look more. To debug an Apple TV you need to connect a
+USB-C cable to it's service port on the rear of the device, while you
+connect this to a Mac on the other side. Console.app will then show you
+the streamed logs from the device.</p>
+<p>While looking on the Apple TV I noticed the following log item:</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>[AirPlay] ### [0x8F37] Set up session 16845584210140482044 with [&lt;ipv6 address&gt;:3378]:52762 failed: 61/0x3D ECONNREFUSED {
+</span><span>&quot;timingProtocol&quot; : &quot;NTP&quot;,
+</span><span>&quot;osName&quot; : &quot;Mac OS X&quot;,
+</span><span>...
+</span><span>&quot;isScreenMirroringSession&quot; : true,
+</span><span>&quot;osVersion&quot; : &quot;10.15.4&quot;,
+</span><span>&quot;timingPort&quot; : 64880,
+</span><span>...
+</span><span>}
+</span></code></pre>
+<p>I have trimmed this log, as most details don't matter. What is
+important is that it looks like the Apple TV is attempting to
+back-connect to the MacBook Pro, which has a connection refused. From
+iOS it appears that the video/timing channel is initiated from the iOS
+device, so no back-connection is required, but for AirPlay to work from
+the MacBook Pro to the Apple TV, the Apple TV must be able to connect
+back on high ports with new UDP/TCP sessions for NTP to synchronise
+clocks.</p>
+<h2 id="my-network">My Network</h2>
+<p>My MacBook pro is on a seperate VLAN to my Apple TV for security
+reasons, mainly because I don't want most devices to access management
+consoles of various software that I have installed. I have used the
+Avahi reflector on my USG to enable cross VLAN discovery. This would
+appear to be issue, is that my firewall is not allowing the NTP traffic
+back to my MacBook pro.</p>
+<p>To resolve this I allowed some high ports from the Apple TV to connect
+back to the VLAN my MacBook Pro is on, and I allowed built-in software
+to recieve connections.</p>
+<p>Once this was done, I was able to AirPlay across VLANs to my Apple TV!</p>
+
+    </div>
+</article>
+
+        </main>
+        
+        <footer>
+            
+            <div class="border"></div>
+            <div class="footer">
+                <small class="footer-left">
+                    Copyright &copy; William Brown
+                </small>
+                <small class="footer-right">
+                    Powered by <a href="https://www.getzola.org">Zola</a> | Theme <a href="https://github.com/barlog-m/oceanic-zen">Oceanic Zen</a>
+                </small>
+            </div>
+        
+        </footer>
+    
+        </div>
+    </body>
+</html>

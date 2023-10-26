@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+        <meta name="description" content="Firstyear&#x27;s blog">
+        
+
+        <title>Firstyear&#x27;s blog-a-log</title>
+
+        
+          <link rel="alternate" type="application/rss+xml" title="RSS" href="https://fy.blackhats.net.au/rss.xml">
+        
+
+        
+            <link rel="stylesheet" href="https://fy.blackhats.net.au/theme.css">
+        
+        
+    </head>
+    <body>
+        <div class="content">
+        
+        
+            <header>
+                <div class="header-left">
+                    <a href="https:&#x2F;&#x2F;fy.blackhats.net.au" class="logo">Firstyear&#x27;s blog-a-log</a>
+                </div>
+                <div class="header-right">
+                    <nav itemscope itemtype="http://schema.org/SiteNavigationElement">
+                      <ul>
+                        
+                        
+                            
+                            <li class="nav">
+                                <a itemprop="url" href="https://fy.blackhats.net.au/blog/">
+                                    <span itemprop="name">Blog</span>
+                                </a>
+                            </li>
+                        
+                            
+                            <li class="nav">
+                                <a itemprop="url" href="https://fy.blackhats.net.au/pages/">
+                                    <span itemprop="name">Pages</span>
+                                </a>
+                            </li>
+                        
+                        
+                        <li class="nav">
+                            <a itemprop="url" href="https://github.com/firstyear">
+                                <img class="icon" src="https:&#x2F;&#x2F;fy.blackhats.net.au/icons/github.svg" alt="Github">
+                            </a>
+                        </li>
+                        
+                        <li class="nav">
+                            <a itemprop="url" href="/rss.xml">
+                                <img class="icon" src="https:&#x2F;&#x2F;fy.blackhats.net.au/rss-logo.png" alt="rss">
+                            </a>
+                        </li>
+                      </ul>
+                    </nav>
+                </div>
+            </header>
+        
+        
+        <main>
+            
+<article itemscope itemtype="http://schema.org/BlogPosting">
+    <div itemprop="headline">
+        <h1>Work around docker exec bug</h1>
+        <div class="border"></div>
+        <time datetime="2018-12-09" class="date" itemprop="datePublished">
+            09 Dec 2018
+        </time>
+    </div>
+    <div itemprop="articleBody">
+        <h1 id="work-around-docker-exec-bug">Work around docker exec bug</h1>
+<p>There is currently a docker exec bug in Centos/RHEL 7 that causes errors
+such as:</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span># docker exec -i -t instance /bin/sh
+</span><span>rpc error: code = 2 desc = oci runtime error: exec failed: container_linux.go:247: starting container process caused &quot;process_linux.go:110: decoding init error from pipe caused \&quot;read parent: connection reset by peer\&quot;&quot;
+</span></code></pre>
+<p>As a work around you can use nsenter instead:</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>PID=docker inspect --format {{.State.Pid}} &lt;name of container&gt;
+</span><span>nsenter --target $PID --mount --uts --ipc --net --pid /bin/sh
+</span></code></pre>
+<p>For more information, you can see the <a href="https://bugzilla.redhat.com/show_bug.cgi?id=1655214">bugreport
+here.</a></p>
+
+    </div>
+</article>
+
+        </main>
+        
+        <footer>
+            
+            <div class="border"></div>
+            <div class="footer">
+                <small class="footer-left">
+                    Copyright &copy; William Brown
+                </small>
+                <small class="footer-right">
+                    Powered by <a href="https://www.getzola.org">Zola</a> | Theme <a href="https://github.com/barlog-m/oceanic-zen">Oceanic Zen</a>
+                </small>
+            </div>
+        
+        </footer>
+    
+        </div>
+    </body>
+</html>

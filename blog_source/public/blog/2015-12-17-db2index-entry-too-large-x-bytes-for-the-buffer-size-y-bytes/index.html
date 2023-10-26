@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+        <meta name="description" content="Firstyear&#x27;s blog">
+        
+
+        <title>Firstyear&#x27;s blog-a-log</title>
+
+        
+          <link rel="alternate" type="application/rss+xml" title="RSS" href="https://fy.blackhats.net.au/rss.xml">
+        
+
+        
+            <link rel="stylesheet" href="https://fy.blackhats.net.au/theme.css">
+        
+        
+    </head>
+    <body>
+        <div class="content">
+        
+        
+            <header>
+                <div class="header-left">
+                    <a href="https:&#x2F;&#x2F;fy.blackhats.net.au" class="logo">Firstyear&#x27;s blog-a-log</a>
+                </div>
+                <div class="header-right">
+                    <nav itemscope itemtype="http://schema.org/SiteNavigationElement">
+                      <ul>
+                        
+                        
+                            
+                            <li class="nav">
+                                <a itemprop="url" href="https://fy.blackhats.net.au/blog/">
+                                    <span itemprop="name">Blog</span>
+                                </a>
+                            </li>
+                        
+                            
+                            <li class="nav">
+                                <a itemprop="url" href="https://fy.blackhats.net.au/pages/">
+                                    <span itemprop="name">Pages</span>
+                                </a>
+                            </li>
+                        
+                        
+                        <li class="nav">
+                            <a itemprop="url" href="https://github.com/firstyear">
+                                <img class="icon" src="https:&#x2F;&#x2F;fy.blackhats.net.au/icons/github.svg" alt="Github">
+                            </a>
+                        </li>
+                        
+                        <li class="nav">
+                            <a itemprop="url" href="/rss.xml">
+                                <img class="icon" src="https:&#x2F;&#x2F;fy.blackhats.net.au/rss-logo.png" alt="rss">
+                            </a>
+                        </li>
+                      </ul>
+                    </nav>
+                </div>
+            </header>
+        
+        
+        <main>
+            
+<article itemscope itemtype="http://schema.org/BlogPosting">
+    <div itemprop="headline">
+        <h1>db2index: entry too large (X bytes) for the buffer size (Y bytes)</h1>
+        <div class="border"></div>
+        <time datetime="2015-12-17" class="date" itemprop="datePublished">
+            17 Dec 2015
+        </time>
+    </div>
+    <div itemprop="articleBody">
+        <h1 id="db2index-entry-too-large-x-bytes-for-the-buffer-size-y-bytes">db2index: entry too large (X bytes) for the buffer size (Y bytes)</h1>
+<p>We've been there: You need to reindex your dirsrv and get it back into
+production as fast as you can. Then all of a sudden you get this error.</p>
+<p>Some quick research shows no way to change the mystical buffer size
+being referenced. You pull out your hair and wonder what's going on, so
+you play with some numbers, and eventually it works, but you don't know
+why.</p>
+<p>It turns out, this is one of the more magical undocumented values that
+DS sets for itself. If we look through the code, we find that this
+buffer is derived from the ldbm instances c_maxsize.</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>./ldap/servers/slapd/back-ldbm/import.c:48: 
+</span><span>
+</span><span>job-&gt;fifo.bsize = (inst-&gt;inst_cache.c_maxsize/10) &lt;&lt; 3;
+</span></code></pre>
+<p>That c_maxsize is actually the value of cn=config,cn=ldbm
+database,cn=plugins,cn=config, nsslapd-dbcachesize.</p>
+<p>So, say that we get the error bytes is too small as it's only (20000000
+bytes) in size. We plug this in:</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>(20000000 &gt;&gt; 3) * 10 = 25000000
+</span></code></pre>
+<p>Which in my case was the size of nsslapd-dbcachesize</p>
+<p>If we have a hypothetical value, say 28000000 bytes, and db2index can't
+run, you can use this reverse to calculate the dbcachesize you need:</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>(28000000 &gt;&gt; 3) * 10 = 35000000
+</span></code></pre>
+<p>This will create a buffersize of 28000000 so you can run the db2index
+task.</p>
+<p>In the future, this value will be configurable, rather than derived
+which will improve the clarity of the error, and the remediation.</p>
+
+    </div>
+</article>
+
+        </main>
+        
+        <footer>
+            
+            <div class="border"></div>
+            <div class="footer">
+                <small class="footer-left">
+                    Copyright &copy; William Brown
+                </small>
+                <small class="footer-right">
+                    Powered by <a href="https://www.getzola.org">Zola</a> | Theme <a href="https://github.com/barlog-m/oceanic-zen">Oceanic Zen</a>
+                </small>
+            </div>
+        
+        </footer>
+    
+        </div>
+    </body>
+</html>

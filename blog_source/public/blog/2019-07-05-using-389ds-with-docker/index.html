@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+        <meta name="description" content="Firstyear&#x27;s blog">
+        
+
+        <title>Firstyear&#x27;s blog-a-log</title>
+
+        
+          <link rel="alternate" type="application/rss+xml" title="RSS" href="https://fy.blackhats.net.au/rss.xml">
+        
+
+        
+            <link rel="stylesheet" href="https://fy.blackhats.net.au/theme.css">
+        
+        
+    </head>
+    <body>
+        <div class="content">
+        
+        
+            <header>
+                <div class="header-left">
+                    <a href="https:&#x2F;&#x2F;fy.blackhats.net.au" class="logo">Firstyear&#x27;s blog-a-log</a>
+                </div>
+                <div class="header-right">
+                    <nav itemscope itemtype="http://schema.org/SiteNavigationElement">
+                      <ul>
+                        
+                        
+                            
+                            <li class="nav">
+                                <a itemprop="url" href="https://fy.blackhats.net.au/blog/">
+                                    <span itemprop="name">Blog</span>
+                                </a>
+                            </li>
+                        
+                            
+                            <li class="nav">
+                                <a itemprop="url" href="https://fy.blackhats.net.au/pages/">
+                                    <span itemprop="name">Pages</span>
+                                </a>
+                            </li>
+                        
+                        
+                        <li class="nav">
+                            <a itemprop="url" href="https://github.com/firstyear">
+                                <img class="icon" src="https:&#x2F;&#x2F;fy.blackhats.net.au/icons/github.svg" alt="Github">
+                            </a>
+                        </li>
+                        
+                        <li class="nav">
+                            <a itemprop="url" href="/rss.xml">
+                                <img class="icon" src="https:&#x2F;&#x2F;fy.blackhats.net.au/rss-logo.png" alt="rss">
+                            </a>
+                        </li>
+                      </ul>
+                    </nav>
+                </div>
+            </header>
+        
+        
+        <main>
+            
+<article itemscope itemtype="http://schema.org/BlogPosting">
+    <div itemprop="headline">
+        <h1>Using 389ds with docker</h1>
+        <div class="border"></div>
+        <time datetime="2019-07-05" class="date" itemprop="datePublished">
+            05 Jul 2019
+        </time>
+    </div>
+    <div itemprop="articleBody">
+        <h1 id="using-389ds-with-docker">Using 389ds with docker</h1>
+<p>I've been wanting to containerise 389 Directory Server for a long
+time - it's been a long road to get here, but I think that our
+container support is getting very close to a production ready and
+capable level. It took so long due to health issues and generally my
+obsession to do everything right.</p>
+<p>Today, container support along with our new command line tools makes 389
+a complete breeze to administer. So lets go through an example of a
+deployment now.</p>
+<p>Please note: the container image here is a git-master build and is not
+production ready as of 2019-07, hopefully this changes soon.</p>
+<h2 id="getting-the-container">Getting the Container</h2>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>docker pull firstyear/389ds:latest
+</span></code></pre>
+<p>If you want to run an ephemeral instance (IE you will LOSE all your data
+on a restart)</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>docker run firstyear/389ds:latest
+</span></code></pre>
+<p>If you want your data to persist, you need to attach a volume at /data:</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>docker volume create 389ds_data
+</span><span>docker run -v 389ds_data:/data firstyear/389ds:latest
+</span></code></pre>
+<p>The image exposes ports 3389 and 3636, so you may want to consider
+publishing these if you want external access.</p>
+<p>The container should now setup and run an instance! That's it, LDAP has
+never been easier to deploy!</p>
+<h2 id="actually-adding-some-data">Actually Adding Some Data ...</h2>
+<p>LDAP only really matters if we have some data! So we'll create a new
+backend. You need to run these instructions inside the current
+container, so I prefix these with:</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>docker exec -i -t &lt;name of container&gt; &lt;command&gt;
+</span><span>docker exec -i -t 389inst dsconf ....
+</span></code></pre>
+<p>This uses the ldapi socket via /data, and authenticates you based on
+your process uid to map you to the LDAP administrator account -
+basically, it's secure, host only admin access to your data.</p>
+<p>Now you can choose any suffix you like, generally based on your dns name
+(IE I use dc=blackhats,dc=net,dc=au).</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>dsconf localhost backend create --suffix dc=example,dc=com --be-name userRoot
+</span><span>&gt; The database was sucessfully created
+</span></code></pre>
+<p>Now fill in the suffix details into your configuration of the container.
+You'll need to find where docker stores the volume on your host for
+this (docker inspect will help you). My location is listed here:</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>vim /var/lib/docker/volumes/389ds_data/_data/config/container.inf
+</span><span>
+</span><span>--&gt; change
+</span><span># basedn ...
+</span><span>--&gt; to
+</span><span>basedn = dc=example,dc=com
+</span></code></pre>
+<p>Now you can populate data into that: The dsidm command is our tool to
+manage users and groups of a backend, and it can provide initialised
+data which has best-practice aci's, demo users and groups and starts as
+a great place for you to build an IDM system.</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>dsidm localhost initialise
+</span></code></pre>
+<p>That's it! You can now see you have a user and a group!</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>dsidm localhost user list
+</span><span>&gt; demo_user
+</span><span>dsidm localhost group list
+</span><span>&gt; demo_group
+</span></code></pre>
+<p>You can create your own user:</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>dsidm localhost user create --uid william --cn William --displayName &#39;William Brown&#39; --uidNumber 1000 --gidNumber 1000 --homeDirectory /home/william
+</span><span>&gt; Successfully created william
+</span><span>dsidm localhost user get william
+</span></code></pre>
+<p>It's trivial to add an ssh key to the user:</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>dsidm localhost user modify william add:nsSshPublicKey:AAA...
+</span><span>&gt; Successfully modified uid=william,ou=people,dc=example,dc=com
+</span></code></pre>
+<p>Or to add them to a group:</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>dsidm localhost group add_member demo_group uid=william,ou=people,dc=example,dc=com
+</span><span>&gt; added member: uid=william,ou=people,dc=example,dc=com
+</span><span>dsidm localhost group members demo_group
+</span><span>&gt; dn: uid=william,ou=people,dc=example,dc=com
+</span></code></pre>
+<p>Finally, we can even generale config templates for your applications:</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>dsidm localhost client_config sssd.conf
+</span><span>dsidm localhost client_config ldap.conf
+</span><span>dsidm localhost client_config display
+</span></code></pre>
+<p>I'm happy to say, LDAP administration has never been easier - we plan
+to add more functionality to enabled broader ranges of administrative
+tasks, especially in the IDM area and management of the configuration.
+It's honestly hard to beleve that in a shortlist of commands you can
+now have a fully functional LDAP IDM solution working.</p>
+
+    </div>
+</article>
+
+        </main>
+        
+        <footer>
+            
+            <div class="border"></div>
+            <div class="footer">
+                <small class="footer-left">
+                    Copyright &copy; William Brown
+                </small>
+                <small class="footer-right">
+                    Powered by <a href="https://www.getzola.org">Zola</a> | Theme <a href="https://github.com/barlog-m/oceanic-zen">Oceanic Zen</a>
+                </small>
+            </div>
+        
+        </footer>
+    
+        </div>
+    </body>
+</html>

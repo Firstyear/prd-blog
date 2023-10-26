@@ -1,0 +1,448 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+        <meta name="description" content="Firstyear&#x27;s blog">
+        
+
+        <title>Firstyear&#x27;s blog-a-log</title>
+
+        
+          <link rel="alternate" type="application/rss+xml" title="RSS" href="https://fy.blackhats.net.au/rss.xml">
+        
+
+        
+            <link rel="stylesheet" href="https://fy.blackhats.net.au/theme.css">
+        
+        
+    </head>
+    <body>
+        <div class="content">
+        
+        
+            <header>
+                <div class="header-left">
+                    <a href="https:&#x2F;&#x2F;fy.blackhats.net.au" class="logo">Firstyear&#x27;s blog-a-log</a>
+                </div>
+                <div class="header-right">
+                    <nav itemscope itemtype="http://schema.org/SiteNavigationElement">
+                      <ul>
+                        
+                        
+                            
+                            <li class="nav">
+                                <a itemprop="url" href="https://fy.blackhats.net.au/blog/">
+                                    <span itemprop="name">Blog</span>
+                                </a>
+                            </li>
+                        
+                            
+                            <li class="nav">
+                                <a itemprop="url" href="https://fy.blackhats.net.au/pages/">
+                                    <span itemprop="name">Pages</span>
+                                </a>
+                            </li>
+                        
+                        
+                        <li class="nav">
+                            <a itemprop="url" href="https://github.com/firstyear">
+                                <img class="icon" src="https:&#x2F;&#x2F;fy.blackhats.net.au/icons/github.svg" alt="Github">
+                            </a>
+                        </li>
+                        
+                        <li class="nav">
+                            <a itemprop="url" href="/rss.xml">
+                                <img class="icon" src="https:&#x2F;&#x2F;fy.blackhats.net.au/rss-logo.png" alt="rss">
+                            </a>
+                        </li>
+                      </ul>
+                    </nav>
+                </div>
+            </header>
+        
+        
+        <main>
+            
+<article itemscope itemtype="http://schema.org/BlogPosting">
+    <div itemprop="headline">
+        <h1>Storage Administration Guide</h1>
+        <div class="border"></div>
+        <time datetime="2023-09-08" class="date" itemprop="datePublished">
+            08 Sep 2023
+        </time>
+    </div>
+    <div itemprop="articleBody">
+        <h1 id="storage-administration-guide">Storage Administration Guide</h1>
+<p>This guide will help you understand, configure and maintain storage on Linux servers. The content
+of this guide is optimised for reliability and accesibility. This is based not only on my own
+experiences but observing the experiences of enterprise customers for many years.</p>
+<h2 id="warnings">⚠️  Warnings ⚠️</h2>
+<p>Making changes to storage entails risks. Linux and it's storage tools have no safety barriers.
+Mistakes can result in <em>COMPLETE LOSS OF ALL YOUR DATA</em>.</p>
+<p><em>DO NOT COPY PASTE COMMANDS HERE WITHOUT UNDERSTANDING THEM.</em></p>
+<p><em>CAREFULLY PLAN YOUR COMMANDS.</em></p>
+<p><em>HAVE BACKUPS THAT YOU HAVE TESTED.</em></p>
+<p>Almost all commands in this document require root privilieges.</p>
+<p>This document is a work in progress!</p>
+<h2 id="general-advice">General Advice</h2>
+<p>Before executing commands that will change your storage you should analyse your storage,
+make notes, and prepare your commands in a notepad before you execute the commands. This
+will allow you to review before making changes.</p>
+<h2 id="understanding-your-storage">Understanding Your Storage</h2>
+<p>Before changing your storage configurations you need to understand what you have and what you may
+want to achieve.</p>
+<h3 id="list-storage-on-your-system">List Storage On Your System</h3>
+<p><code>lsblk</code> is the most important command in your toolbox. It allows you to understand the layout and
+set of your storage between making changes. It also allows you to check which disks are in use so
+that you can <em>avoid</em> them while making changes.</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span># lsblk
+</span><span>NAME   MAJ:MIN RM  SIZE RO TYPE MOUNTPOINTS
+</span><span>sr0     11:0    1  372K  0 rom
+</span><span>vda    254:0    0   10G  0 disk
+</span><span>├─vda1 254:1    0    2M  0 part
+</span><span>├─vda2 254:2    0   33M  0 part /boot/efi
+</span><span>└─vda3 254:3    0   10G  0 part /
+</span><span>vdb    254:16   0   50G  0 disk
+</span><span>vdc    254:32   0   50G  0 disk
+</span><span>vdd    254:48   0   50G  0 disk
+</span><span>vde    254:64   0   50G  0 disk
+</span></code></pre>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span># lsblk
+</span><span>NAME   MAJ:MIN RM  SIZE RO TYPE MOUNTPOINTS
+</span><span>sr0     11:0    1  372K  0 rom
+</span><span>vda    254:0    0   10G  0 disk &lt;---------- this is a whole disk.
+</span><span>                                           /-- these partitions exist on the disk.
+</span><span>├─vda1 254:1    0    2M  0 part            - &lt;- this partition is not mounted
+</span><span>├─vda2 254:2    0   33M  0 part /boot/efi  | &lt;- this partition is mounted at /boot/efi
+</span><span>└─vda3 254:3    0   10G  0 part /          - &lt;- this partition is mounted on /
+</span><span>vdb    254:16   0   50G  0 disk
+</span><span>vdc    254:32   0   50G  0 disk &lt;---------- these disks have no partitions
+</span><span>vdd    254:48   0   50G  0 disk
+</span><span>vde    254:64   0   50G  0 disk
+</span></code></pre>
+<h3 id="view-filesystems-that-mount-at-boot">View Filesystems That Mount At Boot</h3>
+<p>Filesystems are mounted at boot from the <em>F</em>ile<em>S</em>ystem <em>TAB</em>le. These are stored in <code>/etc/fstab</code>.</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span># cat /etc/fstab
+</span><span>UUID=ef76b8e7-6017-4757-bd51-3e0e662d408b / xfs defaults 0 1
+</span><span>UUID=F6F5-05FB /boot/efi vfat defaults 0 0
+</span></code></pre>
+<p>This is arranged as a white-space separted table.</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>/- The path or identifier of the device to mount
+</span><span>|                                                          
+</span><span>|                                         /- where to mount the filesystem
+</span><span>|                                         |                   
+</span><span>|                                         |    /- the type of filesysetm on the device
+</span><span>|                                         |    |              
+</span><span>|                                         |    |   /- mount options for the filesystem to be mounted
+</span><span>|                                         |    |   |          
+</span><span>|                                         |    |   |        /- dump to tape on crash. set to 0
+</span><span>|                                         |    |   |        |
+</span><span>|                                         |    |   |        | /- order of filesystem checks at boot.
+</span><span>|                                         |    |   |        | |  0 = do not check
+</span><span>|                                         |    |   |        | |  1 = check first
+</span><span>|                                         |    |   |        | |  2 = check second ...
+</span><span>v                                         v    v   v        v v
+</span><span>UUID=ef76b8e7-6017-4757-bd51-3e0e662d408b /    xfs defaults 0 1
+</span><span>/dev/disk/by-id/wwn-0x5001b448bd8e7de2    /mnt xfs defaults 0 0
+</span></code></pre>
+<h3 id="show-disk-path-or-identifiers">Show Disk Path Or Identifiers</h3>
+<p>Linux allows disks to be referenced by different aliases that can be more accessible or unique
+to help prevent mistakes. For example, <code>vda</code> and <code>sda</code> are very similar but <code>virtio-pci-0000:04:00.0</code>
+or <code>wwn-0x5000cca0bbefc231</code> are distinct and uniquely identify the device. In addition if you move
+the device between different ports (e.g. changing sata ports, or sas ports) then some of these identifiers
+will stay stable between those changes.</p>
+<h4 id="show-disks-by-identifiers">Show disks by identifiers</h4>
+<p>Disk by ID are a stable identifier that should not change between systems or connection of the device.</p>
+<p>These are commonly used in ZFS pools or administration commands.</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span># ls -l /dev/disk/by-id
+</span><span>lrwxrwxrwx 1 root root  9 Sep  7 08:51 scsi-1ATA_WDC_WDS200T1R0A-68A4W0_223609A005A5 -&gt; ../../sdg
+</span><span>lrwxrwxrwx 1 root root 10 Sep  7 08:51 scsi-1ATA_WDC_WDS200T1R0A-68A4W0_223609A005A5-part1 -&gt; ../../sdg1
+</span><span>lrwxrwxrwx 1 root root 10 Sep  7 08:51 scsi-1ATA_WDC_WDS200T1R0A-68A4W0_223609A005A5-part9 -&gt; ../../sdg9
+</span><span>...
+</span><span>lrwxrwxrwx 1 root root  9 Sep  7 08:51 wwn-0x5001b448bd8e7de2 -&gt; ../../sdg
+</span><span>lrwxrwxrwx 1 root root 10 Sep  7 08:51 wwn-0x5001b448bd8e7de2-part1 -&gt; ../../sdg1
+</span><span>lrwxrwxrwx 1 root root 10 Sep  7 08:51 wwn-0x5001b448bd8e7de2-part9 -&gt; ../../sdg9
+</span></code></pre>
+<h4 id="show-disks-by-uuid">Show disks by UUID</h4>
+<p>Generally only partitions with filesystems will have a UUID - this will not show &quot;devices&quot;.</p>
+<p>UUID's are a stable identifier that should not change between systems or connection of the device.</p>
+<p>These are commonly used in <code>/etc/fstab</code> for mounting filesystems. These are used with
+the <code>fstab</code> syntax of <code>UUID=&lt; ... &gt;</code></p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span># ls -l /dev/disk/by-uuid
+</span><span>lrwxrwxrwx 1 root root 15 Sep  7 08:51 DA2C-4E2B -&gt; ../../nvme1n1p1
+</span><span>lrwxrwxrwx 1 root root 10 Sep  7 08:51 e3967de9-6cab-4387-8a58-aa6b34dba39f -&gt; ../../dm-9
+</span></code></pre>
+<h4 id="show-disks-by-their-physical-attachment-path">Show disks by their physical attachment path</h4>
+<p>These are commonly used to locate the type of device, and where it may be attached on a system.</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span># ls -l /dev/disk/by-path
+</span><span>lrwxrwxrwx 1 root root  9 Sep  7 08:51 pci-0000:00:17.0-ata-8.0 -&gt; ../../sdg
+</span><span>lrwxrwxrwx 1 root root 10 Sep  7 08:51 pci-0000:00:17.0-ata-8.0-part1 -&gt; ../../sdg1
+</span><span>lrwxrwxrwx 1 root root 10 Sep  7 08:51 pci-0000:00:17.0-ata-8.0-part9 -&gt; ../../sdg9
+</span><span>lrwxrwxrwx 1 root root 13 Sep  7 08:51 pci-0000:01:00.0-nvme-1 -&gt; ../../nvme0n1
+</span><span>lrwxrwxrwx 1 root root 15 Sep  7 08:51 pci-0000:01:00.0-nvme-1-part1 -&gt; ../../nvme0n1p1
+</span><span>lrwxrwxrwx 1 root root 15 Sep  7 08:51 pci-0000:01:00.0-nvme-1-part2 -&gt; ../../nvme0n1p2
+</span><span>lrwxrwxrwx 1 root root 15 Sep  7 08:51 pci-0000:01:00.0-nvme-1-part3 -&gt; ../../nvme0n1p3
+</span></code></pre>
+<h2 id="what-storage-setup-do-i-want">What Storage Setup Do I Want?</h2>
+<p>Here are some questions that may help you to decide how to configure the storage in your system.</p>
+<h3 id="i-m-installing-my-favourite-distro-on-a-laptop-workstation">I'm Installing My Favourite Distro On A Laptop/Workstation</h3>
+<ul>
+<li>You should use GPT for partitioning.</li>
+<li>You should use LVM to allow resizing partitions, creating raid or changing disks in the future.</li>
+<li>Split Home vs Root OR combined Home + Root is a personal preference.</li>
+<li>If you want fast and highly reliable storage -&gt; Choose XFS</li>
+<li>If you want features like snapshots -&gt; Choose BTRFS</li>
+</ul>
+<h3 id="i-m-adding-non-root-disks-to-my-workstation-server">I'm Adding Non-Root Disks To My Workstation/Server</h3>
+<h4 id="i-want-highly-reliable-fault-tolerant-storage">I Want Highly Reliable, Fault Tolerant Storage</h4>
+<ul>
+<li>Use ZFS</li>
+</ul>
+<h4 id="i-can-not-afford-to-lose-data-ever">I Can Not Afford To Lose Data Ever.</h4>
+<ul>
+<li>Use ZFS</li>
+</ul>
+<h4 id="i-want-one-giant-pool-of-storage-that-i-will-expand-in-future">I Want One Giant Pool Of Storage That I Will Expand In Future</h4>
+<ul>
+<li>Use ZFS</li>
+</ul>
+<h4 id="i-plan-to-add-remove-change-disks-again-when-ever-i-feel-like">I Plan To Add/Remove/Change Disks Again When Ever I Feel Like</h4>
+<ul>
+<li>Use LVM+RAID</li>
+</ul>
+<h4 id="i-just-want-disks-mounted-like-a-chaos-goblin">I Just Want Disks Mounted Like A Chaos Goblin</h4>
+<ul>
+<li>You should use GPT for partitioning.</li>
+<li>You should use LVM to allow resizing partitions, creating raid or changing disks in the future.</li>
+<li>If you want fast and highly reliable storage -&gt; Choose XFS</li>
+<li>If you want features like snapshots -&gt; Choose BTRFS</li>
+</ul>
+<h2 id="managing-single-disks">Managing Single Disks</h2>
+<h3 id="reload-partition-tables">Reload partition tables</h3>
+<p>After making changes to partition tables, you may need to force the kernel to re-read them so that
+they are reflected in commands like <code>lsblk</code></p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span># partprobe
+</span></code></pre>
+<h2 id="zfs">ZFS</h2>
+<p>todo!();</p>
+<h2 id="lvm">LVM</h2>
+<p>LVM is a Logical Volume Manager for Linux. It allows dynamically changing storage without downtime,
+and the ability to warp and shape into complex and weird disk layouts and geometries. It has excellent
+observability into the state of storage, and you should consider it a &quot;must have&quot; on all systems.</p>
+<p>LVM's single limitation is you can not use it for <code>/boot</code> or <code>EFI System Partitions</code>. These
+must remain as &quot;true&quot; partitions. If in doubt, trust your installer.</p>
+<p>LVM combines a set of physical volumes (PV) into a volume group (VG). A volume group contains a pool of available
+storage. logical volumes (LV) can then be created within that volume group that consume that storage.
+Each logical volume can have it's own characteristics like raid levels. Logical volumes due to
+how they work may span multiple physical volumes since an LV consumes space from the VG which can
+allocate anywhere in the PV's available. This can be visualised as:</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>┌──────┐ ┌──────────────────────┐           
+</span><span>│  LV  │ │          LV          │           
+</span><span>└──────┘ └──────────────────────┘           
+</span><span>┌──────────────────────────────────────────┐
+</span><span>│                    VG                    │
+</span><span>└──────────────────────────────────────────┘
+</span><span>┌────────────┐ ┌────────────┐ ┌────────────┐
+</span><span>│     PV     │ │     PV     │ │     PV     │
+</span><span>└────────────┘ └────────────┘ └────────────┘
+</span></code></pre>
+<p>Here we have two LV's within a VG. The VG is made from 3 PVs. The storage of the LV's may be anywhere
+within the pool of PV's that exist. This allows PVs to be added or removed dynamically as the LV
+content can be moved at any time.</p>
+<h3 id="general-lvm-administration">General LVM Administration</h3>
+<h4 id="read-the-man-pages">Read The Man Pages</h4>
+<p>LVM has some of the <em>best man pages</em> ever put onto a Linux system. They are worth reading to understand
+the options you have for commands!</p>
+<blockquote>
+<p>HINT: Some flavours of OpenSUSE may not have man pages. To fix this:</p>
+</blockquote>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span># $EDITOR /etc/zypp/zypp.conf
+</span><span>...
+</span><span>rpm.install.excludedocs = no
+</span></code></pre>
+<p>Ensure man is installed, and reinstall lvm2 to make sure it's man pages are present.</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span># zypper install -f man lvm2
+</span></code></pre>
+<h4 id="opensuse-install-lvm-tools">OpenSUSE - Install LVM Tools</h4>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span># zypper in lvm2
+</span><span># reboot
+</span></code></pre>
+<blockquote>
+<p>NOTE: In some cases you may need to install kernel-default so that dm-raid's kernel module exists.
+This can be because kernel-default-base may lack the module.</p>
+</blockquote>
+<h4 id="show-all-physical-volumes">Show all Physical Volumes</h4>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span># pvs
+</span><span>  PV         VG   Fmt  Attr PSize  PFree
+</span><span>  /dev/vdb   vg00 lvm2 a--  50.00g 50.00g
+</span><span>  /dev/vdc   vg00 lvm2 a--  50.00g 50.00g
+</span><span>  /dev/vdd   vg00 lvm2 a--  50.00g 50.00g
+</span><span>  /dev/vde   vg00 lvm2 a--  50.00g 50.00g
+</span></code></pre>
+<h4 id="show-all-volume-groups">Show all Volume Groups</h4>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span># vgs
+</span><span>  VG   #PV #LV #SN Attr   VSize   VFree
+</span><span>  vg00   4   0   0 wz--n- 199.98g 199.98g
+</span></code></pre>
+<h4 id="show-all-logical-volumes">Show all Logical Volumes</h4>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span># lvs
+</span><span>  LV      VG   Attr       LSize  Pool Origin Data%  Meta%  Move Log Cpy%Sync Convert
+</span><span>  lv_raid vg00 rwi-a-r--- 80.00g
+</span></code></pre>
+<p>Show the internal details of LVs</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span># lvs -a
+</span><span>  LV                 VG   Attr       LSize  Pool Origin Data%  Meta%  Move Log Cpy%Sync Convert
+</span><span>  lv_raid            vg00 rwi-a-r--- 80.00g                                    18.80
+</span><span>  [lv_raid_rimage_0] vg00 Iwi-aor--- 40.00g
+</span><span>  [lv_raid_rimage_1] vg00 Iwi-aor--- 40.00g
+</span><span>  [lv_raid_rimage_2] vg00 Iwi-aor--- 40.00g
+</span><span>  [lv_raid_rmeta_0]  vg00 ewi-aor---  4.00m
+</span><span>  [lv_raid_rmeta_1]  vg00 ewi-aor---  4.00m
+</span><span>  [lv_raid_rmeta_2]  vg00 ewi-aor---  4.00m
+</span></code></pre>
+<p>Show the internal details of LVs and which devices are backing their storage.</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span># lvs -a -o +devices
+</span><span>  LV                 VG   Attr       LSize  Pool Origin Data%  Meta%  Move Log Cpy%Sync Convert Devices
+</span><span>  lv_raid            vg00 rwi-a-r--- 80.00g                                    21.35            lv_raid_rimage_0(0),lv_raid_rimage_1(0),lv_raid_rimage_2(0)
+</span><span>  [lv_raid_rimage_0] vg00 Iwi-aor--- 40.00g                                                     /dev/vdb(1)
+</span><span>  [lv_raid_rimage_1] vg00 Iwi-aor--- 40.00g                                                     /dev/vdc(1)
+</span><span>  [lv_raid_rimage_2] vg00 Iwi-aor--- 40.00g                                                     /dev/vdd(1)
+</span><span>  [lv_raid_rmeta_0]  vg00 ewi-aor---  4.00m                                                     /dev/vdb(0)
+</span><span>  [lv_raid_rmeta_1]  vg00 ewi-aor---  4.00m                                                     /dev/vdc(0)
+</span><span>  [lv_raid_rmeta_2]  vg00 ewi-aor---  4.00m                                                     /dev/vdd(0)
+</span></code></pre>
+<h3 id="using-lvm-for-raid">Using LVM For Raid</h3>
+<p>First you need to select your devices that will become the PV's</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span># lsblk
+</span><span>NAME   MAJ:MIN RM  SIZE RO TYPE MOUNTPOINTS
+</span><span>sr0     11:0    1  372K  0 rom
+</span><span>vda    254:0    0   10G  0 disk
+</span><span>├─vda1 254:1    0    2M  0 part
+</span><span>├─vda2 254:2    0   33M  0 part /boot/efi
+</span><span>└─vda3 254:3    0   10G  0 part /
+</span><span>vdb    254:16   0   50G  0 disk ----
+</span><span>vdc    254:32   0   50G  0 disk | &lt;-- I will use these 4 devices.
+</span><span>vdd    254:48   0   50G  0 disk |
+</span><span>vde    254:64   0   50G  0 disk ----
+</span></code></pre>
+<p>Create PVs on each member device.</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span># pvcreate /dev/vdb
+</span><span># pvcreate /dev/disk/by-path/virtio-pci-0000\:09\:00.0
+</span><span>...
+</span></code></pre>
+<p>Create a VG containing all the PVs</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>vgcreate &lt;name of vg&gt; &lt;path to pv&gt; [&lt;path to pv&gt; ...]
+</span><span># vgcreate vg00 /dev/vdb /dev/vdc /dev/vdd /dev/vde
+</span></code></pre>
+<p>Create a new LV that is at your prefered raid level.</p>
+<ul>
+<li>If you have two PV's choose raid 1</li>
+<li>If you have three or more choose between raid 5 or raid 10</li>
+</ul>
+<p>In each case, LVM will make sure that the data of the LV is correctly split to PV's to ensure redundancy.</p>
+<ul>
+<li>Raid 1 mirrors. It has no performance changes.</li>
+<li>Raid 5/6 have better <em>write</em> performance but lower <em>read</em> performance compared to raid 10.</li>
+<li>Raid 10 has better <em>read</em> performance but lower <em>write</em> performance compared to raid 5/6</li>
+</ul>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>lvcreate [options] -n &lt;name of LV&gt; --type &lt;type&gt; [-L|-l] &lt;size of lv&gt; --raidintegrity y &lt;VG to create the LV in&gt;
+</span><span>## Create an lv that consumes all space in the VG
+</span><span>## NOTE: you may need to reduce this from 100% with raidintegrity to allow LVM the space
+</span><span>## to create the LV.
+</span><span># lvcreate -n lv_raid --type raid10 -l 100%FREE --raidintegrity y vg00
+</span><span>## Create an lv that provides 80G of raid storage, but consumers more of the VG underneath
+</span><span># lvcreate -n lv_raid --type raid5 -L 80G --raidintegrity y vg00
+</span></code></pre>
+<blockquote>
+<p>HINT: The raidintegrity flag enables checksums of extents to allow detection of potential disk corruption</p>
+</blockquote>
+<p>You can then use <code>lvs</code> to show the state of the sync process of the LV.</p>
+<p>Once created you can make a new filesystem on the volume.</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>mkfs.&lt;fs name&gt; /dev/&lt;vg name&gt;/&lt;lv name&gt;
+</span><span># mkfs.xfs /dev/vg00/lv_raid
+</span></code></pre>
+<p>This can then be added to <code>/etc/fstab</code> to mount on boot.</p>
+<blockquote>
+<p>HINT: <code>/dev/&lt;vg name&gt;/&lt;lv name&gt;</code> paths will never change and can be used reliably in fstab</p>
+</blockquote>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span># $EDITOR /etc/fstab
+</span><span>...
+</span><span>/dev/vg00/lv_raid  /mnt/raid    xfs defaults 0 0
+</span></code></pre>
+<h3 id="managing-lvm-raid">Managing LVM Raid</h3>
+<h4 id="replacing-a-working-disk">Replacing a Working Disk</h4>
+<p>If you want to expand your array, or just replace an old piece of disk media you can do this
+live.</p>
+<p>Attach the new disk and locate it with <code>lsblk</code>. Note it's name, path or other identifier.</p>
+<p>Locate the disk you want to replace by it's path or identifier.</p>
+<p>Create a new PV on the new disk.</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span># pvcreate /dev/vdf
+</span></code></pre>
+<p>Extend the VG with the new PV</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span># vgextend vg00 /dev/vdf
+</span></code></pre>
+<p>Check the pv was added to the vg</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span># pvs
+</span></code></pre>
+<p>Move the extents from the original device, to the new device.</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>## This blocks and monitors the move. If you ctrl-c it continues in the background.
+</span><span># pvmove /dev/vde /dev/vdf
+</span><span>## Run the move in the background
+</span><span># pvmove -b /dev/vde /dev/vdf
+</span></code></pre>
+<p>If backgrounded, you can monitor the move with:</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span># lvs -a
+</span></code></pre>
+<h4 id="replacing-a-corrupted-missing-disk">Replacing a Corrupted/Missing Disk</h4>
+<p>When checking lvs if a disk is corrupted or missing you will see errors such as:</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span># lvs
+</span><span>  WARNING: Couldn&#39;t find device with uuid weDidc-rBve-EL25-NqTG-X2n6-fGmW-FGCs9l.
+</span><span>  WARNING: VG vg00 is missing PV weDidc-rBve-EL25-NqTG-X2n6-fGmW-FGCs9l (last written to /dev/vdd).
+</span><span>  WARNING: Couldn&#39;t find all devices for LV vg00/lv_raid_rimage_2 while checking used and assumed devices.
+</span><span>  WARNING: Couldn&#39;t find all devices for LV vg00/lv_raid_rmeta_2 while checking used and assumed devices.
+</span><span>  LV      VG   Attr       LSize  Pool Origin Data%  Meta%  Move Log Cpy%Sync Convert
+</span><span>  lv_raid vg00 rwi-a-r-p- 99.98g                                    100.00
+</span></code></pre>
+<p>Create a new PV on a replacement disk, and add it to the vg.</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span># pvcreate /dev/path/to/disk
+</span><span># vgextend vg00 /dev/path/to/disk
+</span></code></pre>
+<p>The logical volume must be active to initiate the replacement:</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span># lvchange -ay vg00/lv_raid
+</span></code></pre>
+<p>Replace the failed device allocating the needed extents.</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>## To any free device in the VG
+</span><span># lvconvert --repair vg00/lv_raid
+</span><span>## To a specific PV
+</span><span># lvconvert --repair vg00/lv_raid /dev/vde
+</span></code></pre>
+<p>You can view the progress of the repair with <code>lvs</code></p>
+<p>Instruct the vg to remove the missing device metadata now that the replacement is complete.</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span># vgreduce --removemissing vg00
+</span></code></pre>
+
+    </div>
+</article>
+
+        </main>
+        
+        <footer>
+            
+            <div class="border"></div>
+            <div class="footer">
+                <small class="footer-left">
+                    Copyright &copy; William Brown
+                </small>
+                <small class="footer-right">
+                    Powered by <a href="https://www.getzola.org">Zola</a> | Theme <a href="https://github.com/barlog-m/oceanic-zen">Oceanic Zen</a>
+                </small>
+            </div>
+        
+        </footer>
+    
+        </div>
+    </body>
+</html>

@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+        <meta name="description" content="Firstyear&#x27;s blog">
+        
+
+        <title>Firstyear&#x27;s blog-a-log</title>
+
+        
+          <link rel="alternate" type="application/rss+xml" title="RSS" href="https://fy.blackhats.net.au/rss.xml">
+        
+
+        
+            <link rel="stylesheet" href="https://fy.blackhats.net.au/theme.css">
+        
+        
+    </head>
+    <body>
+        <div class="content">
+        
+        
+            <header>
+                <div class="header-left">
+                    <a href="https:&#x2F;&#x2F;fy.blackhats.net.au" class="logo">Firstyear&#x27;s blog-a-log</a>
+                </div>
+                <div class="header-right">
+                    <nav itemscope itemtype="http://schema.org/SiteNavigationElement">
+                      <ul>
+                        
+                        
+                            
+                            <li class="nav">
+                                <a itemprop="url" href="https://fy.blackhats.net.au/blog/">
+                                    <span itemprop="name">Blog</span>
+                                </a>
+                            </li>
+                        
+                            
+                            <li class="nav">
+                                <a itemprop="url" href="https://fy.blackhats.net.au/pages/">
+                                    <span itemprop="name">Pages</span>
+                                </a>
+                            </li>
+                        
+                        
+                        <li class="nav">
+                            <a itemprop="url" href="https://github.com/firstyear">
+                                <img class="icon" src="https:&#x2F;&#x2F;fy.blackhats.net.au/icons/github.svg" alt="Github">
+                            </a>
+                        </li>
+                        
+                        <li class="nav">
+                            <a itemprop="url" href="/rss.xml">
+                                <img class="icon" src="https:&#x2F;&#x2F;fy.blackhats.net.au/rss-logo.png" alt="rss">
+                            </a>
+                        </li>
+                      </ul>
+                    </nav>
+                </div>
+            </header>
+        
+        
+        <main>
+            
+<article itemscope itemtype="http://schema.org/BlogPosting">
+    <div itemprop="headline">
+        <h1>Linux remote desktop from GDM</h1>
+        <div class="border"></div>
+        <time datetime="2013-06-19" class="date" itemprop="datePublished">
+            19 Jun 2013
+        </time>
+    </div>
+    <div itemprop="articleBody">
+        <h1 id="linux-remote-desktop-from-gdm">Linux remote desktop from GDM</h1>
+<p>For quite some time I have wanted to be able to create thin linux
+workstations that automatically connect to a remote display manager of
+some kind for the relevant desktop services. This has always been
+somewhat of a mystery to me, but I found the final answer to be quite
+simple.</p>
+<p>First, you need a system like a windows Remote Desktop server, or xrdp
+server configured. Make sure that you can connect and login to it.</p>
+<p>Now install your thin client. I used CentOS with a minimal desktop
+install to give me an X server.</p>
+<p>Install the &quot;rdesktop&quot; package on your thin client.</p>
+<p>Now you need to add the Remote Desktop session type.</p>
+<p>Create the file &quot;/usr/bin/rdesktop-session&quot; (Or /opt or /srv. Up to
+you - but make sure it's executable)</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>#!/bin/bash
+</span><span>/usr/bin/rdesktop -d domain.example.com -b -a 32 -x lan -f termserv.example.com
+</span></code></pre>
+<p>Now you need to create a session type that GDM will recognise. Put this
+into &quot;/usr/share/xsessions/rdesktop.desktop&quot;. These options could be
+improved etc.</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>[Desktop Entry]
+</span><span>Name=RDesktop
+</span><span>Comment=This session logs you into RDesktop
+</span><span>Exec=/usr/bin/rdesktop-session
+</span><span>TryExec=/usr/bin/rdesktop-session
+</span><span>Terminal=True
+</span><span>Type=Application
+</span><span>
+</span><span>[Window Manager]
+</span><span>SessionManaged=true
+</span></code></pre>
+<p>Create a user who will automatically connect to the TS.</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>useradd remote_login
+</span></code></pre>
+<p>Configure GDM to automatically login after a time delay. The reason for
+the time delay, is so that after the rdesktop session is over, at the
+GDM display, a staff member can shutdown the thin client.</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>[daemon]
+</span><span>TimedLoginEnable=True
+</span><span>TimedLogin=remote_login
+</span><span>TimedLoginDelay=15
+</span></code></pre>
+<p>Finally, set the remote login user's session to RDesktop
+&quot;/home/remote_login/.dmrc&quot;</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>[Desktop]
+</span><span>Session=rdesktop
+</span></code></pre>
+<p>And that's it!</p>
+<p>If you are using windows terminal services, you will notice that the
+login times out after about a minute, GDM will reset, wait 15 seconds
+and connect again, causing a loop of this action. To prevent this, you
+should extend the windows server login timeout. On the terminal server:</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Control\Terminal Server\WinStations\[[Connection endpoint]]\LogonTimeout (DWord, seconds for timeout)
+</span></code></pre>
+<p>[[Connection endpoint]] is the name in RD Session Host
+configurations : I had rebuilt mine as default and was wondering why
+this no longer worked. This way you can apply the logon timeout to
+different session connections.</p>
+<p>Update: Actually, it needs to be RDP-Tcp regardless of the connection
+endpoint. Bit silly.</p>
+
+    </div>
+</article>
+
+        </main>
+        
+        <footer>
+            
+            <div class="border"></div>
+            <div class="footer">
+                <small class="footer-left">
+                    Copyright &copy; William Brown
+                </small>
+                <small class="footer-right">
+                    Powered by <a href="https://www.getzola.org">Zola</a> | Theme <a href="https://github.com/barlog-m/oceanic-zen">Oceanic Zen</a>
+                </small>
+            </div>
+        
+        </footer>
+    
+        </div>
+    </body>
+</html>

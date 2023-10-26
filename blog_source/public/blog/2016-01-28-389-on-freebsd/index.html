@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+        <meta name="description" content="Firstyear&#x27;s blog">
+        
+
+        <title>Firstyear&#x27;s blog-a-log</title>
+
+        
+          <link rel="alternate" type="application/rss+xml" title="RSS" href="https://fy.blackhats.net.au/rss.xml">
+        
+
+        
+            <link rel="stylesheet" href="https://fy.blackhats.net.au/theme.css">
+        
+        
+    </head>
+    <body>
+        <div class="content">
+        
+        
+            <header>
+                <div class="header-left">
+                    <a href="https:&#x2F;&#x2F;fy.blackhats.net.au" class="logo">Firstyear&#x27;s blog-a-log</a>
+                </div>
+                <div class="header-right">
+                    <nav itemscope itemtype="http://schema.org/SiteNavigationElement">
+                      <ul>
+                        
+                        
+                            
+                            <li class="nav">
+                                <a itemprop="url" href="https://fy.blackhats.net.au/blog/">
+                                    <span itemprop="name">Blog</span>
+                                </a>
+                            </li>
+                        
+                            
+                            <li class="nav">
+                                <a itemprop="url" href="https://fy.blackhats.net.au/pages/">
+                                    <span itemprop="name">Pages</span>
+                                </a>
+                            </li>
+                        
+                        
+                        <li class="nav">
+                            <a itemprop="url" href="https://github.com/firstyear">
+                                <img class="icon" src="https:&#x2F;&#x2F;fy.blackhats.net.au/icons/github.svg" alt="Github">
+                            </a>
+                        </li>
+                        
+                        <li class="nav">
+                            <a itemprop="url" href="/rss.xml">
+                                <img class="icon" src="https:&#x2F;&#x2F;fy.blackhats.net.au/rss-logo.png" alt="rss">
+                            </a>
+                        </li>
+                      </ul>
+                    </nav>
+                </div>
+            </header>
+        
+        
+        <main>
+            
+<article itemscope itemtype="http://schema.org/BlogPosting">
+    <div itemprop="headline">
+        <h1>389 on freebsd</h1>
+        <div class="border"></div>
+        <time datetime="2016-01-28" class="date" itemprop="datePublished">
+            28 Jan 2016
+        </time>
+    </div>
+    <div itemprop="articleBody">
+        <h1 id="389-on-freebsd">389 on freebsd</h1>
+<p>I've decided to start porting 389-ds to freebsd.</p>
+<p>So tonight I took the first steps. Let's see if we can get it to build
+in a dev environment like I would use normally.</p>
+<p>You will need to install these deps:</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>autotools
+</span><span>git
+</span><span>openldap-client
+</span><span>db5
+</span><span>cyrus-sasl
+</span><span>pkgconf
+</span><span>nspr
+</span><span>nss
+</span><span>net-snmp
+</span><span>gmake
+</span></code></pre>
+<p>You then need to install svrcore. I'll likely add a port for this too.</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>fetch https://ftp.mozilla.org/pub/directory/svrcore/releases/4.0.4/src/svrcore-4.0.4.tar.bz2
+</span><span>tar -xvjf svrcore-4.0.4.tar.bz2
+</span><span>cd svrcore-4.0.4
+</span><span>CFLAGS=&quot;-fPIC &quot;./configure --prefix=/opt/svrcore
+</span><span>make
+</span><span>sudo make install
+</span></code></pre>
+<p>Now you can clone ds and try to build it:</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>cd
+</span><span>git clone https://git.fedorahosted.org/git/389/ds.git
+</span><span>cd ds
+</span><span>./configure --prefix=/opt/dirsrv --with-openldap=/usr/local --with-db --with-db-inc=/usr/local/include/db5/ --with-db-lib=/usr/local/lib/db5/ --with-sasl --with-sasl-inc=/usr/local/include/sasl/ --with-sasl-lib=/usr/local/lib/sasl2/ --with-svrcore-inc=/opt/svrcore/include/ --with-svrcore-lib=/opt/svrcore/lib/ --with-netsnmp=/usr/local
+</span><span>gmake
+</span></code></pre>
+<p>If it's like me you get the following:</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>make: &quot;/usr/home/admin_local/ds/Makefile&quot; line 10765: warning: duplicate script for target &quot;%/dirsrv&quot; ignored
+</span><span>make: &quot;/usr/home/admin_local/ds/Makefile&quot; line 10762: warning: using previous script for &quot;%/dirsrv&quot; defined here
+</span><span>make: &quot;/usr/home/admin_local/ds/Makefile&quot; line 10767: warning: duplicate script for target &quot;%/dirsrv&quot; ignored
+</span><span>make: &quot;/usr/home/admin_local/ds/Makefile&quot; line 10762: warning: using previous script for &quot;%/dirsrv&quot; defined here
+</span><span>make: &quot;/usr/home/admin_local/ds/Makefile&quot; line 10768: warning: duplicate script for target &quot;%/dirsrv&quot; ignored
+</span><span>make: &quot;/usr/home/admin_local/ds/Makefile&quot; line 10762: warning: using previous script for &quot;%/dirsrv&quot; defined here
+</span><span>perl ./ldap/servers/slapd/mkDBErrStrs.pl -i /usr/local/include/db5/ -o .
+</span><span>make  all-am
+</span><span>make[1]: &quot;/usr/home/admin_local/ds/Makefile&quot; line 10765: warning: duplicate script for target &quot;%/dirsrv&quot; ignored
+</span><span>make[1]: &quot;/usr/home/admin_local/ds/Makefile&quot; line 10762: warning: using previous script for &quot;%/dirsrv&quot; defined here
+</span><span>make[1]: &quot;/usr/home/admin_local/ds/Makefile&quot; line 10767: warning: duplicate script for target &quot;%/dirsrv&quot; ignored
+</span><span>make[1]: &quot;/usr/home/admin_local/ds/Makefile&quot; line 10762: warning: using previous script for &quot;%/dirsrv&quot; defined here
+</span><span>make[1]: &quot;/usr/home/admin_local/ds/Makefile&quot; line 10768: warning: duplicate script for target &quot;%/dirsrv&quot; ignored
+</span><span>make[1]: &quot;/usr/home/admin_local/ds/Makefile&quot; line 10762: warning: using previous script for &quot;%/dirsrv&quot; defined here
+</span><span>depbase=`echo ldap/libraries/libavl/avl.o | sed &#39;s|[^/]*$|.deps/&amp;|;s|\.o$||&#39;`; cc -DHAVE_CONFIG_H -I.     -DBUILD_NUM= -DVENDOR=&quot;\&quot;389 Project\&quot;&quot; -DBRAND=&quot;\&quot;389\&quot;&quot; -DCAPBRAND=&quot;\&quot;389\&quot;&quot;  -UPACKAGE_VERSION -UPACKAGE_TARNAME -UPACKAGE_STRING -UPACKAGE_BUGREPORT -I./ldap/include -I./ldap/servers/slapd -I./include -I.  -DLOCALSTATEDIR=&quot;\&quot;/opt/dirsrv/var\&quot;&quot; -DSYSCONFDIR=&quot;\&quot;/opt/dirsrv/etc\&quot;&quot;  -DLIBDIR=&quot;\&quot;/opt/dirsrv/lib\&quot;&quot; -DBINDIR=&quot;\&quot;/opt/dirsrv/bin\&quot;&quot;  -DDATADIR=&quot;\&quot;/opt/dirsrv/share\&quot;&quot; -DDOCDIR=&quot;\&quot;/opt/dirsrv/share/doc/389-ds-base\&quot;&quot;  -DSBINDIR=&quot;\&quot;/opt/dirsrv/sbin\&quot;&quot; -DPLUGINDIR=&quot;\&quot;/opt/dirsrv/lib/dirsrv/plugins\&quot;&quot; -DTEMPLATEDIR=&quot;\&quot;/opt/dirsrv/share/dirsrv/data\&quot;&quot;     -g -O2 -MT ldap/libraries/libavl/avl.o -MD -MP -MF $depbase.Tpo -c -o ldap/libraries/libavl/avl.o ldap/libraries/libavl/avl.c &amp;&amp; mv -f $depbase.Tpo $depbase.Po
+</span><span>rm -f libavl.a
+</span><span>ar cru libavl.a ldap/libraries/libavl/avl.o
+</span><span>ranlib libavl.a
+</span><span>cc -DHAVE_CONFIG_H -I.     -DBUILD_NUM= -DVENDOR=&quot;\&quot;389 Project\&quot;&quot; -DBRAND=&quot;\&quot;389\&quot;&quot; -DCAPBRAND=&quot;\&quot;389\&quot;&quot;  -UPACKAGE_VERSION -UPACKAGE_TARNAME -UPACKAGE_STRING -UPACKAGE_BUGREPORT -I./ldap/include -I./ldap/servers/slapd -I./include -I.  -DLOCALSTATEDIR=&quot;\&quot;/opt/dirsrv/var\&quot;&quot; -DSYSCONFDIR=&quot;\&quot;/opt/dirsrv/etc\&quot;&quot;  -DLIBDIR=&quot;\&quot;/opt/dirsrv/lib\&quot;&quot; -DBINDIR=&quot;\&quot;/opt/dirsrv/bin\&quot;&quot;  -DDATADIR=&quot;\&quot;/opt/dirsrv/share\&quot;&quot; -DDOCDIR=&quot;\&quot;/opt/dirsrv/share/doc/389-ds-base\&quot;&quot;  -DSBINDIR=&quot;\&quot;/opt/dirsrv/sbin\&quot;&quot; -DPLUGINDIR=&quot;\&quot;/opt/dirsrv/lib/dirsrv/plugins\&quot;&quot; -DTEMPLATEDIR=&quot;\&quot;/opt/dirsrv/share/dirsrv/data\&quot;&quot;  -I./lib/ldaputil -I/usr/local/include  -I/usr/local/include/nss -I/usr/local/include/nss/nss -I/usr/local/include/nspr   -I/usr/local/include/nspr   -g -O2 -MT lib/ldaputil/libldaputil_a-cert.o -MD -MP -MF lib/ldaputil/.deps/libldaputil_a-cert.Tpo -c -o lib/ldaputil/libldaputil_a-cert.o `test -f &#39;lib/ldaputil/cert.c&#39; || echo &#39;./&#39;`lib/ldaputil/cert.c
+</span><span>In file included from lib/ldaputil/cert.c:16:
+</span><span>/usr/include/malloc.h:3:2: error: &quot;&lt;malloc.h&gt; has been replaced by &lt;stdlib.h&gt;&quot;
+</span><span>#error &quot;&lt;malloc.h&gt; has been replaced by &lt;stdlib.h&gt;&quot;
+</span><span> ^
+</span><span>1 error generated.
+</span><span>*** Error code 1
+</span><span>
+</span><span>Stop.
+</span><span>make[1]: stopped in /usr/home/admin_local/ds
+</span><span>*** Error code 1
+</span><span>
+</span><span>Stop.
+</span><span>make: stopped in /usr/home/admin_local/ds
+</span></code></pre>
+<p>Time to start looking at including some #ifdef __FREEBSD__ macros.</p>
+
+    </div>
+</article>
+
+        </main>
+        
+        <footer>
+            
+            <div class="border"></div>
+            <div class="footer">
+                <small class="footer-left">
+                    Copyright &copy; William Brown
+                </small>
+                <small class="footer-right">
+                    Powered by <a href="https://www.getzola.org">Zola</a> | Theme <a href="https://github.com/barlog-m/oceanic-zen">Oceanic Zen</a>
+                </small>
+            </div>
+        
+        </footer>
+    
+        </div>
+    </body>
+</html>

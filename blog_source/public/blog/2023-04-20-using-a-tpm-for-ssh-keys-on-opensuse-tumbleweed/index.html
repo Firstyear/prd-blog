@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+        <meta name="description" content="Firstyear&#x27;s blog">
+        
+
+        <title>Firstyear&#x27;s blog-a-log</title>
+
+        
+          <link rel="alternate" type="application/rss+xml" title="RSS" href="https://fy.blackhats.net.au/rss.xml">
+        
+
+        
+            <link rel="stylesheet" href="https://fy.blackhats.net.au/theme.css">
+        
+        
+    </head>
+    <body>
+        <div class="content">
+        
+        
+            <header>
+                <div class="header-left">
+                    <a href="https:&#x2F;&#x2F;fy.blackhats.net.au" class="logo">Firstyear&#x27;s blog-a-log</a>
+                </div>
+                <div class="header-right">
+                    <nav itemscope itemtype="http://schema.org/SiteNavigationElement">
+                      <ul>
+                        
+                        
+                            
+                            <li class="nav">
+                                <a itemprop="url" href="https://fy.blackhats.net.au/blog/">
+                                    <span itemprop="name">Blog</span>
+                                </a>
+                            </li>
+                        
+                            
+                            <li class="nav">
+                                <a itemprop="url" href="https://fy.blackhats.net.au/pages/">
+                                    <span itemprop="name">Pages</span>
+                                </a>
+                            </li>
+                        
+                        
+                        <li class="nav">
+                            <a itemprop="url" href="https://github.com/firstyear">
+                                <img class="icon" src="https:&#x2F;&#x2F;fy.blackhats.net.au/icons/github.svg" alt="Github">
+                            </a>
+                        </li>
+                        
+                        <li class="nav">
+                            <a itemprop="url" href="/rss.xml">
+                                <img class="icon" src="https:&#x2F;&#x2F;fy.blackhats.net.au/rss-logo.png" alt="rss">
+                            </a>
+                        </li>
+                      </ul>
+                    </nav>
+                </div>
+            </header>
+        
+        
+        <main>
+            
+<article itemscope itemtype="http://schema.org/BlogPosting">
+    <div itemprop="headline">
+        <h1>Using a TPM for SSH keys on OpenSUSE Tumbleweed</h1>
+        <div class="border"></div>
+        <time datetime="2023-04-20" class="date" itemprop="datePublished">
+            20 Apr 2023
+        </time>
+    </div>
+    <div itemprop="articleBody">
+        <h1 id="using-a-tpm-for-ssh-keys-on-opensuse-tumbleweed">Using a TPM for SSH keys on OpenSUSE Tumbleweed</h1>
+<p>In some environments it is required to store ssh private keys in a way
+where they can not be extracted from the machine. Trusted Platform
+Modules (TPM) are an excellent way to achieve this. While other guides
+exist online for how to configure this for other distributions, this
+will focus on OpenSUSE Tumbleweed.</p>
+<h2 id="install-packages">Install Packages</h2>
+<p>The following is required to be installed.</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>zypper install tpm2-pkcs11 tpm2.0-tools tpm2-0-tss libtpm2_pkcs11-0
+</span></code></pre>
+<ul>
+<li>tpm2-pkcs11 - tools to configure the ssh key in the TPM</li>
+<li>tpm2.0-tools - tools for TPM introspection</li>
+<li>tpm2-0-tss - udev rules and tss group</li>
+<li>libtpm2_pkcs11-0 - library for ssh to access TPM via pkcs</li>
+</ul>
+<h2 id="check-the-tpm-exists">Check the TPM exists</h2>
+<p>You can check the TPM exists and is working with:</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>ls -l /dev/tpm*
+</span><span># crw-rw---- 1 tss root  10,   224 Apr 19 18:39 /dev/tpm0
+</span></code></pre>
+<p>To check the supported algorithms on the TPM:</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>tpm2_getcap algorithms
+</span></code></pre>
+<p>If this command errors, your TPM may be misconfigured or you may not
+have access to the TPM.</p>
+<p><em>HINT</em>: You can add a TPM to a KVM virtual machine with virt-install
+with the line:</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>--tpm backend.type=emulator,backend.version=2.0,model=tpm-tis
+</span></code></pre>
+<p>From virt-manager you can add the TPM via &quot;Add Hardware&quot;, &quot;TPM&quot;.</p>
+<p>Editing the virtual machine xml directly a TPM can be defined with:</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>&lt;domain type=&#39;kvm&#39;&gt;
+</span><span>  &lt;devices&gt;
+</span><span>    &lt;tpm model=&#39;tpm-tis&#39;&gt;
+</span><span>      &lt;backend type=&#39;emulator&#39; version=&#39;2.0&#39;/&gt;
+</span><span>    &lt;/tpm&gt;
+</span><span>  &lt;/devices&gt;
+</span><span>&lt;/domain&gt;
+</span></code></pre>
+<h2 id="allow-user-access">Allow User Access</h2>
+<p>Add your user to the tss group</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>usermod -a -G tss username
+</span></code></pre>
+<h2 id="configure-the-ssh-key">Configure the SSH key</h2>
+<p><em>NOTE</em> Be sure to perform these steps as your user - not as root!</p>
+<p>Initialise the tpm pkcs store - note the id in the output.</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>tpm2_ptool init
+</span><span># action: Created
+</span><span># id: 1
+</span></code></pre>
+<p>Using the id from the above output, you can use that to create a new
+token. Note here that the userpin is the pin for using the ssh key. The
+sopin is the recovery password incase you lose the pin and need to reset
+it.</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>tpm2_ptool addtoken --pid=1 --label=ssh --userpin=&quot;&quot; --sopin=&quot;&quot;
+</span><span>tpm2_ptool addkey --label=ssh --userpin=&quot;&quot; --algorithm=ecc256
+</span></code></pre>
+<p>If you want to use a different key algorithm, other choices are rsa2048,
+rsa3072, rsa4096, ecc256, ecc384, ecc521.</p>
+<p>Now you can view the public key with:</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>ssh-keygen -D /usr/lib64/pkcs11/libtpm2_pkcs11.so.0
+</span></code></pre>
+<p>It's a good idea to store this into a file for later:</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>ssh-keygen -D /usr/lib64/pkcs11/libtpm2_pkcs11.so.0 | tee ~/.ssh/id_ecdsa_tpm.pub
+</span></code></pre>
+<h2 id="using-the-ssh-key">Using the SSH Key</h2>
+<p>You can modify your ssh configuration to always use the key. You will be
+prompted for the userpin to access the ssh key as required.</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span># ~/.ssh/config
+</span><span>
+</span><span>PKCS11Provider /usr/lib64/pkcs11/libtpm2_pkcs11.so.0
+</span><span>PasswordAuthentication no
+</span></code></pre>
+
+    </div>
+</article>
+
+        </main>
+        
+        <footer>
+            
+            <div class="border"></div>
+            <div class="footer">
+                <small class="footer-left">
+                    Copyright &copy; William Brown
+                </small>
+                <small class="footer-right">
+                    Powered by <a href="https://www.getzola.org">Zola</a> | Theme <a href="https://github.com/barlog-m/oceanic-zen">Oceanic Zen</a>
+                </small>
+            </div>
+        
+        </footer>
+    
+        </div>
+    </body>
+</html>

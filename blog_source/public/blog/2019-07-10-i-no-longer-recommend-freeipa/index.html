@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+        <meta name="description" content="Firstyear&#x27;s blog">
+        
+
+        <title>Firstyear&#x27;s blog-a-log</title>
+
+        
+          <link rel="alternate" type="application/rss+xml" title="RSS" href="https://fy.blackhats.net.au/rss.xml">
+        
+
+        
+            <link rel="stylesheet" href="https://fy.blackhats.net.au/theme.css">
+        
+        
+    </head>
+    <body>
+        <div class="content">
+        
+        
+            <header>
+                <div class="header-left">
+                    <a href="https:&#x2F;&#x2F;fy.blackhats.net.au" class="logo">Firstyear&#x27;s blog-a-log</a>
+                </div>
+                <div class="header-right">
+                    <nav itemscope itemtype="http://schema.org/SiteNavigationElement">
+                      <ul>
+                        
+                        
+                            
+                            <li class="nav">
+                                <a itemprop="url" href="https://fy.blackhats.net.au/blog/">
+                                    <span itemprop="name">Blog</span>
+                                </a>
+                            </li>
+                        
+                            
+                            <li class="nav">
+                                <a itemprop="url" href="https://fy.blackhats.net.au/pages/">
+                                    <span itemprop="name">Pages</span>
+                                </a>
+                            </li>
+                        
+                        
+                        <li class="nav">
+                            <a itemprop="url" href="https://github.com/firstyear">
+                                <img class="icon" src="https:&#x2F;&#x2F;fy.blackhats.net.au/icons/github.svg" alt="Github">
+                            </a>
+                        </li>
+                        
+                        <li class="nav">
+                            <a itemprop="url" href="/rss.xml">
+                                <img class="icon" src="https:&#x2F;&#x2F;fy.blackhats.net.au/rss-logo.png" alt="rss">
+                            </a>
+                        </li>
+                      </ul>
+                    </nav>
+                </div>
+            </header>
+        
+        
+        <main>
+            
+<article itemscope itemtype="http://schema.org/BlogPosting">
+    <div itemprop="headline">
+        <h1>I no longer recommend FreeIPA</h1>
+        <div class="border"></div>
+        <time datetime="2019-07-10" class="date" itemprop="datePublished">
+            10 Jul 2019
+        </time>
+    </div>
+    <div itemprop="articleBody">
+        <h1 id="i-no-longer-recommend-freeipa">I no longer recommend FreeIPA</h1>
+<p>It's probably taken me a few years to write this, but I can no longer
+recommend FreeIPA for IDM installations.</p>
+<h2 id="why-not">Why not?</h2>
+<p>The FreeIPA project focused on Kerberos and SSSD, with enough other
+parts glued on to look like a complete IDM project. Now that's fine,
+but it means that concerns in other parts of the project are largely
+ignored. It creates design decisions that are not scalable or robust.</p>
+<p>Due to these decisions IPA has stability issues and scaling issues that
+other products do not.</p>
+<p>To be clear: security systems like IDM or LDAP can <em>never</em> go down.
+That's not acceptable.</p>
+<h2 id="what-do-you-recommend-instead">What do you recommend instead?</h2>
+<ul>
+<li><a href="https://kanidm.github.io/kanidm/stable/">Kanidm</a></li>
+<li>Samba with AD</li>
+<li>AzureAD</li>
+<li>389 Directory Server</li>
+</ul>
+<p>All of these projects are very reliable, secure, scalable.</p>
+<p>Kanidm specifically is my own project built from the ground up, which
+has tried to learn from the mistakes and successes of AD, FreeIPA and
+389-ds. It's what I recommend the most.</p>
+<p>Additionally, we have done a lot of work into 389 to improve our out of
+box IDM capabilities too, but there is more to be done too. The Samba AD
+team have done great things too, and deserve a lot of respect for what
+they have done.</p>
+<h2 id="is-there-more-detail-than-this">Is there more detail than this?</h2>
+<p>Yes - buy me a drink and I'll talk :)</p>
+<h2 id="didn-t-you-help">Didn't you help?</h2>
+<p>I tried and it was not taken on board. Issues I reported years ago still
+exist today 🙃.</p>
+
+    </div>
+</article>
+
+        </main>
+        
+        <footer>
+            
+            <div class="border"></div>
+            <div class="footer">
+                <small class="footer-left">
+                    Copyright &copy; William Brown
+                </small>
+                <small class="footer-right">
+                    Powered by <a href="https://www.getzola.org">Zola</a> | Theme <a href="https://github.com/barlog-m/oceanic-zen">Oceanic Zen</a>
+                </small>
+            </div>
+        
+        </footer>
+    
+        </div>
+    </body>
+</html>

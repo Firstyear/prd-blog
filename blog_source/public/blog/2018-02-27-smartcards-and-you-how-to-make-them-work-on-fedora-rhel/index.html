@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+        <meta name="description" content="Firstyear&#x27;s blog">
+        
+
+        <title>Firstyear&#x27;s blog-a-log</title>
+
+        
+          <link rel="alternate" type="application/rss+xml" title="RSS" href="https://fy.blackhats.net.au/rss.xml">
+        
+
+        
+            <link rel="stylesheet" href="https://fy.blackhats.net.au/theme.css">
+        
+        
+    </head>
+    <body>
+        <div class="content">
+        
+        
+            <header>
+                <div class="header-left">
+                    <a href="https:&#x2F;&#x2F;fy.blackhats.net.au" class="logo">Firstyear&#x27;s blog-a-log</a>
+                </div>
+                <div class="header-right">
+                    <nav itemscope itemtype="http://schema.org/SiteNavigationElement">
+                      <ul>
+                        
+                        
+                            
+                            <li class="nav">
+                                <a itemprop="url" href="https://fy.blackhats.net.au/blog/">
+                                    <span itemprop="name">Blog</span>
+                                </a>
+                            </li>
+                        
+                            
+                            <li class="nav">
+                                <a itemprop="url" href="https://fy.blackhats.net.au/pages/">
+                                    <span itemprop="name">Pages</span>
+                                </a>
+                            </li>
+                        
+                        
+                        <li class="nav">
+                            <a itemprop="url" href="https://github.com/firstyear">
+                                <img class="icon" src="https:&#x2F;&#x2F;fy.blackhats.net.au/icons/github.svg" alt="Github">
+                            </a>
+                        </li>
+                        
+                        <li class="nav">
+                            <a itemprop="url" href="/rss.xml">
+                                <img class="icon" src="https:&#x2F;&#x2F;fy.blackhats.net.au/rss-logo.png" alt="rss">
+                            </a>
+                        </li>
+                      </ul>
+                    </nav>
+                </div>
+            </header>
+        
+        
+        <main>
+            
+<article itemscope itemtype="http://schema.org/BlogPosting">
+    <div itemprop="headline">
+        <h1>Smartcards and You - How To Make Them Work on Fedora&#x2F;RHEL</h1>
+        <div class="border"></div>
+        <time datetime="2018-02-27" class="date" itemprop="datePublished">
+            27 Feb 2018
+        </time>
+    </div>
+    <div itemprop="articleBody">
+        <h1 id="smartcards-and-you-how-to-make-them-work-on-fedora-rhel">Smartcards and You - How To Make Them Work on Fedora/RHEL</h1>
+<p>Smartcards are a great way to authenticate users. They have a device
+(something you have) and a pin (something you know). They prevent
+password transmission, use strong crypto and they even come in a variety
+of formats. From your &quot;card&quot; shapes to yubikeys.</p>
+<p>So why aren't they used more? It's the classic issue of usability -
+the setup for them is undocumented, complex, and hard to discover. Today
+I hope to change this.</p>
+<h2 id="the-goal">The Goal</h2>
+<p>To authenticate a user with a smartcard to a physical linux system,
+backed onto LDAP. The public cert in LDAP is validated, as is the chain
+to the CA.</p>
+<h2 id="you-will-need">You Will Need</h2>
+<ul>
+<li>LDAP (<a href="http://www.port389.org/">here is one I prepared earlier</a>)</li>
+<li>One Linux - Fedora 27 or RHEL 7 work best</li>
+<li>A smartcard (yubikey 4/nano works)</li>
+</ul>
+<p>I'll be focusing on the yubikey because that's what I own.</p>
+<h2 id="preparing-the-smartcard">Preparing the Smartcard</h2>
+<p>First we need to make the smartcard hold our certificate. Because of a
+crypto issue in yubikey firmware, it's best to generate certificates
+for these externally.</p>
+<p>I've documented this before in another post, but for accesibility here
+it is again.</p>
+<p>Create an NSS DB, and generate a certificate signing request:</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>certutil -d . -N -f pwdfile.txt
+</span><span>certutil -d . -R -a -o user.csr -f pwdfile.txt -g 4096 -Z SHA256 -v 24 \
+</span><span>--keyUsage digitalSignature,nonRepudiation,keyEncipherment,dataEncipherment --nsCertType sslClient --extKeyUsage clientAuth \
+</span><span>-s &quot;CN=username,O=Testing,L=example,ST=Queensland,C=AU&quot;
+</span></code></pre>
+<p>Once the request is signed, and your certificate is in &quot;user.crt&quot;,
+import this to the database.</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>certutil -A -d . -f pwdfile.txt -i user.crt -a -n TLS -t &quot;,,&quot;
+</span><span>certutil -A -d . -f pwdfile.txt -i ca.crt -a -n TLS -t &quot;CT,,&quot;
+</span></code></pre>
+<p>Now export that as a p12 bundle for the yubikey to import.</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>pk12util -o user.p12 -d . -k pwdfile.txt -n TLS
+</span></code></pre>
+<p>Now import this to the yubikey - remember to use slot 9a this time! As
+well make sure you set the touch policy NOW, because you can't change
+it later!</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>yubico-piv-tool -s9a -i user.p12 -K PKCS12 -aimport-key -aimport-certificate -k --touch-policy=always
+</span></code></pre>
+<h2 id="setting-up-your-ldap-user">Setting up your LDAP user</h2>
+<p>First setup your system to work with LDAP via SSSD. You've done that?
+Good! Now it's time to get our user ready.</p>
+<p>Take our user.crt and convert it to DER:</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>openssl x509 -inform PEM -outform DER -in user.crt -out user.der
+</span></code></pre>
+<p>Now you need to transform that into something that LDAP can understand.
+In the future I'll be adding a tool to 389-ds to make this
+&quot;automatic&quot;, but for now you can use python:</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>python3
+</span><span>&gt;&gt;&gt; import base64
+</span><span>&gt;&gt;&gt; with open(&#39;user.der&#39;, &#39;r&#39;) as f:
+</span><span>&gt;&gt;&gt;    print(base64.b64encode(f.read))
+</span></code></pre>
+<p>That should output a long base64 string on one line. Add this to your
+ldap user with ldapvi:</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>uid=william,ou=People,dc=...
+</span><span>userCertificate;binary:: &lt;BASE64&gt;
+</span></code></pre>
+<p>Note that ';binary' tag has an important meaning here for certificate
+data, and the '::' tells ldap that this is b64 encoded, so it will
+decode on addition.</p>
+<h2 id="setting-up-the-system">Setting up the system</h2>
+<p>Now that you have done that, you need to teach SSSD how to intepret that
+attribute.</p>
+<p>In your various SSSD sections you'll need to make the following
+changes:</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>[domain/LDAP]
+</span><span>auth_provider = ldap
+</span><span>ldap_user_certificate = userCertificate;binary
+</span><span>
+</span><span>[sssd]
+</span><span># This controls OCSP checks, you probably want this enabled!
+</span><span># certificate_verification = no_verification
+</span><span>
+</span><span>[pam]
+</span><span>pam_cert_auth = True
+</span></code></pre>
+<p>Now the TRICK is letting SSSD know to use certificates. You need to run:</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>sudo touch /var/lib/sss/pubconf/pam_preauth_available
+</span></code></pre>
+<p>With out this, SSSD won't even try to process CCID authentication!</p>
+<p>Add your ca.crt to the system trusted CA store for SSSD to verify:</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>certutil -A -d /etc/pki/nssdb -i ca.crt -n USER_CA -t &quot;CT,,&quot;
+</span></code></pre>
+<p>Add coolkey to the database so it can find smartcards:</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>modutil -dbdir /etc/pki/nssdb -add &quot;coolkey&quot; -libfile /usr/lib64/libcoolkeypk11.so
+</span></code></pre>
+<p>Check that SSSD can find the certs now:</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span># sudo /usr/libexec/sssd/p11_child --pre --nssdb=/etc/pki/nssdb
+</span><span>PIN for william
+</span><span>william
+</span><span>/usr/lib64/libcoolkeypk11.so
+</span><span>0001
+</span><span>CAC ID Certificate
+</span></code></pre>
+<p>If you get no output here you are missing something! If this doesn't
+work, nothing will!</p>
+<p>Finally, you need to tweak PAM to make sure that pam_unix isn't getting
+in the way. I use the following configuration.</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>auth        required      pam_env.so
+</span><span># This skips pam_unix if the given uid is not local (IE it&#39;s from SSSD)
+</span><span>auth        [default=1 ignore=ignore success=ok] pam_localuser.so
+</span><span>auth        sufficient    pam_unix.so nullok try_first_pass
+</span><span>auth        requisite     pam_succeed_if.so uid &gt;= 1000 quiet_success
+</span><span>auth        sufficient    pam_sss.so prompt_always ignore_unknown_user
+</span><span>auth        required      pam_deny.so
+</span><span>
+</span><span>account     required      pam_unix.so
+</span><span>account     sufficient    pam_localuser.so
+</span><span>account     sufficient    pam_succeed_if.so uid &lt; 1000 quiet
+</span><span>account     [default=bad success=ok user_unknown=ignore] pam_sss.so
+</span><span>account     required      pam_permit.so
+</span><span>
+</span><span>password    requisite     pam_pwquality.so try_first_pass local_users_only retry=3 authtok_type=
+</span><span>password    sufficient    pam_unix.so sha512 shadow try_first_pass use_authtok
+</span><span>password    sufficient    pam_sss.so use_authtok
+</span><span>password    required      pam_deny.so
+</span><span>
+</span><span>session     optional      pam_keyinit.so revoke
+</span><span>session     required      pam_limits.so
+</span><span>-session    optional      pam_systemd.so
+</span><span>session     [success=1 default=ignore] pam_succeed_if.so service in crond quiet use_uid
+</span><span>session     required      pam_unix.so
+</span><span>session     optional      pam_sss.so
+</span></code></pre>
+<p>That's it! Restart SSSD, and you should be good to go.</p>
+<p>Finally, you may find SELinux isn't allowing authentication. This is
+really sad that smartcards don't work with SELinux out of the box and I
+have raised a number of bugs, but check this just in case.</p>
+<p>Happy authentication!</p>
+
+    </div>
+</article>
+
+        </main>
+        
+        <footer>
+            
+            <div class="border"></div>
+            <div class="footer">
+                <small class="footer-left">
+                    Copyright &copy; William Brown
+                </small>
+                <small class="footer-right">
+                    Powered by <a href="https://www.getzola.org">Zola</a> | Theme <a href="https://github.com/barlog-m/oceanic-zen">Oceanic Zen</a>
+                </small>
+            </div>
+        
+        </footer>
+    
+        </div>
+    </body>
+</html>

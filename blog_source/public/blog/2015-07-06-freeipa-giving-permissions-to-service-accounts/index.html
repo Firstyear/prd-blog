@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+        <meta name="description" content="Firstyear&#x27;s blog">
+        
+
+        <title>Firstyear&#x27;s blog-a-log</title>
+
+        
+          <link rel="alternate" type="application/rss+xml" title="RSS" href="https://fy.blackhats.net.au/rss.xml">
+        
+
+        
+            <link rel="stylesheet" href="https://fy.blackhats.net.au/theme.css">
+        
+        
+    </head>
+    <body>
+        <div class="content">
+        
+        
+            <header>
+                <div class="header-left">
+                    <a href="https:&#x2F;&#x2F;fy.blackhats.net.au" class="logo">Firstyear&#x27;s blog-a-log</a>
+                </div>
+                <div class="header-right">
+                    <nav itemscope itemtype="http://schema.org/SiteNavigationElement">
+                      <ul>
+                        
+                        
+                            
+                            <li class="nav">
+                                <a itemprop="url" href="https://fy.blackhats.net.au/blog/">
+                                    <span itemprop="name">Blog</span>
+                                </a>
+                            </li>
+                        
+                            
+                            <li class="nav">
+                                <a itemprop="url" href="https://fy.blackhats.net.au/pages/">
+                                    <span itemprop="name">Pages</span>
+                                </a>
+                            </li>
+                        
+                        
+                        <li class="nav">
+                            <a itemprop="url" href="https://github.com/firstyear">
+                                <img class="icon" src="https:&#x2F;&#x2F;fy.blackhats.net.au/icons/github.svg" alt="Github">
+                            </a>
+                        </li>
+                        
+                        <li class="nav">
+                            <a itemprop="url" href="/rss.xml">
+                                <img class="icon" src="https:&#x2F;&#x2F;fy.blackhats.net.au/rss-logo.png" alt="rss">
+                            </a>
+                        </li>
+                      </ul>
+                    </nav>
+                </div>
+            </header>
+        
+        
+        <main>
+            
+<article itemscope itemtype="http://schema.org/BlogPosting">
+    <div itemprop="headline">
+        <h1>FreeIPA: Giving permissions to service accounts.</h1>
+        <div class="border"></div>
+        <time datetime="2015-07-06" class="date" itemprop="datePublished">
+            06 Jul 2015
+        </time>
+    </div>
+    <div itemprop="articleBody">
+        <h1 id="freeipa-giving-permissions-to-service-accounts">FreeIPA: Giving permissions to service accounts.</h1>
+<p><a href="/blog/html/2019/07/10/i_no_longer_recommend_freeipa.html">I no longer recommend using FreeIPA - Read more
+here!</a></p>
+<p>I was setting up FreeRADIUS to work with MSCHAPv2 with FreeIPA (Oh god
+you're a horrible human being I hear you say).</p>
+<p>To do this, you need to do a few things, the main one being allowing a
+service account a read permission to a normally hidden attribute.
+However, service accounts don't normally have the ability to be added
+to permission classes.</p>
+<p>First, to enable this setup, you need to install freeipa-adtrust and do
+the initial setup.</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>yum install freeipa-server-trust-ad freeradius
+</span><span>
+</span><span>ipa-adtrust-install
+</span></code></pre>
+<p>Now change an accounts password, then as cn=Directory Manager look at
+the account. You should see ipaNTHash on the account now.</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>ldapsearch -H ldap://ipa.example.com -x -D &#39;cn=Directory Manager&#39; -W -LLL -Z &#39;(uid=username)&#39; ipaNTHash
+</span></code></pre>
+<p>Now we setup the permission and a role to put the service accounts into.</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>ipa permission-add &#39;ipaNTHash service read&#39; --attrs=ipaNTHash --type=user  --right=read
+</span><span>ipa privilege-add &#39;Radius services&#39; --desc=&#39;Privileges needed to allow radiusd servers to operate&#39;
+</span><span>ipa privilege-add-permission &#39;Radius services&#39; --permissions=&#39;ipaNTHash service read&#39;
+</span><span>ipa role-add &#39;Radius server&#39; --desc=&quot;Radius server role&quot;
+</span><span>ipa role-add-privilege --privileges=&quot;Radius services&quot; &#39;Radius server&#39;
+</span></code></pre>
+<p>Next, we add the service account.</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>ipa service-add &#39;radius/host.ipa.example.net.au&#39;
+</span></code></pre>
+<p>Most services should be able to use the service account with either the
+keytab for client authentication, or for at least the service to
+authenticate to ldap. This is how you get the keytab.</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>ipa-getkeytab -p &#39;radius/host.ipa.example.net.au&#39; -s host.ipa.example.net.au -k /root/radiusd.keytab
+</span><span>kinit -t /root/radiusd.keytab -k radius/host.ipa.example.net.au
+</span><span>ldapwhoami -Y GSSAPI
+</span></code></pre>
+<p>If you plan to use this account with something like radius that only
+accepts a password, here is how you can set one.</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>dn: krbprincipalname=radius/host.ipa.example.net.au@IPA.EXAMPLE.NET.AU,cn=services,\
+</span><span>cn=accounts,dc=ipa,dc=example,dc=net,dc=au
+</span><span>changetype: modify
+</span><span>add: objectClass
+</span><span>objectClass: simpleSecurityObject
+</span><span>-
+</span><span>add: userPassword
+</span><span>userPassword: &lt;The service account password&gt;
+</span><span>
+</span><span>ldapmodify -f &lt;path/to/ldif&gt; -D &#39;cn=Directory Manager&#39; -W -H ldap://host.ipa.example.net.au -Z
+</span><span>ldapwhoami -Z -D &#39;krbprincipalname=radius/host.ipa.example.net.au@IPA.EXAMPLE.NET.AU,\
+</span><span>cn=services,cn=accounts,dc=ipa,dc=example,dc=net,dc=au&#39; -W 
+</span></code></pre>
+<p>For either whoami test you should see a dn like:</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>krbprincipalname=radius/host.ipa.example.net.au@IPA.EXAMPLE.NET.AU,cn=services,cn=accounts,dc=ipa,dc=example,dc=net,dc=au
+</span></code></pre>
+<p>Finally, we have to edit the cn=Radius server object and add the service
+account. This is what the object should look like in the end:</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span># Radius server, roles, accounts, ipa.example.net.au
+</span><span>dn: cn=Radius server,cn=roles,cn=accounts,dc=ipa,dc=example,dc=net,dc=au
+</span><span>memberOf: cn=Radius services,cn=privileges,cn=pbac,dc=ipa,dc=example,dc=net,
+</span><span> dc=au
+</span><span>memberOf: cn=ipaNTHash service read,cn=permissions,cn=pbac,dc=ipa,dc=example
+</span><span> ,dc=net,dc=au
+</span><span>description: Radius server role
+</span><span>cn: Radius server
+</span><span>objectClass: groupofnames
+</span><span>objectClass: nestedgroup
+</span><span>objectClass: top
+</span><span>member: krbprincipalname=radius/host.ipa.example.net.au@IPA.EXAMPLE.NET.AU
+</span><span> ,cn=services,cn=accounts,dc=ipa,dc=example,dc=net,dc=au
+</span></code></pre>
+<p>Now you should be able to use the service account to search and show
+ipaNTHash on objects.</p>
+<p>If you use this as your identify in raddb/mods-avaliable/ldap, and set
+control:NT-Password := 'ipaNTHash' in the update section, you should
+be able to use this as an ldap backend for MSCHAPv2. I will write a more
+complete blog on the radius half of this setup later.</p>
+<p>NOTES: Thanks to afayzullin for noting the deprecation of --permission
+with ipa permission-add. This has been updated to --right as per his
+suggestion. Additional thanks for pointing out I should include the
+command to do the directory manager ldapsearch for ipanthash.</p>
+
+    </div>
+</article>
+
+        </main>
+        
+        <footer>
+            
+            <div class="border"></div>
+            <div class="footer">
+                <small class="footer-left">
+                    Copyright &copy; William Brown
+                </small>
+                <small class="footer-right">
+                    Powered by <a href="https://www.getzola.org">Zola</a> | Theme <a href="https://github.com/barlog-m/oceanic-zen">Oceanic Zen</a>
+                </small>
+            </div>
+        
+        </footer>
+    
+        </div>
+    </body>
+</html>

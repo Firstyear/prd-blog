@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+        <meta name="description" content="Firstyear&#x27;s blog">
+        
+
+        <title>Firstyear&#x27;s blog-a-log</title>
+
+        
+          <link rel="alternate" type="application/rss+xml" title="RSS" href="https://fy.blackhats.net.au/rss.xml">
+        
+
+        
+            <link rel="stylesheet" href="https://fy.blackhats.net.au/theme.css">
+        
+        
+    </head>
+    <body>
+        <div class="content">
+        
+        
+            <header>
+                <div class="header-left">
+                    <a href="https:&#x2F;&#x2F;fy.blackhats.net.au" class="logo">Firstyear&#x27;s blog-a-log</a>
+                </div>
+                <div class="header-right">
+                    <nav itemscope itemtype="http://schema.org/SiteNavigationElement">
+                      <ul>
+                        
+                        
+                            
+                            <li class="nav">
+                                <a itemprop="url" href="https://fy.blackhats.net.au/blog/">
+                                    <span itemprop="name">Blog</span>
+                                </a>
+                            </li>
+                        
+                            
+                            <li class="nav">
+                                <a itemprop="url" href="https://fy.blackhats.net.au/pages/">
+                                    <span itemprop="name">Pages</span>
+                                </a>
+                            </li>
+                        
+                        
+                        <li class="nav">
+                            <a itemprop="url" href="https://github.com/firstyear">
+                                <img class="icon" src="https:&#x2F;&#x2F;fy.blackhats.net.au/icons/github.svg" alt="Github">
+                            </a>
+                        </li>
+                        
+                        <li class="nav">
+                            <a itemprop="url" href="/rss.xml">
+                                <img class="icon" src="https:&#x2F;&#x2F;fy.blackhats.net.au/rss-logo.png" alt="rss">
+                            </a>
+                        </li>
+                      </ul>
+                    </nav>
+                </div>
+            </header>
+        
+        
+        <main>
+            
+<article itemscope itemtype="http://schema.org/BlogPosting">
+    <div itemprop="headline">
+        <h1>python gssapi with flask and s4u2proxy</h1>
+        <div class="border"></div>
+        <time datetime="2015-11-26" class="date" itemprop="datePublished">
+            26 Nov 2015
+        </time>
+    </div>
+    <div itemprop="articleBody">
+        <h1 id="python-gssapi-with-flask-and-s4u2proxy">python gssapi with flask and s4u2proxy</h1>
+<p><a href="/blog/html/2017/05/23/kerberos_why_the_world_moved_on.html">UPDATE: 2019 I don't recommend using kerberos - read more
+here.</a></p>
+<p>I have recently been implementing gssapi negotiate support in a flask
+application at work. In almost every case I advise that you use
+mod-auth-gssapi: It's just better.</p>
+<p>But if you have a use case where you cannot avoid implementing you own,
+there are some really gotchas in using python-gssapi.</p>
+<p>Python-gssapi is the updated, newer, better gssapi module for python,
+essentially obsoleting python-kerberos. It will have python 3 support
+and is more full featured.</p>
+<p>However, like everything to do with gssapi, it's fiendishly annoying to
+use, and lacks a lot in terms of documentation and examples.</p>
+<p>The hardest parts:</p>
+<ul>
+<li>Knowing how to complete the negotiation with the data set in headers
+by the client</li>
+<li>Finding that python-gssapi expects you to base64 decode the request</li>
+<li>Finding how to destroy credentials</li>
+<li>Getting the delegated credentials into a ccache</li>
+</ul>
+<p>Now, a thing to remember is that here, if your kdc support it, you will
+be using s4u2proxy automatically. If you want to know more, and you are
+using freeipa, you can look into <a href="http://www.freeipa.org/page/V4/Service_Constraint_Delegation">constrained
+delegation</a>.</p>
+<p>Here is how I implemented the negotiate handler in flask.</p>
+<p>:</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>def _negotiate_start(req):
+</span><span>    # This assumes a realm. You can leave this unset to use the default ream from krb5.conf iirc.
+</span><span>    svc_princ = gssnames.Name(&#39;HTTP/%s@EXAMPLE.COM&#39;% (socket.gethostname()))
+</span><span>    server_creds = gsscreds.Credentials(usage=&#39;accept&#39;, name=svc_princ)
+</span><span>    context = gssctx.SecurityContext(creds=server_creds)
+</span><span>    # Yay! Undocumented gssapi magic. No indication that you need to b64 decode.
+</span><span>    context.step(base64.b64decode(req))
+</span><span>    deleg_creds = context.delegated_creds
+</span><span>    CCACHE = &#39;MEMORY:ccache_rest389_%s&#39; % deleg_creds.name
+</span><span>    store = {&#39;ccache&#39;: CCACHE}
+</span><span>    deleg_creds.store(store, overwrite=True)
+</span><span>    os.environ[&#39;KRB5CCNAME&#39;] = CCACHE
+</span><span>    # Return the context, so we can free it later.
+</span><span>    return context
+</span><span>
+</span><span>
+</span><span>def _negotiate_end(context):
+</span><span>
+</span><span>    # tell python-gssapi to free gss_cred_id_t
+</span><span>    deleg_creds = context.delegated_creds
+</span><span>    del(deleg_creds)
+</span><span>
+</span><span>
+</span><span>def _connection(f, *args, **kwargs):
+</span><span>    retval = None
+</span><span>    negotiate = False
+</span><span>    headers = Headers()  # Allows a multivalue header response.
+</span><span>    # Request comes from **kwargs
+</span><span>    authorization = request.headers.get(&quot;Authorization&quot;, None)
+</span><span>    try:
+</span><span>        if authorization is not None:
+</span><span>            values = authorization.split()
+</span><span>            if values[0] == &#39;Negotiate&#39;:
+</span><span>                # If this is valid, it sets KRB5CCNAME
+</span><span>                negotiate = _negotiate_start(values[1])
+</span><span>        # This is set by mod_auth_gssapi if you are using that instead.
+</span><span>        if request.headers.get(&quot;Krb5Ccname&quot;, &#39;(null)&#39;) != &#39;(null)&#39;:
+</span><span>            os.environ[&#39;KRB5CCNAME&#39;] = request.headers.get(&quot;Krb5Ccname&quot;, None)
+</span><span>        if os.environ.get(&#39;KRB5CCNAME&#39;, &#39;&#39;) != &#39;&#39;:
+</span><span>            pass
+</span><span>            # Do something with the krb creds here, db connection etc.
+</span><span>            retval = f(dir_srv_conn, *args, **kwargs)
+</span><span>        else:
+</span><span>            headers.add(&#39;WWW-Authenticate&#39;, &#39;Negotiate&#39;)
+</span><span>            retval = Response(&quot;Unauthorized&quot;, 401, headers)
+</span><span>    finally:
+</span><span>        if negotiate is not False:
+</span><span>            _negotiate_end(negotiate)
+</span><span>        if os.environ.get(&#39;KRB5CCNAME&#39;, None) is not None:
+</span><span>            os.environ[&#39;KRB5CCNAME&#39;] = &#39;&#39;
+</span><span>    return retval
+</span><span>
+</span><span>
+</span><span>def authenticateConnection(f):
+</span><span>    @wraps(f)
+</span><span>    def decorator(*args, **kwargs):
+</span><span>        return _connection(f, *args, **kwargs)
+</span><span>    return decorator
+</span><span>
+</span><span>
+</span><span>@app.route(&#39;/&#39;, methods[&#39;GET&#39;])
+</span><span>@authenticateConnection
+</span><span>def index():
+</span><span>    pass
+</span></code></pre>
+
+    </div>
+</article>
+
+        </main>
+        
+        <footer>
+            
+            <div class="border"></div>
+            <div class="footer">
+                <small class="footer-left">
+                    Copyright &copy; William Brown
+                </small>
+                <small class="footer-right">
+                    Powered by <a href="https://www.getzola.org">Zola</a> | Theme <a href="https://github.com/barlog-m/oceanic-zen">Oceanic Zen</a>
+                </small>
+            </div>
+        
+        </footer>
+    
+        </div>
+    </body>
+</html>

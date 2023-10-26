@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+        <meta name="description" content="Firstyear&#x27;s blog">
+        
+
+        <title>Firstyear&#x27;s blog-a-log</title>
+
+        
+          <link rel="alternate" type="application/rss+xml" title="RSS" href="https://fy.blackhats.net.au/rss.xml">
+        
+
+        
+            <link rel="stylesheet" href="https://fy.blackhats.net.au/theme.css">
+        
+        
+    </head>
+    <body>
+        <div class="content">
+        
+        
+            <header>
+                <div class="header-left">
+                    <a href="https:&#x2F;&#x2F;fy.blackhats.net.au" class="logo">Firstyear&#x27;s blog-a-log</a>
+                </div>
+                <div class="header-right">
+                    <nav itemscope itemtype="http://schema.org/SiteNavigationElement">
+                      <ul>
+                        
+                        
+                            
+                            <li class="nav">
+                                <a itemprop="url" href="https://fy.blackhats.net.au/blog/">
+                                    <span itemprop="name">Blog</span>
+                                </a>
+                            </li>
+                        
+                            
+                            <li class="nav">
+                                <a itemprop="url" href="https://fy.blackhats.net.au/pages/">
+                                    <span itemprop="name">Pages</span>
+                                </a>
+                            </li>
+                        
+                        
+                        <li class="nav">
+                            <a itemprop="url" href="https://github.com/firstyear">
+                                <img class="icon" src="https:&#x2F;&#x2F;fy.blackhats.net.au/icons/github.svg" alt="Github">
+                            </a>
+                        </li>
+                        
+                        <li class="nav">
+                            <a itemprop="url" href="/rss.xml">
+                                <img class="icon" src="https:&#x2F;&#x2F;fy.blackhats.net.au/rss-logo.png" alt="rss">
+                            </a>
+                        </li>
+                      </ul>
+                    </nav>
+                </div>
+            </header>
+        
+        
+        <main>
+            
+<article itemscope itemtype="http://schema.org/BlogPosting">
+    <div itemprop="headline">
+        <h1>389ds in containers</h1>
+        <div class="border"></div>
+        <time datetime="2020-03-28" class="date" itemprop="datePublished">
+            28 Mar 2020
+        </time>
+    </div>
+    <div itemprop="articleBody">
+        <h1 id="389ds-in-containers">389ds in containers</h1>
+<p>I've spent a number of years working in the background to get 389-ds
+working in containers. I think it's very close to production ready
+(<a href="https://pagure.io/389-ds-base/issue/50989">one issue outstanding!</a>)
+and I'm now using it at home for my production LDAP needs.</p>
+<p>So here's a run down on using 389ds in a container!</p>
+<h2 id="getting-it-started">Getting it Started</h2>
+<p>The team provides an image for pre-release testing which you can get
+with docker pull:</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>docker pull 389ds/dirsrv:latest
+</span><span># OR, if you want to be pinned to the 1.4 release series.
+</span><span>docker pull 389ds/dirsrv:1.4
+</span></code></pre>
+<p>The image can be run in an ephemeral mode (data will be lost on stop of
+the container) so you can test it:</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>docker run 389ds/dirsrv:1.4
+</span></code></pre>
+<h2 id="making-it-persistent">Making it Persistent</h2>
+<p>To make your data persistent, you'll need to add a volume, and bind it
+to the container.</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>docker volume create 389ds
+</span></code></pre>
+<p>You can run 389ds where the container instance is removed each time the
+container stops, but the data persists (I promise this is safe!) with:</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>docker run --rm -v 389ds:/data -p 3636:3636 389ds/dirsrv:latest
+</span></code></pre>
+<p>Check your instance is working with an ldapsearch:</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>LDAPTLS_REQCERT=never ldapsearch -H ldaps://127.0.0.1:3636 -x -b &#39;&#39; -s base vendorVersion
+</span></code></pre>
+<p><em>NOTE: Setting the environment variable `LDAPTLS_REQCERT` to `never`
+disables CA verification of the LDAPS connection. Only use this in
+testing environments!</em></p>
+<p>If you want to make the container instance permanent (uses docker
+start/stop/restart etc) then you'll need to do a docker create with
+similar arguments:</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>docker create  -v 389ds:/data -p 3636:3636 389ds/dirsrv:latest
+</span><span>docker ps -a
+</span><span>CONTAINER ID        IMAGE                 ...  NAMES
+</span><span>89b342c2e058        389ds/dirsrv:latest   ...  adoring_bartik
+</span></code></pre>
+<p>Remember, even if you rm the container instance, the volume stores all
+the data so you can re-pull the image and recreate the container and
+continue.</p>
+<h2 id="administering-the-instance">Administering the Instance</h2>
+<p>The best way is to the use the local LDAPI socket - by default the
+cn=Directory Manager password is randomised so that it can't be
+accessed remotely.</p>
+<p>To use the local LDAPI socket, you'll use docker exec into the running
+instance.</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>docker start &lt;container name&gt;
+</span><span>docker exec -i -t &lt;container name&gt; /usr/sbin/dsconf localhost &lt;cmd&gt;
+</span><span>docker exec -i -t &lt;container name&gt; /usr/sbin/dsconf localhost backend suffix list
+</span><span>No backends
+</span></code></pre>
+<p>In a container, the instance is always named &quot;localhost&quot;. So lets add
+a database backend now to our instance:</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>docker exec -i -t &lt;cn&gt; /usr/sbin/dsconf localhost backend create --suffix dc=example,dc=com --be-name userRoot
+</span><span>The database was sucessfully created
+</span></code></pre>
+<p>You can even go ahead and populate your backend now. To make it easier,
+specify your basedn into the volume's /data/config/container.inf. Once
+that's done we can setup sample data (including access controls), and
+create some users and groups.</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>docker exec -i -t &lt;cn&gt; /bin/sh -c &quot;echo -e &#39;\nbasedn = dc=example,dc=com&#39; &gt;&gt; /data/config/container.inf&quot;
+</span><span>docker exec -i -t &lt;cn&gt; /usr/sbin/dsidm localhost initialise
+</span><span>docker exec -i -t &lt;cn&gt; /usr/sbin/dsidm localhost user create --uid william --cn william \
+</span><span>    --displayName William --uidNumber 1000 --gidNumber 1000 --homeDirectory /home/william
+</span><span>docker exec -i -t &lt;cn&gt; /usr/sbin/dsidm localhost group create --cn test_group
+</span><span>docker exec -i -t &lt;cn&gt; /usr/sbin/dsidm localhost group add_member test_group uid=william,ou=people,dc=example,dc=com
+</span><span>docker exec -i -t &lt;cn&gt; /usr/sbin/dsidm localhost account reset_password uid=william,ou=people,dc=example,dc=com
+</span><span>LDAPTLS_REQCERT=never ldapwhoami -H ldaps://127.0.0.1:3636 -x -D uid=william,ou=people,dc=example,dc=com -W
+</span><span>    Enter LDAP Password:
+</span><span>    dn: uid=william,ou=people,dc=example,dc=com
+</span></code></pre>
+<p>There is much more you can do with these tools of course, but it's very
+easy to get started and working with an ldap server like this.</p>
+<h2 id="further-configuration">Further Configuration</h2>
+<p>Because this runs in a container, the approach to some configuration is
+a bit different. Some settings can be configured through either the
+content of the volume, or through environment variables.</p>
+<p>You can reset the directory manager password on startup but use the
+environment variable DS_DM_PASSWORD. Of course, please use a better
+password than &quot;password&quot;. pwgen is a good tool for this! This password
+persists across restarts, so you should make sure it's good.</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>docker run --rm -e DS_DM_PASSWORD=password -v 389ds:/data -p 3636:3636 389ds/dirsrv:latest
+</span><span>LDAPTLS_REQCERT=never ldapwhoami -H ldaps://127.0.0.1:3636 -x -D &#39;cn=Directory Manager&#39; -w password
+</span><span>    dn: cn=directory manager
+</span></code></pre>
+<p>You can also configure certificates through pem files.</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>/data/tls/server.key
+</span><span>/data/tls/server.crt
+</span><span>/data/tls/ca/*.crt
+</span></code></pre>
+<p>All the certs in /data/tls/ca/ will be imported as CA's and the server
+key and crt will be used for the TLS server.</p>
+<p>If for some reason you need to reindex your db at startup, you can use:</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>docker run --rm -e DS_REINDEX=true -v 389ds:/data -p 3636:3636 389ds/dirsrv:latest
+</span></code></pre>
+<p>After the reindex is complete the instance will start like normal.</p>
+<h2 id="conclusion">Conclusion</h2>
+<p>389ds in a container is one of the easiest and quickest ways to get a
+working LDAP environment today. Please test it and let us know what you
+think!</p>
+
+    </div>
+</article>
+
+        </main>
+        
+        <footer>
+            
+            <div class="border"></div>
+            <div class="footer">
+                <small class="footer-left">
+                    Copyright &copy; William Brown
+                </small>
+                <small class="footer-right">
+                    Powered by <a href="https://www.getzola.org">Zola</a> | Theme <a href="https://github.com/barlog-m/oceanic-zen">Oceanic Zen</a>
+                </small>
+            </div>
+        
+        </footer>
+    
+        </div>
+    </body>
+</html>

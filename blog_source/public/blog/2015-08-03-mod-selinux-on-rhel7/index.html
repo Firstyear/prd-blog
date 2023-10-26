@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+        <meta name="description" content="Firstyear&#x27;s blog">
+        
+
+        <title>Firstyear&#x27;s blog-a-log</title>
+
+        
+          <link rel="alternate" type="application/rss+xml" title="RSS" href="https://fy.blackhats.net.au/rss.xml">
+        
+
+        
+            <link rel="stylesheet" href="https://fy.blackhats.net.au/theme.css">
+        
+        
+    </head>
+    <body>
+        <div class="content">
+        
+        
+            <header>
+                <div class="header-left">
+                    <a href="https:&#x2F;&#x2F;fy.blackhats.net.au" class="logo">Firstyear&#x27;s blog-a-log</a>
+                </div>
+                <div class="header-right">
+                    <nav itemscope itemtype="http://schema.org/SiteNavigationElement">
+                      <ul>
+                        
+                        
+                            
+                            <li class="nav">
+                                <a itemprop="url" href="https://fy.blackhats.net.au/blog/">
+                                    <span itemprop="name">Blog</span>
+                                </a>
+                            </li>
+                        
+                            
+                            <li class="nav">
+                                <a itemprop="url" href="https://fy.blackhats.net.au/pages/">
+                                    <span itemprop="name">Pages</span>
+                                </a>
+                            </li>
+                        
+                        
+                        <li class="nav">
+                            <a itemprop="url" href="https://github.com/firstyear">
+                                <img class="icon" src="https:&#x2F;&#x2F;fy.blackhats.net.au/icons/github.svg" alt="Github">
+                            </a>
+                        </li>
+                        
+                        <li class="nav">
+                            <a itemprop="url" href="/rss.xml">
+                                <img class="icon" src="https:&#x2F;&#x2F;fy.blackhats.net.au/rss-logo.png" alt="rss">
+                            </a>
+                        </li>
+                      </ul>
+                    </nav>
+                </div>
+            </header>
+        
+        
+        <main>
+            
+<article itemscope itemtype="http://schema.org/BlogPosting">
+    <div itemprop="headline">
+        <h1>mod selinux on rhel7</h1>
+        <div class="border"></div>
+        <time datetime="2015-08-03" class="date" itemprop="datePublished">
+            03 Aug 2015
+        </time>
+    </div>
+    <div itemprop="articleBody">
+        <h1 id="mod-selinux-on-rhel7">mod selinux on rhel7</h1>
+<p>I have now compiled and testing mod_selinux on el7. I'm trying to get
+this into EPEL now.</p>
+<p>To test this once you have done a build.</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>#!/usr/bin/env python
+</span><span>import cgi
+</span><span>import cgitb; cgitb.enable()  # for troubleshooting
+</span><span>import selinux
+</span><span>
+</span><span>print &quot;Content-type: text/html&quot;
+</span><span>print
+</span><span>print &quot;&quot;&quot;
+</span><span>&lt;html&gt;
+</span><span>&lt;head&gt;&lt;title&gt;Selinux CGI context&lt;/title&gt;&lt;/head&gt;
+</span><span>&lt;body&gt;
+</span><span>  &lt;p&gt;Current context is %s&lt;/p&gt;
+</span><span>&lt;/body&gt;
+</span><span>&lt;/html&gt;
+</span><span>&quot;&quot;&quot; % cgi.escape(str(selinux.getcon()))
+</span></code></pre>
+<p>Put this cgi into:</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>/var/www/cgi-bin/selinux-c1.cgi
+</span><span>/var/www/cgi-bin/selinux-c2.cgi
+</span><span>/var/www/cgi-bin/selinux-c3.cgi
+</span></code></pre>
+<p>Now, install and configure httpd.</p>
+<p>/etc/httpd/conf.d/mod_selinux.conf</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>&lt;VirtualHost *:80&gt;
+</span><span> DocumentRoot          /var/www/html
+</span><span>
+</span><span>    &lt;LocationMatch /cgi-bin/selinux-c2.cgi&gt;
+</span><span>    selinuxDomainVal    *:s0:c2
+</span><span>    &lt;/LocationMatch&gt;
+</span><span>    &lt;LocationMatch /cgi-bin/selinux-c3.cgi&gt;
+</span><span>    selinuxDomainVal    *:s0:c3
+</span><span>    &lt;/LocationMatch&gt;
+</span><span>
+</span><span>&lt;/VirtualHost&gt;
+</span></code></pre>
+<p>Now when you load each page you should see different contexts such as:
+&quot;Current context is [0,
+'system_u:system_r:httpd_sys_script_t:s0:c3']&quot;</p>
+<p>You can easily extend these location-match based contexts onto django
+project urls etc. Consider you have a file upload. You place that into
+c1, and then have all other processes in c2. If the url needs to look at
+the file, then you place that in c1 also.</p>
+<p>Alternately, you can use this for virtualhost isolation, or even if you
+feel game, write new policies to allow more complex rules within your
+application.</p>
+<p>34</p>
+
+    </div>
+</article>
+
+        </main>
+        
+        <footer>
+            
+            <div class="border"></div>
+            <div class="footer">
+                <small class="footer-left">
+                    Copyright &copy; William Brown
+                </small>
+                <small class="footer-right">
+                    Powered by <a href="https://www.getzola.org">Zola</a> | Theme <a href="https://github.com/barlog-m/oceanic-zen">Oceanic Zen</a>
+                </small>
+            </div>
+        
+        </footer>
+    
+        </div>
+    </body>
+</html>

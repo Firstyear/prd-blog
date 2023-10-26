@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+        <meta name="description" content="Firstyear&#x27;s blog">
+        
+
+        <title>Firstyear&#x27;s blog-a-log</title>
+
+        
+          <link rel="alternate" type="application/rss+xml" title="RSS" href="https://fy.blackhats.net.au/rss.xml">
+        
+
+        
+            <link rel="stylesheet" href="https://fy.blackhats.net.au/theme.css">
+        
+        
+    </head>
+    <body>
+        <div class="content">
+        
+        
+            <header>
+                <div class="header-left">
+                    <a href="https:&#x2F;&#x2F;fy.blackhats.net.au" class="logo">Firstyear&#x27;s blog-a-log</a>
+                </div>
+                <div class="header-right">
+                    <nav itemscope itemtype="http://schema.org/SiteNavigationElement">
+                      <ul>
+                        
+                        
+                            
+                            <li class="nav">
+                                <a itemprop="url" href="https://fy.blackhats.net.au/blog/">
+                                    <span itemprop="name">Blog</span>
+                                </a>
+                            </li>
+                        
+                            
+                            <li class="nav">
+                                <a itemprop="url" href="https://fy.blackhats.net.au/pages/">
+                                    <span itemprop="name">Pages</span>
+                                </a>
+                            </li>
+                        
+                        
+                        <li class="nav">
+                            <a itemprop="url" href="https://github.com/firstyear">
+                                <img class="icon" src="https:&#x2F;&#x2F;fy.blackhats.net.au/icons/github.svg" alt="Github">
+                            </a>
+                        </li>
+                        
+                        <li class="nav">
+                            <a itemprop="url" href="/rss.xml">
+                                <img class="icon" src="https:&#x2F;&#x2F;fy.blackhats.net.au/rss-logo.png" alt="rss">
+                            </a>
+                        </li>
+                      </ul>
+                    </nav>
+                </div>
+            </header>
+        
+        
+        <main>
+            
+<article itemscope itemtype="http://schema.org/BlogPosting">
+    <div itemprop="headline">
+        <h1>Concurrency 1: Types of Concurrency</h1>
+        <div class="border"></div>
+        <time datetime="2019-12-29" class="date" itemprop="datePublished">
+            29 Dec 2019
+        </time>
+    </div>
+    <div itemprop="articleBody">
+        <h1 id="concurrency-1-types-of-concurrency">Concurrency 1: Types of Concurrency</h1>
+<p>I want to explain different types of concurrent datastructures, so that
+we can explore their properties and when or why they might be useful.</p>
+<p>As our computer systems become increasingly parallel and asynchronous,
+it's important that our applications are able to work in these
+environments effectively. Languages like Rust help us to ensure our
+concurrent structures are safe.</p>
+<h2 id="cpu-memory-model-crash-course">CPU Memory Model Crash Course</h2>
+<p>In no way is this a thorough, complete, or 100% accurate representation
+of CPU memory. My goal is to give you a quick brief on how it works. I
+highly recommend you read <a href="https://people.freebsd.org/~lstewart/articles/cpumemory.pdf">&quot;what every programmer should know about
+memory&quot;</a>
+if you want to learn more.</p>
+<p>In a CPU we have a view of a memory space. That could be in the order of
+KB to TB. But it's a single coherent view of that space.</p>
+<p>Of course, over time systems and people have demanded more and more
+performance. But we also have languages like C, that won't change from
+their view of a system as a single memory space, or change how they
+work. Of course, it turns out <a href="https://queue.acm.org/detail.cfm?id=3212479">C is not a low level
+language</a> but we like to
+convince ourselves it is.</p>
+<p>To keep working with C and others, CPU's have acquired cache's that
+are transparent to the operation of the memory. You have no control of
+what is - or is not - in the cache. It &quot;just happens&quot; asynchronously.
+This is exactly why spectre and meltdown happened (and will continue to
+happen) because these async behaviours will always have the observable
+effect of making your CPU faster. Who knew!</p>
+<p>Anyway, for this to work, each CPU has multiple layers of cache. At L3
+the cache is shared with all the cores on the die. At L1 it is &quot;per
+cpu&quot;.</p>
+<p>Of course it's a single view into memory. So if address 0xff is in the
+CPU cache of core 1, and also in cache of core 2, what happens? Well
+it's supported! Caches between cores are kept in sync via a state
+machine called MESI. These states are:</p>
+<ul>
+<li>Exclusive - The cache is the only owner of this value, and it is
+unchanged.</li>
+<li>Modified - The cache is the only owner of this value, and it has
+been changed.</li>
+<li>Invalid - The cache holds this value but another cache has changed
+it.</li>
+<li>Shared - This cache and maybe others are viewing this valid value.</li>
+</ul>
+<p>To gloss very heavily over this topic, we want to avoid invaild. Why?
+That means two cpus are <em>contending</em> for the value, causing many
+attempts to keep each other in check. These contentions cause CPU's to
+slow down.</p>
+<p>We want values to either be in E/M or S. In shared, many cpu's are able
+to read the value at maximum speed, all the time. In E/M, we know only
+this cpu is changing the value.</p>
+<p>This cache coherency is also why mutexes and locks exist - they issue
+the needed CPU commands to keep the caches in the correct states for the
+memory we are accessing.</p>
+<p>Keep in mind Rust's variables are immutable, and able to share between
+threads, or mutable and single thread only. Sound familar? Rust is
+helping with concurrency by keeping our variables in the fastest
+possible cache states.</p>
+<h2 id="data-structures">Data Structures</h2>
+<p>We use data structures in programming to help improve behaviours of
+certain tasks. Maybe we need to find values quicker, sort contents, or
+search for things. Data Structures are a key element of modern computer
+performance.</p>
+<p>However most data structures are not thread safe. This means only a
+single CPU can access or change them at a time. Why? Because if a second
+read them, due to cache-differences in content the second CPU may see an
+invalid datastructure, leading to undefined behaviour.</p>
+<p>Mutexes can be used, but this causes other CPU's to stall and wait for
+the mutex to be released -not really what we want on our system. We want
+every CPU to be able to process data without stopping!</p>
+<h2 id="thread-safe-datastructures">Thread Safe Datastructures</h2>
+<p>There exist many types of thread safe datastructures that can work on
+parallel systems. They often avoid mutexes to try and keep CPU's moving
+as fast as possible, relying on special atomic cpu operations to keep
+all the threads in sync.</p>
+<p>Multiple classes of these structures exist, which have different
+properties.</p>
+<h2 id="mutex">Mutex</h2>
+<p>I have mentioned these already, but it's worth specifying the
+properties of a mutex. A mutex is a system where a single CPU exists in
+the mutex. It becomes one &quot;reader/writer&quot; and all other CPU's must
+wait until the mutex is released by the current CPU holder.</p>
+<h2 id="read-write-lock">Read Write Lock</h2>
+<p>Often called RWlock, these allow one writer OR multiple parallel
+readers. If a reader is reading then a writer request is delayed until
+the readers complete. If a writer is changing data, all new reads are
+blocked. All readers will always be reading the same data.</p>
+<p>These are great for highly concurrent systems provided your data changes
+infrequently. If you have a writer changing data a lot, this causes your
+readers to be continually blocking. The delay on the writer is also high
+due to a potentially high amount of parallel readers that need to exit.</p>
+<h2 id="lock-free">Lock Free</h2>
+<p>Lock free is a common (and popular) datastructue type. These are
+structures that don't use a mutex at all, and can have multiple readers
+<em>and</em> multiple writers at the same time.</p>
+<p>The most common and popular structure for lock free is queues, where
+many CPUs can append items and many can dequeue at the same time. There
+are also a number of lock free sets which can be updated in the same
+way.</p>
+<p>An interesting part of lock free is that all CPU's are working on the
+same set - if CPU 1 reads a value, then CPU 2 writes the same value, the
+next read from CPU 1 will show the new value. This is because these
+structures aren't transactional - lock free, but not transactional.
+There are some times where this is really useful as a property when you
+need a single view of the world between all threads, and your program
+can tolerate data changing between reads.</p>
+<h2 id="wait-free">Wait Free</h2>
+<p>This is a specialisation of lock free, where the reader/writer has
+guaranteed characteristics about the time they will wait to read or
+write data. This is very detailed and subtle, only affecting real time
+systems that have strict deadline and performance requirements.</p>
+<h2 id="concurrently-readable">Concurrently Readable</h2>
+<p>In between all of these is a type of structure called concurrently
+readable. A concurrently readable structure allows one writer <em>and</em>
+multiple parallel readers. An interesting property is that when the
+reader &quot;begins&quot; to read, the view for that reader is guaranteed not to
+change until the reader completes. This means that the structure is
+transactional.</p>
+<p>An example being if CPU 1 reads a value, and CPU 2 writes to it, CPU 1
+would NOT see the change from CPU 2 - it's outside of the read
+transaction!</p>
+<p>In this way there are a lot of read-only immutable data, and one writer
+mutating and changing things ... sounds familar? It's very close to
+how our CPU's cache work!</p>
+<p>These structures also naturally lend themself well to long processing or
+database systems where you need transactional (ACID) properties. In fact
+some databases use concurrent readable structures to achieve ACID
+semantics.</p>
+<p>If it's not obvious - concurrent readability is where my interest lies,
+and in the next post I'll discuss some specific concurrently readable
+structures that exist today, and ideas for future structures.</p>
+
+    </div>
+</article>
+
+        </main>
+        
+        <footer>
+            
+            <div class="border"></div>
+            <div class="footer">
+                <small class="footer-left">
+                    Copyright &copy; William Brown
+                </small>
+                <small class="footer-right">
+                    Powered by <a href="https://www.getzola.org">Zola</a> | Theme <a href="https://github.com/barlog-m/oceanic-zen">Oceanic Zen</a>
+                </small>
+            </div>
+        
+        </footer>
+    
+        </div>
+    </body>
+</html>

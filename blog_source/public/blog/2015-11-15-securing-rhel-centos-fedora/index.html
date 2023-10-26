@@ -1,0 +1,627 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+        <meta name="description" content="Firstyear&#x27;s blog">
+        
+
+        <title>Firstyear&#x27;s blog-a-log</title>
+
+        
+          <link rel="alternate" type="application/rss+xml" title="RSS" href="https://fy.blackhats.net.au/rss.xml">
+        
+
+        
+            <link rel="stylesheet" href="https://fy.blackhats.net.au/theme.css">
+        
+        
+    </head>
+    <body>
+        <div class="content">
+        
+        
+            <header>
+                <div class="header-left">
+                    <a href="https:&#x2F;&#x2F;fy.blackhats.net.au" class="logo">Firstyear&#x27;s blog-a-log</a>
+                </div>
+                <div class="header-right">
+                    <nav itemscope itemtype="http://schema.org/SiteNavigationElement">
+                      <ul>
+                        
+                        
+                            
+                            <li class="nav">
+                                <a itemprop="url" href="https://fy.blackhats.net.au/blog/">
+                                    <span itemprop="name">Blog</span>
+                                </a>
+                            </li>
+                        
+                            
+                            <li class="nav">
+                                <a itemprop="url" href="https://fy.blackhats.net.au/pages/">
+                                    <span itemprop="name">Pages</span>
+                                </a>
+                            </li>
+                        
+                        
+                        <li class="nav">
+                            <a itemprop="url" href="https://github.com/firstyear">
+                                <img class="icon" src="https:&#x2F;&#x2F;fy.blackhats.net.au/icons/github.svg" alt="Github">
+                            </a>
+                        </li>
+                        
+                        <li class="nav">
+                            <a itemprop="url" href="/rss.xml">
+                                <img class="icon" src="https:&#x2F;&#x2F;fy.blackhats.net.au/rss-logo.png" alt="rss">
+                            </a>
+                        </li>
+                      </ul>
+                    </nav>
+                </div>
+            </header>
+        
+        
+        <main>
+            
+<article itemscope itemtype="http://schema.org/BlogPosting">
+    <div itemprop="headline">
+        <h1>Securing RHEL - CentOS - Fedora</h1>
+        <div class="border"></div>
+        <time datetime="2015-11-15" class="date" itemprop="datePublished">
+            15 Nov 2015
+        </time>
+    </div>
+    <div itemprop="articleBody">
+        <h1 id="securing-rhel-centos-fedora">Securing RHEL - CentOS - Fedora</h1>
+<p>We've had a prompting to investigate our OS security at my work. As a
+result, I've been given a pretty open mandate to investigate and
+deliver some simple changes that help lock down our systems and make
+measurable changes to security and incident analysis.</p>
+<p>First, I used some common sense. Second, I did my research. Third, I
+used tools to help look at things that I would otherwise have missed.</p>
+<p>The best tool I used was certainly OpenSCAP. Very simple to use, and
+gives some really basic recommendations that just make sense. Some of
+it's answers I took with a grain of salt. For example, account lockout
+modules in pam aren't needed, as we handle this via our directory
+services. But it can highlight areas you may have missed.</p>
+<p>To run a scap scan:</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>yum install scap-security-guide openscap openscap-scanner
+</span><span>FEDORA
+</span><span>oscap xccdf eval --profile xccdf_org.ssgproject.content_profile_common --results /tmp/`hostname`-ssg-results.xml \
+</span><span>--report /tmp/`hostname`-ssg-results.html /usr/share/xml/scap/ssg/content/ssg-fedora-ds.xml
+</span><span>RHEL / CENTOS
+</span><span>oscap xccdf eval --profile xccdf_org.ssgproject.content_profile_common --results /tmp/`hostname`-ssg-results.xml \
+</span><span>--report /tmp/`hostname`-ssg-results.html /usr/share/xml/scap/ssg/content/ssg-rhel7-ds.xml
+</span></code></pre>
+<p>Then view the output in a web browser.</p>
+<p>Here is what I came up with.</p>
+<p>-- Partitioning --------------------</p>
+<p>Sadly, you need to reinstall for these, but worth rolling out for
+&quot;future builds&quot;. Here is my partition section from ks.conf. Especially
+important is putting audit on its own partition.</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span># Partition clearing information                                                                                
+</span><span>bootloader --location=mbr                                                                                       
+</span><span>clearpart --initlabel --all                                                                                     
+</span><span># Disk partitioning information                                                                                 
+</span><span>part /boot --fstype=ext4 --size=512 --asprimary --fsoptions=x-systemd.automount,nodev,nosuid,defaults
+</span><span># LVM                                                                                                           
+</span><span>part pv.2 --size=16384 --grow --asprimary                                                                       
+</span><span>volgroup vg00 pv.2                                                                                              
+</span><span>logvol swap --fstype=swap --size=2048 --name=swap_lv --vgname=vg00               
+</span><span>logvol / --fstype=xfs --size=512 --name=root_lv --vgname=vg00 --fsoptions=defaults
+</span><span>logvol /usr --fstype=xfs --size=3072 --name=usr_lv --vgname=vg00 --fsoptions=nodev,defaults
+</span><span>logvol /home --fstype=&quot;xfs&quot; --size=512 --name=home_lv --vgname=vg00 --fsoptions=nodev,nosuid,defaults
+</span><span>logvol /var  --fstype=xfs --size=3072 --name=var_lv --vgname=vg00 --fsoptions=nodev,nosuid,noexec,defaults
+</span><span>logvol /var/log --fstype=&quot;xfs&quot; --size=1536 --name=var_log_lv --vgname=vg00 --fsoptions=nodev,nosuid,noexec,defaults
+</span><span>logvol /var/log/audit --fstype=&quot;xfs&quot; --size=512 --name=var_log_audit_lv --vgname=vg00 --fsoptions=nodev,nosuid,noexec,defaults
+</span><span>logvol /srv --fstype=&quot;xfs&quot; --size=512 --name=srv_lv --vgname=vg00 --fsoptions=nodev,nosuid,defaults
+</span><span>logvol /opt --fstype=&quot;xfs&quot; --size=512 --name=opt_lv --vgname=vg00 --fsoptions=nodev,nosuid,defaults
+</span></code></pre>
+<p>With /tmp, if you mount this, and run redhat satellite, you need to be
+careful. Satellite expects to be able to execute out of /tmp, so don't
+set noexec on that partition!</p>
+<p>-- SSH keys ----------------</p>
+<p>It's just good practice to use these. It saves typing in a password to
+a prompt which helps to limit credential exposure. We are enabling LDAP
+backed SSH keys now to make this easier in our workplace.</p>
+<p>-- SELinux ---------------</p>
+<p>SELinux isn't perfect by any means, but it helps a lot. It can make the
+work of an attacker more complex, and it can help prevent data leakage
+via the network. Consider that by default httpd_t cannot make outgoing
+network connections. This is awesome to prevent data being leaked back
+to attackers. Well worth the time to setup these policies correctly.</p>
+<p>If you have to set permissive to make an application work, do it on a
+per-domain basis with:</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>semanage permissive -a httpd_t
+</span></code></pre>
+<p>This way the protections on all other processes are not removed.</p>
+<p>On some of my systems I even run confined staff users to help prevent
+mistakes / malware from users. I manage this via FreeIPA.</p>
+<p>-- Auditing ----------------</p>
+<p>This allows us to see who / what is altering things on our system. We
+extended the core auditing rules to include a few extras.</p>
+<p>/etc/audit/rules.d/audit.rules</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span># This file contains the auditctl rules that are loaded
+</span><span># whenever the audit daemon is started via the initscripts.
+</span><span># The rules are simply the parameters that would be passed
+</span><span># to auditctl.
+</span><span>
+</span><span># First rule - delete all
+</span><span>-D
+</span><span>
+</span><span># Increase the buffers to survive stress events.
+</span><span># Make this bigger for busy systems
+</span><span>-b 8192
+</span><span>
+</span><span>#
+</span><span># Feel free to add below this line. See auditctl man page
+</span><span>-w /etc/ -p wa -k etc_modification
+</span><span>
+</span><span># Detect login log tampering
+</span><span>-w /var/log/faillog -p wa -k logins
+</span><span>-w /var/log/lastlog -p wa -k logins
+</span><span>-w /var/run/utmp -p wa -k session
+</span><span>-w /var/log/btmp -p wa -k session
+</span><span>-w /var/log/wtmp -p wa -k session
+</span><span>
+</span><span># audit_time_rules
+</span><span>## REMOVE STIME ON RHEL
+</span><span>#-a always,exit -F arch=b32 -S stime -S adjtimex -S settimeofday -S clock_settime -k audit_time_rules
+</span><span>#-a always,exit -F arch=b64 -S stime -S adjtimex -S settimeofday -S clock_settime -k audit_time_rules
+</span><span>
+</span><span># audit_rules_networkconfig_modification
+</span><span>-a always,exit -F arch=b32 -S sethostname -S setdomainname -k audit_rules_networkconfig_modification
+</span><span>-a always,exit -F arch=b64 -S sethostname -S setdomainname -k audit_rules_networkconfig_modification
+</span><span>
+</span><span># Audit kernel module manipulation
+</span><span>-a always,exit -F arch=b32 -S init_module -S delete_module -k modules
+</span><span>-a always,exit -F arch=b64 -S init_module -S delete_module -k modules
+</span><span>
+</span><span>################################################################################
+</span><span># These are super paranoid rules at this point. Only use if you are willing to take
+</span><span># a 3% to 10% perf degredation.
+</span><span>
+</span><span># Perhaps remove the uid limits on some of these actions? We often get attacked via services, not users. These rules are more for workstations...
+</span><span>
+</span><span>#-a always,exit -F arch=b32 -S chmod -S chown -S fchmod -S fchmodat -S fchown -S fchownat -S fremovexattr -S fsetxattr -S lchown -S lremovexattr -S lsetxattr -S removexattr -S setxattr -F auid&gt;=500 -F auid!=4294967295 -k perm_mod
+</span><span>#-a always,exit -F arch=b32 -S creat -S open -S openat -S open_by_handle_at -S truncate -S ftruncate -F exit=-EACCES -F auid&gt;=500 -F auid!=4294967295 -k access
+</span><span>#-a always,exit -F arch=b32 -S creat -S open -S openat -S open_by_handle_at -S truncate -S ftruncate -F exit=-EPERM -F auid&gt;=500 -F auid!=4294967295 -k access
+</span><span>#-a always,exit -F arch=b32 -S rmdir -S unlink -S unlinkat -S rename -S renameat -F auid&gt;=500 -F auid!=4294967295 -k delete
+</span><span># This rule is more useful on a workstation with automount ...
+</span><span>#-a always,exit -F arch=b32 -S mount -F auid&gt;=500 -F auid!=4294967295 -k export
+</span><span>
+</span><span>#-a always,exit -F arch=b64 -S chmod -S chown -S fchmod -S fchmodat -S fchown -S fchownat -S fremovexattr -S fsetxattr -S lchown -S lremovexattr -S lsetxattr -S removexattr -S setxattr -F auid&gt;=500 -F auid!=4294967295 -k perm_mod
+</span><span>#-a always,exit -F arch=b64 -S creat -S open -S openat -S open_by_handle_at -S truncate -S ftruncate -F exit=-EACCES -F auid&gt;=500 -F auid!=4294967295 -k access
+</span><span>#-a always,exit -F arch=b64 -S creat -S open -S openat -S open_by_handle_at -S truncate -S ftruncate -F exit=-EPERM -F auid&gt;=500 -F auid!=4294967295 -k access
+</span><span>#-a always,exit -F arch=b64 -S rmdir -S unlink -S unlinkat -S rename -S renameat -F auid&gt;=500 -F auid!=4294967295 -k delete
+</span><span># This rule is more useful on a workstation with automount ...
+</span><span>#-a always,exit -F arch=b64 -S mount -F auid&gt;=500 -F auid!=4294967295 -k export
+</span><span>
+</span><span># This setting means you need a reboot to changed audit rules.
+</span><span>#  probably worth doing .... 
+</span><span>#-e 2
+</span></code></pre>
+<p>To handle all the extra events I increased my audit logging sizes</p>
+<p>/etc/audit/auditd.conf :</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>log_file = /var/log/audit/audit.log                                                                             
+</span><span>log_format = RAW                                                                                                
+</span><span>log_group = root                                                                                                
+</span><span>priority_boost = 4                                                                                              
+</span><span>flush = INCREMENTAL                                                                                             
+</span><span>freq = 20                                                                                                       
+</span><span>num_logs = 5                                                                                                    
+</span><span>disp_qos = lossy                                                                                                
+</span><span>dispatcher = /sbin/audispd                                                                                      
+</span><span>name_format = NONE                                                                                              
+</span><span>max_log_file = 20                                                                  
+</span><span>max_log_file_action = ROTATE                                                                                    
+</span><span>space_left = 100                                                                                                
+</span><span>space_left_action = EMAIL                                                                                       
+</span><span>action_mail_acct = root                                                                                         
+</span><span>admin_space_left = 75                                                                                           
+</span><span>admin_space_left_action = SUSPEND                                                                               
+</span><span>admin_space_left_action = email                                                                                 
+</span><span>disk_full_action = SUSPEND                                                                                      
+</span><span>disk_error_action = SUSPEND                                                                                     
+</span><span>tcp_listen_queue = 5                                                                                            
+</span><span>tcp_max_per_addr = 1                                                                                            
+</span><span>tcp_client_max_idle = 0                                                                                         
+</span><span>enable_krb5 = no                                                                                                
+</span><span>krb5_principal = auditd  
+</span></code></pre>
+<p>-- PAM and null passwords
+------------------------------</p>
+<p>Scap noticed that the default config of password-auth-ac contained
+nullok on some lines. Remove this:</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>BEFORE
+</span><span>auth        sufficient    pam_unix.so nullok try_first_pass
+</span><span>AFTER
+</span><span>auth        sufficient    pam_unix.so try_first_pass
+</span></code></pre>
+<p>-- Firewall (Backups, SMH, NRPE)
+-------------------------------------</p>
+<p>Backup clients (Amanda, netbackup, commvault) tend to have very high
+privilege, no SELinux, and are security swiss cheese. Similar is true
+for vendor systems like HP system management homepage, and NRPE
+(nagios). It's well worth locking these down. Before we had blanket
+&quot;port open&quot; rules, now these are tighter.</p>
+<p>In iptables, you should use the &quot;-s&quot; to specify a source range these
+are allowed to connect from. The smaller the range, the better.</p>
+<p>In firewalld, you need to use the rich language. Which is a bit more
+verbose, and finicky than iptables. My rules end up as: :</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>rule family=&quot;ipv4&quot; source address=&quot;10.0.0.0/24&quot; port port=&quot;2381&quot; protocol=&quot;tcp&quot; accept
+</span></code></pre>
+<p>For example. Use the firewalld-cmd with the --add-rich-rule, or use
+ansibles rich_rule options.</p>
+<p>-- AIDE (HIDS) -------------------</p>
+<p>Aide is a fantastic and simple file integrity checker. I have an ansible
+role that I can tack onto the end of all my playbooks to automatically
+update the AIDE database so that it stays consistent with changes, but
+will allow us to see out of band changes.</p>
+<p>The default AIDE config often picks up files that change frequently. I
+have an aide.conf that still provides function, but without triggering
+false alarms. I include aide-local.conf so that other teams / staff can
+add application specific aide monitoring that doesn't conflict with my
+work.</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span># Example configuration file for AIDE.
+</span><span>
+</span><span>@@define DBDIR /var/lib/aide
+</span><span>@@define LOGDIR /var/log/aide
+</span><span>
+</span><span># The location of the database to be read.
+</span><span>database=file:@@{DBDIR}/aide.db.gz
+</span><span>
+</span><span># The location of the database to be written.
+</span><span>#database_out=sql:host:port:database:login_name:passwd:table
+</span><span>#database_out=file:aide.db.new
+</span><span>database_out=file:@@{DBDIR}/aide.db.new.gz
+</span><span>
+</span><span># Whether to gzip the output to database
+</span><span>gzip_dbout=yes
+</span><span>
+</span><span># Default.
+</span><span>verbose=5
+</span><span>
+</span><span>#report_url=file:@@{LOGDIR}/aide.log
+</span><span>report_url=stdout
+</span><span>#report_url=stderr
+</span><span>#NOT IMPLEMENTED report_url=mailto:root@foo.com
+</span><span>report_url=syslog:LOG_AUTH
+</span><span>
+</span><span># These are the default rules.
+</span><span>#
+</span><span>#p:      permissions
+</span><span>#i:      inode:
+</span><span>#n:      number of links
+</span><span>#u:      user
+</span><span>#g:      group
+</span><span>#s:      size
+</span><span>#b:      block count
+</span><span>#m:      mtime
+</span><span>#a:      atime
+</span><span>#c:      ctime
+</span><span>#S:      check for growing size
+</span><span>#acl:           Access Control Lists
+</span><span>#selinux        SELinux security context
+</span><span>#xattrs:        Extended file attributes
+</span><span>#md5:    md5 checksum
+</span><span>#sha1:   sha1 checksum
+</span><span>#sha256:        sha256 checksum
+</span><span>#sha512:        sha512 checksum
+</span><span>#rmd160: rmd160 checksum
+</span><span>#tiger:  tiger checksum
+</span><span>
+</span><span>#haval:  haval checksum (MHASH only)
+</span><span>#gost:   gost checksum (MHASH only)
+</span><span>#crc32:  crc32 checksum (MHASH only)
+</span><span>#whirlpool:     whirlpool checksum (MHASH only)
+</span><span>
+</span><span>FIPSR = p+i+n+u+g+s+m+c+acl+selinux+xattrs+sha256
+</span><span>
+</span><span># Fips without time because of some database/sqlite issues
+</span><span>FIPSRMT = p+i+n+u+g+s+acl+selinux+xattrs+sha256
+</span><span>
+</span><span>#R:             p+i+n+u+g+s+m+c+acl+selinux+xattrs+md5
+</span><span>#L:             p+i+n+u+g+acl+selinux+xattrs
+</span><span>#E:             Empty group
+</span><span>#&gt;:             Growing logfile p+u+g+i+n+S+acl+selinux+xattrs
+</span><span>
+</span><span># You can create custom rules like this.
+</span><span># With MHASH...
+</span><span># ALLXTRAHASHES = sha1+rmd160+sha256+sha512+whirlpool+tiger+haval+gost+crc32
+</span><span>ALLXTRAHASHES = sha1+rmd160+sha256+sha512+tiger
+</span><span># Everything but access time (Ie. all changes)
+</span><span>EVERYTHING = R+ALLXTRAHASHES
+</span><span>
+</span><span># Sane, with multiple hashes
+</span><span># NORMAL = R+rmd160+sha256+whirlpool
+</span><span>NORMAL = FIPSR+sha512
+</span><span>
+</span><span># For directories, don&#39;t bother doing hashes
+</span><span>DIR = p+i+n+u+g+acl+selinux+xattrs
+</span><span>
+</span><span># Access control only
+</span><span>PERMS = p+i+u+g+acl+selinux+xattrs
+</span><span>
+</span><span># Logfile are special, in that they often change
+</span><span>LOG = &gt;
+</span><span>
+</span><span># Just do sha256 and sha512 hashes
+</span><span>LSPP = FIPSR+sha512
+</span><span>LSPPMT = FIPSRMT+sha512
+</span><span>
+</span><span># Some files get updated automatically, so the inode/ctime/mtime change
+</span><span># but we want to know when the data inside them changes
+</span><span>DATAONLY =  p+n+u+g+s+acl+selinux+xattrs+sha256
+</span><span>
+</span><span># Next decide what directories/files you want in the database.
+</span><span>
+</span><span>/boot   NORMAL
+</span><span>/bin    NORMAL
+</span><span>/sbin   NORMAL
+</span><span>/usr/bin NORMAL
+</span><span>/usr/sbin NORMAL
+</span><span>/lib    NORMAL
+</span><span>/lib64  NORMAL
+</span><span># These may be too variable
+</span><span>/opt    NORMAL
+</span><span>/srv    NORMAL
+</span><span># These are too volatile
+</span><span># We can check USR if we want, but it doesn&#39;t net us much.
+</span><span>#/usr    NORMAL
+</span><span>!/usr/src
+</span><span>!/usr/tmp
+</span><span>
+</span><span># Check only permissions, inode, user and group for /etc, but
+</span><span># cover some important files closely.
+</span><span>/etc    PERMS
+</span><span>!/etc/mtab
+</span><span># Ignore backup files
+</span><span>!/etc/.*~
+</span><span>/etc/exports  NORMAL
+</span><span>/etc/fstab    NORMAL
+</span><span>/etc/passwd   NORMAL
+</span><span>/etc/group    NORMAL
+</span><span>/etc/gshadow  NORMAL
+</span><span>/etc/shadow   NORMAL
+</span><span>/etc/security/opasswd   NORMAL
+</span><span>
+</span><span>/etc/hosts.allow   NORMAL
+</span><span>/etc/hosts.deny    NORMAL
+</span><span>
+</span><span>/etc/sudoers NORMAL
+</span><span>/etc/sudoers.d NORMAL
+</span><span>/etc/skel NORMAL
+</span><span>
+</span><span>/etc/logrotate.d NORMAL
+</span><span>
+</span><span>/etc/resolv.conf DATAONLY
+</span><span>
+</span><span>/etc/nscd.conf NORMAL
+</span><span>/etc/securetty NORMAL
+</span><span>
+</span><span># Shell/X starting files
+</span><span>/etc/profile NORMAL
+</span><span>/etc/bashrc NORMAL
+</span><span>/etc/bash_completion.d/ NORMAL
+</span><span>/etc/login.defs NORMAL
+</span><span>/etc/zprofile NORMAL
+</span><span>/etc/zshrc NORMAL
+</span><span>/etc/zlogin NORMAL
+</span><span>/etc/zlogout NORMAL
+</span><span>/etc/profile.d/ NORMAL
+</span><span>/etc/X11/ NORMAL
+</span><span>
+</span><span># Pkg manager
+</span><span>/etc/yum.conf NORMAL
+</span><span>/etc/yumex.conf NORMAL
+</span><span>/etc/yumex.profiles.conf NORMAL
+</span><span>/etc/yum/ NORMAL
+</span><span>/etc/yum.repos.d/ NORMAL
+</span><span>
+</span><span># Ignore lvm files that change regularly
+</span><span>!/etc/lvm/archive
+</span><span>!/etc/lvm/backup
+</span><span>!/etc/lvm/cache
+</span><span>
+</span><span># Don&#39;t scan log by default, because not everything is a &quot;growing log file&quot;.
+</span><span>!/var/log   LOG
+</span><span>!/var/run/utmp LOG
+</span><span>
+</span><span># This gets new/removes-old filenames daily
+</span><span>!/var/log/sa
+</span><span># As we are checking it, we&#39;ve truncated yesterdays size to zero.
+</span><span>!/var/log/aide.log
+</span><span>!/var/log/journal
+</span><span>
+</span><span># LSPP rules...
+</span><span># AIDE produces an audit record, so this becomes perpetual motion.
+</span><span># /var/log/audit/ LSPP
+</span><span>/etc/audit/ LSPP
+</span><span>/etc/audisp/ LSPP
+</span><span>/etc/libaudit.conf LSPP
+</span><span>/usr/sbin/stunnel LSPP
+</span><span>/var/spool/at LSPP
+</span><span>/etc/at.allow LSPP
+</span><span>/etc/at.deny LSPP
+</span><span>/etc/cron.allow LSPP
+</span><span>/etc/cron.deny LSPP
+</span><span>/etc/cron.d/ LSPP
+</span><span>/etc/cron.daily/ LSPP
+</span><span>/etc/cron.hourly/ LSPP
+</span><span>/etc/cron.monthly/ LSPP
+</span><span>/etc/cron.weekly/ LSPP
+</span><span>/etc/crontab LSPP
+</span><span>/var/spool/cron/root LSPP
+</span><span>
+</span><span>/etc/login.defs LSPP
+</span><span>/etc/securetty LSPP
+</span><span>/var/log/faillog LSPP
+</span><span>/var/log/lastlog LSPP
+</span><span>
+</span><span>/etc/hosts LSPP
+</span><span>/etc/sysconfig LSPP
+</span><span>
+</span><span>/etc/inittab LSPP
+</span><span>#/etc/grub/ LSPP
+</span><span>/etc/rc.d LSPP
+</span><span>
+</span><span>/etc/ld.so.conf LSPP
+</span><span>
+</span><span>/etc/localtime LSPP
+</span><span>
+</span><span>/etc/sysctl.conf LSPP
+</span><span>
+</span><span>/etc/modprobe.conf LSPP
+</span><span>
+</span><span>/etc/pam.d LSPP
+</span><span>/etc/security LSPP
+</span><span>/etc/aliases LSPP
+</span><span>/etc/postfix LSPP
+</span><span>
+</span><span>/etc/ssh/sshd_config LSPP
+</span><span>/etc/ssh/ssh_config LSPP
+</span><span>
+</span><span>/etc/stunnel LSPP
+</span><span>
+</span><span>/etc/vsftpd.ftpusers LSPP
+</span><span>/etc/vsftpd LSPP
+</span><span>
+</span><span>/etc/issue LSPP
+</span><span>/etc/issue.net LSPP
+</span><span>
+</span><span>/etc/cups LSPP
+</span><span>
+</span><span># Check our key stores for tampering.
+</span><span>/etc/pki LSPPMT
+</span><span>!/etc/pki/nssdb/
+</span><span>/etc/pki/nssdb/cert8.db LSPP
+</span><span>/etc/pki/nssdb/cert9.db LSPP
+</span><span>/etc/pki/nssdb/key3.db LSPP
+</span><span>/etc/pki/nssdb/key4.db LSPP
+</span><span>/etc/pki/nssdb/pkcs11.txt LSPP
+</span><span>/etc/pki/nssdb/secmod.db LSPP
+</span><span>
+</span><span># Check ldap and auth configurations.
+</span><span>/etc/openldap LSPP
+</span><span>/etc/sssd LSPP
+</span><span>
+</span><span># Ignore the prelink cache as it changes.
+</span><span>!/etc/prelink.cache
+</span><span>
+</span><span># With AIDE&#39;s default verbosity level of 5, these would give lots of
+</span><span># warnings upon tree traversal. It might change with future version.
+</span><span>#
+</span><span>#=/lost\+found    DIR
+</span><span>#=/home           DIR
+</span><span>
+</span><span># Ditto /var/log/sa reason...
+</span><span>!/var/log/and-httpd
+</span><span>
+</span><span>#/root   NORMAL
+</span><span># Admins dot files constantly change, just check PERMS
+</span><span>#/root/\..* PERMS
+</span><span># Check root sensitive files
+</span><span>/root/.ssh/ NORMAL
+</span><span>/root/.bash_profile NORMAL
+</span><span>/root/.bashrc NORMAL
+</span><span>/root/.cshrc NORMAL
+</span><span>/root/.tcshrc NORMAL
+</span><span>/root/.zshrc NORMAL
+</span><span>
+</span><span>
+</span><span>@@include /etc/aide-local.conf
+</span></code></pre>
+<p>-- Time ------------</p>
+<p>Make sure you run an NTP client. I'm a fan of chrony these days, as
+it's syncs quickly and reliably.</p>
+<p>-- Collect core dumps and abrt
+-----------------------------------</p>
+<p>Install and run kdump and abrtd so you can analyse why something
+crashed, to determine if it was malicious or not.</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>yum install kexec-tools abrt abrt-cli
+</span><span>systemctl enable abrtd
+</span></code></pre>
+<p>At the same time, you need to alter kdump.conf to dump correctly</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>xfs /dev/os_vg/var_lv                                                            
+</span><span>path /crash                                                                      
+</span><span>core_collector makedumpfile -l --message-level 7 -d 23,31                        
+</span><span>default reboot   
+</span></code></pre>
+<p>Finally, append crashkernel=auto to your grub commandline.</p>
+<p>-- Sysctl --------------</p>
+<p>These are an evolved set of sysctls and improvements to our base install
+that help tune some basic network and other areas to strengthen the
+network stack and base OS.</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span># Ensure ASLR
+</span><span>kernel.randomize_va_space = 2
+</span><span># limit access to dmesg
+</span><span>## does this affect ansible facts
+</span><span>kernel.dmesg_restrict = 1
+</span><span>
+</span><span># Prevent suid binaries core dumping. Helps to prevent memory / data leaks
+</span><span>fs.suid_dumpable = 0
+</span><span>
+</span><span># https://www.kernel.org/doc/Documentation/networking/ip-sysctl.txt
+</span><span># Controls IP packet forwarding
+</span><span>net.ipv4.ip_forward = 0
+</span><span>
+</span><span># Controls source route verification
+</span><span>net.ipv4.conf.default.rp_filter = 1
+</span><span>
+</span><span># Do not accept source routing
+</span><span>net.ipv4.conf.default.accept_source_route = 0
+</span><span>
+</span><span># Controls the System Request debugging functionality of the kernel
+</span><span>kernel.sysrq = 0
+</span><span>
+</span><span># Controls whether core dumps will append the PID to the core filename.
+</span><span># Useful for debugging multi-threaded applications.
+</span><span>kernel.core_uses_pid = 1
+</span><span># Decrease the time default value for tcp_fin_timeout connection
+</span><span>net.ipv4.tcp_fin_timeout = 35
+</span><span># Decrease the time default value for tcp_keepalive_time connection
+</span><span>net.ipv4.tcp_keepalive_time = 600
+</span><span># Provide more ports and timewait buckets to increase connectivity
+</span><span>net.ipv4.ip_local_port_range = 8192 61000
+</span><span>net.ipv4.tcp_max_tw_buckets = 1000000
+</span><span>
+</span><span>## Network Hardening ##
+</span><span>net.ipv4.tcp_max_syn_backlog = 4096
+</span><span>net.ipv4.conf.all.accept_redirects = 0
+</span><span>net.ipv4.conf.all.secure_redirects = 0
+</span><span>net.ipv4.conf.default.accept_redirects = 0
+</span><span>net.ipv4.conf.default.secure_redirects = 0
+</span><span>net.ipv4.icmp_echo_ignore_broadcasts = 1
+</span><span>net.ipv4.conf.all.send_redirects = 0
+</span><span>net.ipv4.conf.default.send_redirects = 0
+</span><span>net.ipv4.icmp_ignore_bogus_error_responses = 1
+</span><span>
+</span><span>net.nf_conntrack_max = 262144
+</span></code></pre>
+
+    </div>
+</article>
+
+        </main>
+        
+        <footer>
+            
+            <div class="border"></div>
+            <div class="footer">
+                <small class="footer-left">
+                    Copyright &copy; William Brown
+                </small>
+                <small class="footer-right">
+                    Powered by <a href="https://www.getzola.org">Zola</a> | Theme <a href="https://github.com/barlog-m/oceanic-zen">Oceanic Zen</a>
+                </small>
+            </div>
+        
+        </footer>
+    
+        </div>
+    </body>
+</html>

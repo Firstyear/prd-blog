@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+        <meta name="description" content="Firstyear&#x27;s blog">
+        
+
+        <title>Firstyear&#x27;s blog-a-log</title>
+
+        
+          <link rel="alternate" type="application/rss+xml" title="RSS" href="https://fy.blackhats.net.au/rss.xml">
+        
+
+        
+            <link rel="stylesheet" href="https://fy.blackhats.net.au/theme.css">
+        
+        
+    </head>
+    <body>
+        <div class="content">
+        
+        
+            <header>
+                <div class="header-left">
+                    <a href="https:&#x2F;&#x2F;fy.blackhats.net.au" class="logo">Firstyear&#x27;s blog-a-log</a>
+                </div>
+                <div class="header-right">
+                    <nav itemscope itemtype="http://schema.org/SiteNavigationElement">
+                      <ul>
+                        
+                        
+                            
+                            <li class="nav">
+                                <a itemprop="url" href="https://fy.blackhats.net.au/blog/">
+                                    <span itemprop="name">Blog</span>
+                                </a>
+                            </li>
+                        
+                            
+                            <li class="nav">
+                                <a itemprop="url" href="https://fy.blackhats.net.au/pages/">
+                                    <span itemprop="name">Pages</span>
+                                </a>
+                            </li>
+                        
+                        
+                        <li class="nav">
+                            <a itemprop="url" href="https://github.com/firstyear">
+                                <img class="icon" src="https:&#x2F;&#x2F;fy.blackhats.net.au/icons/github.svg" alt="Github">
+                            </a>
+                        </li>
+                        
+                        <li class="nav">
+                            <a itemprop="url" href="/rss.xml">
+                                <img class="icon" src="https:&#x2F;&#x2F;fy.blackhats.net.au/rss-logo.png" alt="rss">
+                            </a>
+                        </li>
+                      </ul>
+                    </nav>
+                </div>
+            </header>
+        
+        
+        <main>
+            
+<article itemscope itemtype="http://schema.org/BlogPosting">
+    <div itemprop="headline">
+        <h1>389ds on freebsd update</h1>
+        <div class="border"></div>
+        <time datetime="2016-04-17" class="date" itemprop="datePublished">
+            17 Apr 2016
+        </time>
+    </div>
+    <div itemprop="articleBody">
+        <h1 id="389ds-on-freebsd-update">389ds on freebsd update</h1>
+<p>A few months ago I posted an how to build 389-ds for freebsd. This was
+to start my porting effort.</p>
+<p>I have now finished the port. There are still issues that the perl
+setup-ds.pl installer does not work, but this will be resolved soon in
+other ways.</p>
+<p>For now here are the steps for 389-ds on freebsd. You may need to wait
+for a few days for the relevant patches to be in git.</p>
+<p>You will need to install these deps:</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>autotools
+</span><span>git
+</span><span>openldap-client
+</span><span>db5
+</span><span>cyrus-sasl
+</span><span>pkgconf
+</span><span>nspr
+</span><span>nss
+</span><span>net-snmp
+</span><span>gmake
+</span><span>python34
+</span></code></pre>
+<p>You will need to use pip for these python dependencies.</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>sudo python3.4 -m ensurepip
+</span><span>sudo pip3.4 install six pyasn1 pyasn1-modules 
+</span></code></pre>
+<p>You will need to install svrcore.</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>fetch http://www.port389.org/binaries/svrcore-4.1.1.tar.bz2
+</span><span>tar -xvzf svrcore-4.1.1.tar.bz2
+</span><span>cd svrcore-4.1.1
+</span><span>CFLAGS=&quot;-fPIC &quot;./configure --prefix=/opt/svrcore
+</span><span>make
+</span><span>sudo make install
+</span></code></pre>
+<p>You will need the following python tools checked out:</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>git clone https://git.fedorahosted.org/git/389/lib389.git
+</span><span>git clone https://github.com/pyldap/pyldap.git
+</span><span>cd pyldap
+</span><span>python3.4 setup.py build
+</span><span>sudo python3.4 setup.py install
+</span></code></pre>
+<p>Now you can clone ds and try to build it:</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>cd
+</span><span>git clone https://git.fedorahosted.org/git/389/ds.git
+</span><span>cd ds
+</span><span>./configure --prefix=/opt/dirsrv --with-openldap=/usr/local --with-db --with-db-inc=/usr/local/include/db5/ --with-db-lib=/usr/local/lib/db5/ --with-sasl --with-sasl-inc=/usr/local/include/sasl/ --with-sasl-lib=/usr/local/lib/sasl2/ --with-svrcore-inc=/opt/svrcore/include/ --with-svrcore-lib=/opt/svrcore/lib/ --with-netsnmp=/usr/local
+</span><span>gmake
+</span><span>sudo gmake install
+</span></code></pre>
+<p>Go back to the lib389 directory:</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>sudo pw user add dirsrv
+</span><span>sudo PYTHONPATH=`pwd` python3.4 lib389/clitools/ds_setup.py -f ~/setup-ds-admin.inf -v
+</span><span>sudo chown -R dirsrv:dirsrv /opt/dirsrv/var/{run,lock,log,lib}/dirsrv
+</span><span>sudo chmod 775 /opt/dirsrv/var
+</span><span>sudo chmod 775 /opt/dirsrv/var/*
+</span><span>sudo /opt/dirsrv/sbin/ns-slapd -d 0 -D /opt/dirsrv/etc/dirsrv/slapd-localhost
+</span></code></pre>
+<p>This is a really minimal setup routine right now. If it all worked, you
+can now run your instance. Here is my output belowe:</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>INFO:lib389.tools:Running setup with verbose
+</span><span>INFO:lib389.tools:Using inf from /home/william/setup-ds-admin.inf
+</span><span>INFO:lib389.tools:Configuration [&#39;general&#39;, &#39;slapd&#39;, &#39;rest&#39;, &#39;backend-userRoot&#39;]
+</span><span>INFO:lib389.tools:Configuration general {&#39;selinux&#39;: False, &#39;full_machine_name&#39;: &#39;localhost.localdomain&#39;, &#39;config_version&#39;: 2, &#39;strict_host_checking&#39;: True}
+</span><span>INFO:lib389.tools:Configuration slapd {&#39;secure_port&#39;: 636, &#39;root_password&#39;: &#39;password&#39;, &#39;port&#39;: 389, &#39;cert_dir&#39;: &#39;/opt/dirsrv/etc/dirsrv/slapd-localhost/&#39;, &#39;lock_dir&#39;: &#39;/opt/dirsrv/var/lock/dirsrv/slapd-localhost&#39;, &#39;ldif_dir&#39;: &#39;/opt/dirsrv/var/lib/dirsrv/slapd-localhost/ldif&#39;, &#39;backup_dir&#39;: &#39;/opt/dirsrv/var/lib/dirsrv/slapd-localhost/bak&#39;, &#39;prefix&#39;: &#39;/opt/dirsrv&#39;, &#39;instance_name&#39;: &#39;localhost&#39;, &#39;bin_dir&#39;: &#39;/opt/dirsrv/bin/&#39;, &#39;data_dir&#39;: &#39;/opt/dirsrv/share/&#39;, &#39;local_state_dir&#39;: &#39;/opt/dirsrv/var&#39;, &#39;run_dir&#39;: &#39;/opt/dirsrv/var/run/dirsrv&#39;, &#39;schema_dir&#39;: &#39;/opt/dirsrv/etc/dirsrv/slapd-localhost/schema&#39;, &#39;config_dir&#39;: &#39;/opt/dirsrv/etc/dirsrv/slapd-localhost/&#39;, &#39;root_dn&#39;: &#39;cn=Directory Manager&#39;, &#39;log_dir&#39;: &#39;/opt/dirsrv/var/log/dirsrv/slapd-localhost&#39;, &#39;tmp_dir&#39;: &#39;/tmp&#39;, &#39;user&#39;: &#39;dirsrv&#39;, &#39;group&#39;: &#39;dirsrv&#39;, &#39;db_dir&#39;: &#39;/opt/dirsrv/var/lib/dirsrv/slapd-localhost/db&#39;, &#39;sbin_dir&#39;: &#39;/opt/dirsrv/sbin&#39;, &#39;sysconf_dir&#39;: &#39;/opt/dirsrv/etc&#39;, &#39;defaults&#39;: &#39;1.3.5&#39;}
+</span><span>INFO:lib389.tools:Configuration backends [{&#39;name&#39;: &#39;userRoot&#39;, &#39;sample_entries&#39;: True, &#39;suffix&#39;: &#39;dc=example,dc=com&#39;}]
+</span><span>INFO:lib389.tools:PASSED: user / group checking
+</span><span>INFO:lib389.tools:PASSED: Hostname strict checking
+</span><span>INFO:lib389.tools:PASSED: prefix checking
+</span><span>INFO:lib389:dir (sys) : /opt/dirsrv/etc/sysconfig
+</span><span>INFO:lib389.tools:PASSED: instance checking
+</span><span>INFO:lib389.tools:PASSED: root user checking
+</span><span>INFO:lib389.tools:PASSED: network avaliability checking
+</span><span>INFO:lib389.tools:READY: beginning installation
+</span><span>INFO:lib389.tools:ACTION: creating /opt/dirsrv/var/lib/dirsrv/slapd-localhost/bak
+</span><span>INFO:lib389.tools:ACTION: creating /opt/dirsrv/etc/dirsrv/slapd-localhost/
+</span><span>INFO:lib389.tools:ACTION: creating /opt/dirsrv/etc/dirsrv/slapd-localhost/
+</span><span>INFO:lib389.tools:ACTION: creating /opt/dirsrv/var/lib/dirsrv/slapd-localhost/db
+</span><span>INFO:lib389.tools:ACTION: creating /opt/dirsrv/var/lib/dirsrv/slapd-localhost/ldif
+</span><span>INFO:lib389.tools:ACTION: creating /opt/dirsrv/var/lock/dirsrv/slapd-localhost
+</span><span>INFO:lib389.tools:ACTION: creating /opt/dirsrv/var/log/dirsrv/slapd-localhost
+</span><span>INFO:lib389.tools:ACTION: creating /opt/dirsrv/var/run/dirsrv
+</span><span>INFO:lib389.tools:ACTION: Creating certificate database is /opt/dirsrv/etc/dirsrv/slapd-localhost/
+</span><span>INFO:lib389.tools:ACTION: Creating dse.ldif
+</span><span>INFO:lib389.tools:FINISH: completed installation
+</span><span>Sucessfully created instance
+</span><span>
+</span><span>[17/Apr/2016:14:44:21.030683607 +1000] could not open config file &quot;/opt/dirsrv/etc/dirsrv/slapd-localhost//slapd-collations.conf&quot; - absolute path?
+</span><span>[17/Apr/2016:14:44:21.122087994 +1000] 389-Directory/1.3.5.1 B2016.108.412 starting up
+</span><span>[17/Apr/2016:14:44:21.460033554 +1000] convert_pbe_des_to_aes:  Checking for DES passwords to convert to AES...
+</span><span>[17/Apr/2016:14:44:21.461012440 +1000] convert_pbe_des_to_aes - No DES passwords found to convert.
+</span><span>[17/Apr/2016:14:44:21.462712083 +1000] slapd started.  Listening on All Interfaces port 389 for LDAP requests
+</span></code></pre>
+<p>If we do an ldapsearch:</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>fbsd-389-port# uname -r -s
+</span><span>FreeBSD 10.2-RELEASE
+</span><span>fbsd-389-port# ldapsearch -h localhost -b &#39;&#39; -s base -x +
+</span><span># extended LDIF
+</span><span>#
+</span><span># LDAPv3
+</span><span># base &lt;&gt; with scope baseObject
+</span><span># filter: (objectclass=*)
+</span><span># requesting: + 
+</span><span>#
+</span><span>
+</span><span>#
+</span><span>dn:
+</span><span>creatorsName: cn=server,cn=plugins,cn=config
+</span><span>modifiersName: cn=server,cn=plugins,cn=config
+</span><span>createTimestamp: 20160417044112Z
+</span><span>modifyTimestamp: 20160417044112Z
+</span><span>subschemaSubentry: cn=schema
+</span><span>supportedExtension: 2.16.840.1.113730.3.5.7
+</span><span>supportedExtension: 2.16.840.1.113730.3.5.8
+</span><span>supportedExtension: 1.3.6.1.4.1.4203.1.11.3
+</span><span>supportedExtension: 1.3.6.1.4.1.4203.1.11.1
+</span><span>supportedControl: 2.16.840.1.113730.3.4.2
+</span><span>supportedControl: 2.16.840.1.113730.3.4.3
+</span><span>supportedControl: 2.16.840.1.113730.3.4.4
+</span><span>supportedControl: 2.16.840.1.113730.3.4.5
+</span><span>supportedControl: 1.2.840.113556.1.4.473
+</span><span>supportedControl: 2.16.840.1.113730.3.4.9
+</span><span>supportedControl: 2.16.840.1.113730.3.4.16
+</span><span>supportedControl: 2.16.840.1.113730.3.4.15
+</span><span>supportedControl: 2.16.840.1.113730.3.4.17
+</span><span>supportedControl: 2.16.840.1.113730.3.4.19
+</span><span>supportedControl: 1.3.6.1.1.13.1
+</span><span>supportedControl: 1.3.6.1.1.13.2
+</span><span>supportedControl: 1.3.6.1.4.1.42.2.27.8.5.1
+</span><span>supportedControl: 1.3.6.1.4.1.42.2.27.9.5.2
+</span><span>supportedControl: 1.2.840.113556.1.4.319
+</span><span>supportedControl: 1.3.6.1.4.1.42.2.27.9.5.8
+</span><span>supportedControl: 1.3.6.1.4.1.4203.666.5.16
+</span><span>supportedControl: 2.16.840.1.113730.3.4.14
+</span><span>supportedControl: 2.16.840.1.113730.3.4.20
+</span><span>supportedControl: 1.3.6.1.4.1.1466.29539.12
+</span><span>supportedControl: 2.16.840.1.113730.3.4.12
+</span><span>supportedControl: 2.16.840.1.113730.3.4.18
+</span><span>supportedFeatures: 1.3.6.1.4.1.4203.1.5.1
+</span><span>supportedSASLMechanisms: EXTERNAL
+</span><span>supportedLDAPVersion: 2
+</span><span>supportedLDAPVersion: 3
+</span><span>vendorName: 389 Project
+</span><span>vendorVersion: 389-Directory/1.3.5.1 B2016.108.412
+</span></code></pre>
+
+    </div>
+</article>
+
+        </main>
+        
+        <footer>
+            
+            <div class="border"></div>
+            <div class="footer">
+                <small class="footer-left">
+                    Copyright &copy; William Brown
+                </small>
+                <small class="footer-right">
+                    Powered by <a href="https://www.getzola.org">Zola</a> | Theme <a href="https://github.com/barlog-m/oceanic-zen">Oceanic Zen</a>
+                </small>
+            </div>
+        
+        </footer>
+    
+        </div>
+    </body>
+</html>

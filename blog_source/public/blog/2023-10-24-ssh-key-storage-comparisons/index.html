@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+        <meta name="description" content="Firstyear&#x27;s blog">
+        
+
+        <title>Firstyear&#x27;s blog-a-log</title>
+
+        
+          <link rel="alternate" type="application/rss+xml" title="RSS" href="https://fy.blackhats.net.au/rss.xml">
+        
+
+        
+            <link rel="stylesheet" href="https://fy.blackhats.net.au/theme.css">
+        
+        
+    </head>
+    <body>
+        <div class="content">
+        
+        
+            <header>
+                <div class="header-left">
+                    <a href="https:&#x2F;&#x2F;fy.blackhats.net.au" class="logo">Firstyear&#x27;s blog-a-log</a>
+                </div>
+                <div class="header-right">
+                    <nav itemscope itemtype="http://schema.org/SiteNavigationElement">
+                      <ul>
+                        
+                        
+                            
+                            <li class="nav">
+                                <a itemprop="url" href="https://fy.blackhats.net.au/blog/">
+                                    <span itemprop="name">Blog</span>
+                                </a>
+                            </li>
+                        
+                            
+                            <li class="nav">
+                                <a itemprop="url" href="https://fy.blackhats.net.au/pages/">
+                                    <span itemprop="name">Pages</span>
+                                </a>
+                            </li>
+                        
+                        
+                        <li class="nav">
+                            <a itemprop="url" href="https://github.com/firstyear">
+                                <img class="icon" src="https:&#x2F;&#x2F;fy.blackhats.net.au/icons/github.svg" alt="Github">
+                            </a>
+                        </li>
+                        
+                        <li class="nav">
+                            <a itemprop="url" href="/rss.xml">
+                                <img class="icon" src="https:&#x2F;&#x2F;fy.blackhats.net.au/rss-logo.png" alt="rss">
+                            </a>
+                        </li>
+                      </ul>
+                    </nav>
+                </div>
+            </header>
+        
+        
+        <main>
+            
+<article itemscope itemtype="http://schema.org/BlogPosting">
+    <div itemprop="headline">
+        <h1>SSH Key Storage Comparison</h1>
+        <div class="border"></div>
+        <time datetime="2023-10-24" class="date" itemprop="datePublished">
+            24 Oct 2023
+        </time>
+    </div>
+    <div itemprop="articleBody">
+        <h1 id="ssh-key-storage">SSH Key Storage</h1>
+<p>A kind reader asked me an interesting question the other day. &quot;What do you think of the choice
+of ssh sk keys between ecdsa and ed25519?&quot;. At the same time, within Kanidm we have actually been
+discussing the different approaches we could take with ssh key handling in the future between
+ssh cas and ssh sk key attestation, especially once we consider service accounts.</p>
+<p>As with anything in security we always need to balance the technology with the risks and threats
+that we are trying to mitigate or prevent.</p>
+<p>Compared to the use of a username and password, using ssh keys to authenticate to a remote server
+is significantly more secure. This is especially true if you disable password authentication
+methods.</p>
+<h2 id="cryptographic-considerations">Cryptographic Considerations</h2>
+<p>Of course, just using cryptographic authentication isn't free. While we no longer have the risks
+of passwords, the threats that exist against cryptographic keys are quite different. This means
+we now need to ensure that we follow and keep up to date with developments in crytpgraphy.</p>
+<p>There are many sites that can assist with key requirements such as <a href="https://www.keylength.com">keylength.com</a>.
+The following table was generated on 2023-09-25 with the year set to 2030 (meaning these key sizes values are
+<em>predicted</em> to be safe until 2030).</p>
+<blockquote>
+<table><thead><tr><th>Method</th><th>Date</th><th>Symmetric</th><th>FM</th><th>DL Key</th><th>DL Group</th><th>Elliptic Curve</th><th>Hash</th></tr></thead><tbody>
+<tr><td>Lenstra / Verheul</td><td>2030</td><td>93</td><td>2493^2016</td><td>165</td><td>2493</td><td>176</td><td>186</td></tr>
+<tr><td>Lenstra Updated </td><td>2030</td><td>88</td><td>1698^2063</td><td>176</td><td>1698</td><td>176</td><td>176</td></tr>
+<tr><td>ECRYPT</td><td>2029-2068</td><td>256</td><td>15360</td><td>512</td><td>15360</td><td>512</td><td>512</td></tr>
+<tr><td>NIST</td><td>2019-2030</td><td>112</td><td>2048</td><td>224</td><td>2048</td><td>224</td><td>224</td></tr>
+<tr><td>ANSSI</td><td>&gt; 2030</td><td>128</td><td>3072</td><td>200</td><td>3072</td><td>256</td><td>256</td></tr>
+<tr><td>NSA</td><td>-</td><td>256</td><td>3072</td><td>-</td><td>-</td><td>384</td><td>384</td></tr>
+<tr><td>RFC3766 </td><td>-</td><td>-</td><td>-</td><td>-</td><td>-</td><td>-</td><td>-</td></tr>
+<tr><td>BSI</td><td>-</td><td>-</td><td>-</td><td>-</td><td>-</td><td>-</td><td>-</td></tr>
+</tbody></table>
+<ul>
+<li>DL - Discrete Logarithm</li>
+<li>FM - Factoring Modulus</li>
+</ul>
+</blockquote>
+<p>The values here that are important for ssh key generation is the Factoring Modulus (FM) and
+Elliptic Curve.Each of these sources is assuming different risks and requirements. You will need to
+make your own informed choices about these but reading between the values here your minimum key
+size should be at least RSA 2048 and ECDSA P256 / ED25519, or if you wish to future proof
+you may wish to choose RSA 3072, ECDSA P512 / ED448.</p>
+<h2 id="p-256-vs-ed25519">P-256 vs ED25519</h2>
+<p>Our dear reader asked if you should choose ED25519 over ECDSA P-256 as there are two attacks (LadderLeak, Minerva)
+that affect ECDSA. I am not a cryptographer, so my view here should be taken with caution, but reading
+both papers the authors indicate that these attacks require a large number of signatures to conduct
+meaning that outside of research conditions, these may not be viable against ssh keys. The authors
+themself validate that these attacks may not be possible outside of research conditions.</p>
+<h2 id="ssh-key-storage-1">SSH Key Storage</h2>
+<p>Since we now have cryptographic keys for authentication we need to care about how we store these.
+Storage of keys is just as important as the type of key we use.</p>
+<h3 id="files-on-disk">Files on Disk</h3>
+<p>Most peoples first introduction to ssh keys is storing them as files in their home directory.
+If during the generation you entered a passphrase, then this stores the private keys as
+encrypted files. If you do not specify a passphrase these are stored unencrypted. Generally it's
+a good idea to store these with a passphrase so that theft of the private key means an attacker
+can not immediately use this for nefarious purposes.</p>
+<h3 id="security-keys">Security Keys</h3>
+<p>Rather than storing ssh keys in files, they can be generated in the secure enclave of
+a security key such as a yubikey. Because these are stored in the secure enclave, malware or an
+attacker can not take the keys from the machine. Additionally, because of how these keys work, they
+will not operate without physical interaction with the key.</p>
+<p>Another unique property of these keys is they can strictly enforce that userverification (such as
+a PIN or biometric) is validated as well as physical interaction before they can proceed.
+This verification requirement is baked into the key at creation time and enforced by the secure unclave so that it can not be bypassed, adding an extra
+level of security - changing the key from something you have to something you have and are/know.</p>
+<p>These keys can also attest (cryptographically prove) that they are in a secure enclave at creation time,
+so that for higher security environments they can assert that keys <em>must</em> be hardware backed.</p>
+<p>So far we have mentioned these keys are in the secure enclave. By default the actual
+private key is stored in a file, encrypted by a secret master key inside the security key. This
+is what allows these keys to have &quot;unlimited storage&quot; as keys are loaded and unloaded as needed (the
+same way that a TPM works).</p>
+<p>However for the most secure environments, they may wish that the key never leaves the enclave even if in a secure encrypted form. Security
+keys have extremely limited storage (generally 8 keys, some models up to 25), so this limits the use
+of these resident keys. But if they are required, you can create a resident, attested, user verified
+key for the highest levels of assurance.</p>
+<h3 id="certificate-authorities">Certificate Authorities</h3>
+<p>ssh keys normally rely on the public key being transferred to the machine to authenticate too. This
+leads to strategies like ssh key distribution in kanidm so that a central server can be consulted
+for which authorised keys are valid for authentication.</p>
+<p>However a ssh certificate authority functions more like TLS where a certificate authority's key
+is trusted by the servers, and then users are issued an ssh key <em>signed</em> by that authority. When
+authenticating to the server since the user certificate is signed by a trusted authority it can be
+allowed to proceed.</p>
+<p>Since these keys are issued as files they carry some of the same risks as our previous files. However
+because there is an authority that can issue the keys, they can be created with a short expiration
+as required. This leads to some interesting configurations where an external tool can be used to
+issue certificates as required, limited to specific hosts and commands.</p>
+<h2 id="comparison">Comparison</h2>
+<p>As with anything, all of these approaches have pros and cons. It's up to you to decide what will be
+best in your scenario.</p>
+<blockquote>
+<table><thead><tr><th>Key Type</th><th style="text-align: center">Strict Enforcement</th><th style="text-align: center">Exfiltration Possible</th><th style="text-align: center">Expiration</th><th style="text-align: center">Hardware Bound</th><th style="text-align: center">User Verification</th></tr></thead><tbody>
+<tr><td>ssh key</td><td style="text-align: center">no</td><td style="text-align: center">yes</td><td style="text-align: center">no</td><td style="text-align: center">no</td><td style="text-align: center">no</td></tr>
+<tr><td>encrypted ssh key</td><td style="text-align: center">no</td><td style="text-align: center">yes</td><td style="text-align: center">no</td><td style="text-align: center">no</td><td style="text-align: center">yes-ish</td></tr>
+<tr><td>sk key</td><td style="text-align: center">no</td><td style="text-align: center">no</td><td style="text-align: center">no</td><td style="text-align: center">yes</td><td style="text-align: center">yes</td></tr>
+<tr><td>attested sk key</td><td style="text-align: center">yes</td><td style="text-align: center">no</td><td style="text-align: center">no</td><td style="text-align: center">yes</td><td style="text-align: center">yes</td></tr>
+<tr><td>ca key</td><td style="text-align: center">yes</td><td style="text-align: center">yes</td><td style="text-align: center">yes</td><td style="text-align: center">possible</td><td style="text-align: center">yes*</td></tr>
+</tbody></table>
+</blockquote>
+<p>* If you use ca keys with sk keys, or your issuing ca provides a form of verification</p>
+<p>For some example use cases:</p>
+<p><em>I am a home user logging into my server</em></p>
+<ul>
+<li>Use what ever makes you happy</li>
+<li>Any ssh key auth is better than a password</li>
+</ul>
+<p><em>I am logging into production servers</em></p>
+<ul>
+<li>Use ssh key files with passphrases</li>
+<li>sk keys with enforce user verification</li>
+</ul>
+<p><em>I am a business looking to enforce secure keys for admins/developers</em></p>
+<ul>
+<li>Use attested sk keys with enforced user verification</li>
+<li>Deploy an ssh ca that requires authentication to issue certificates</li>
+</ul>
+<p><em>I am a three letter agency that ...</em></p>
+<ul>
+<li>Ask your security team, that's what they're there for.</li>
+<li>But also, use attested resident sk keys with enforced user verification</li>
+</ul>
+<p>There is no perfect answer here, but you need to consider the risks you face and how you want
+to mitigate them. The biggest problem of all of this is <em>proof</em>. Once you move from &quot;I want an ssh
+key&quot; to &quot;we want to enforce our requirements&quot; this adds extra challenges that only an ssh ca or attested
+sk keys can fufil. While it's nice to trust our users, strictly enforced requirements are far better
+when it comes to security.</p>
+<h2 id="ssh-key-creation-reference">SSH Key Creation Reference</h2>
+<h3 id="files-on-disk-1">Files on Disk</h3>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>ssh-keygen -t [rsa | ecdsa | ed25519] -b &lt;bits&gt;
+</span><span>ssh-keygen -t ed25519
+</span><span>ssh-keygen -t ecdsa -b 512
+</span><span>ssh-keygen -t rsa -b 3072
+</span></code></pre>
+<h3 id="security-keys-basic">Security Keys (Basic)</h3>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>ssh-keygen -t [ecdsa-sk | ed25519-sk]
+</span><span>ssh-keygen -t ecdsa-sk
+</span><span>// Note: Not all keys support ed25519
+</span><span>ssh-keygen -t ed25519-sk
+</span></code></pre>
+<h3 id="security-keys-user-verified">Security Keys (User Verified)</h3>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>ssh-keygen -t [ecdsa-sk | ed25519-sk] -O verify-required
+</span><span>ssh-keygen -t ecdsa-sk -O verify-required
+</span></code></pre>
+<h3 id="certificate-authority">Certificate Authority</h3>
+
+    </div>
+</article>
+
+        </main>
+        
+        <footer>
+            
+            <div class="border"></div>
+            <div class="footer">
+                <small class="footer-left">
+                    Copyright &copy; William Brown
+                </small>
+                <small class="footer-right">
+                    Powered by <a href="https://www.getzola.org">Zola</a> | Theme <a href="https://github.com/barlog-m/oceanic-zen">Oceanic Zen</a>
+                </small>
+            </div>
+        
+        </footer>
+    
+        </div>
+    </body>
+</html>

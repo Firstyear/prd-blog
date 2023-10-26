@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+        <meta name="description" content="Firstyear&#x27;s blog">
+        
+
+        <title>Firstyear&#x27;s blog-a-log</title>
+
+        
+          <link rel="alternate" type="application/rss+xml" title="RSS" href="https://fy.blackhats.net.au/rss.xml">
+        
+
+        
+            <link rel="stylesheet" href="https://fy.blackhats.net.au/theme.css">
+        
+        
+    </head>
+    <body>
+        <div class="content">
+        
+        
+            <header>
+                <div class="header-left">
+                    <a href="https:&#x2F;&#x2F;fy.blackhats.net.au" class="logo">Firstyear&#x27;s blog-a-log</a>
+                </div>
+                <div class="header-right">
+                    <nav itemscope itemtype="http://schema.org/SiteNavigationElement">
+                      <ul>
+                        
+                        
+                            
+                            <li class="nav">
+                                <a itemprop="url" href="https://fy.blackhats.net.au/blog/">
+                                    <span itemprop="name">Blog</span>
+                                </a>
+                            </li>
+                        
+                            
+                            <li class="nav">
+                                <a itemprop="url" href="https://fy.blackhats.net.au/pages/">
+                                    <span itemprop="name">Pages</span>
+                                </a>
+                            </li>
+                        
+                        
+                        <li class="nav">
+                            <a itemprop="url" href="https://github.com/firstyear">
+                                <img class="icon" src="https:&#x2F;&#x2F;fy.blackhats.net.au/icons/github.svg" alt="Github">
+                            </a>
+                        </li>
+                        
+                        <li class="nav">
+                            <a itemprop="url" href="/rss.xml">
+                                <img class="icon" src="https:&#x2F;&#x2F;fy.blackhats.net.au/rss-logo.png" alt="rss">
+                            </a>
+                        </li>
+                      </ul>
+                    </nav>
+                </div>
+            </header>
+        
+        
+        <main>
+            
+<article itemscope itemtype="http://schema.org/BlogPosting">
+    <div itemprop="headline">
+        <h1>Ldap post read control</h1>
+        <div class="border"></div>
+        <time datetime="2015-11-26" class="date" itemprop="datePublished">
+            26 Nov 2015
+        </time>
+    </div>
+    <div itemprop="articleBody">
+        <h1 id="ldap-post-read-control">Ldap post read control</h1>
+<p>This was a bit of a pain to use in python.</p>
+<p>If we want to modify and entry and immediately check it's entryUSN so
+that we can track the update status of objects in ldap, we can use the
+post read control so that after the add/mod/modrdn is complete, we can
+immediately check the result of usn atomically. This lets us compare
+entryusn to know if the object has changed or not.</p>
+<p>To use in python:</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>&gt;&gt;&gt; conn.modify_ext( &#39;cn=Directory Administrators,dc=example,dc=com&#39;,
+</span><span>      ldap.modlist.modifyModlist({}, {&#39;description&#39; : [&#39;oeusoeutlnsoe&#39;] } ),
+</span><span>     [PostReadControl(criticality=True,attrList=[&#39;nsUniqueId&#39;])]  
+</span><span>     ) 
+</span><span>6
+</span><span>&gt;&gt;&gt; _,_,_,resp_ctrls = conn.result3(6)
+</span><span>&gt;&gt;&gt; resp_ctrls
+</span><span>[&lt;ldap.controls.readentry.PostReadControl instance at 0x2389cf8&gt;]
+</span><span>&gt;&gt;&gt; resp_ctrls[0].dn
+</span><span>&#39;cn=Directory Administrators,dc=example,dc=com&#39;
+</span><span>&gt;&gt;&gt; resp_ctrls[0].entry
+</span><span>{&#39;nsUniqueId&#39;: [&#39;826cc526-8caf11e5-93ba8a51-c5ee9f85&#39;]}
+</span></code></pre>
+<p>See also,
+<a href="http://www.python-ldap.org/doc/html/ldap-controls.html">PostRead</a> and
+<a href="http://www.python-ldap.org/doc/html/ldap.html">python-ldap</a>.</p>
+
+    </div>
+</article>
+
+        </main>
+        
+        <footer>
+            
+            <div class="border"></div>
+            <div class="footer">
+                <small class="footer-left">
+                    Copyright &copy; William Brown
+                </small>
+                <small class="footer-right">
+                    Powered by <a href="https://www.getzola.org">Zola</a> | Theme <a href="https://github.com/barlog-m/oceanic-zen">Oceanic Zen</a>
+                </small>
+            </div>
+        
+        </footer>
+    
+        </div>
+    </body>
+</html>

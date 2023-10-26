@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+        <meta name="description" content="Firstyear&#x27;s blog">
+        
+
+        <title>Firstyear&#x27;s blog-a-log</title>
+
+        
+          <link rel="alternate" type="application/rss+xml" title="RSS" href="https://fy.blackhats.net.au/rss.xml">
+        
+
+        
+            <link rel="stylesheet" href="https://fy.blackhats.net.au/theme.css">
+        
+        
+    </head>
+    <body>
+        <div class="content">
+        
+        
+            <header>
+                <div class="header-left">
+                    <a href="https:&#x2F;&#x2F;fy.blackhats.net.au" class="logo">Firstyear&#x27;s blog-a-log</a>
+                </div>
+                <div class="header-right">
+                    <nav itemscope itemtype="http://schema.org/SiteNavigationElement">
+                      <ul>
+                        
+                        
+                            
+                            <li class="nav">
+                                <a itemprop="url" href="https://fy.blackhats.net.au/blog/">
+                                    <span itemprop="name">Blog</span>
+                                </a>
+                            </li>
+                        
+                            
+                            <li class="nav">
+                                <a itemprop="url" href="https://fy.blackhats.net.au/pages/">
+                                    <span itemprop="name">Pages</span>
+                                </a>
+                            </li>
+                        
+                        
+                        <li class="nav">
+                            <a itemprop="url" href="https://github.com/firstyear">
+                                <img class="icon" src="https:&#x2F;&#x2F;fy.blackhats.net.au/icons/github.svg" alt="Github">
+                            </a>
+                        </li>
+                        
+                        <li class="nav">
+                            <a itemprop="url" href="/rss.xml">
+                                <img class="icon" src="https:&#x2F;&#x2F;fy.blackhats.net.au/rss-logo.png" alt="rss">
+                            </a>
+                        </li>
+                      </ul>
+                    </nav>
+                </div>
+            </header>
+        
+        
+        <main>
+            
+<article itemscope itemtype="http://schema.org/BlogPosting">
+    <div itemprop="headline">
+        <h1>Using SUSE Leap Enterprise with Docker</h1>
+        <div class="border"></div>
+        <time datetime="2020-08-26" class="date" itemprop="datePublished">
+            26 Aug 2020
+        </time>
+    </div>
+    <div itemprop="articleBody">
+        <h1 id="using-suse-leap-enterprise-with-docker">Using SUSE Leap Enterprise with Docker</h1>
+<p>It's a little bit annoying to connect up all the parts for this. If you
+have a SLE15 system then credentials for SCC are automatically passed
+into containers via secrets.</p>
+<p>But if you are on a non-SLE base, like myself with MacOS or OpenSUSE
+you'll need to provide these to the container in another way. The
+documentation is a bit tricky to search and connect up what you need but
+in summary:</p>
+<ul>
+<li>Get [/etc/SUSEConnect]{.title-ref} and
+[/etc/zypp/credentials.d/SCCcredentials]{.title-ref} from an SLE
+install that has been registered. The SLE version does not matter.</li>
+<li>Mount them into the image:</li>
+</ul>
+<pre data-lang="bash" style="background-color:#2b303b;color:#c0c5ce;" class="language-bash "><code class="language-bash" data-lang="bash"><span>    </span><span style="color:#bf616a;">docker</span><span> ...</span><span style="color:#bf616a;"> -v</span><span> /scc/SUSEConnect:/etc/SUSEConnect \
+</span><span style="color:#bf616a;">        -v</span><span> /scc/SCCcredentials:/etc/zypp/credentials.d/SCCcredentials \
+</span><span>        ...
+</span><span>        </span><span style="color:#bf616a;">registry.suse.com/suse/sle15:15.2
+</span></code></pre>
+<p>Now you can use the images from <a href="https://registry.suse.com/">the SUSE
+registry</a>. For example [docker pull
+registry.suse.com/suse/sle15:15.2]{.title-ref} and have working zypper
+within them.</p>
+<p>If you want to add extra modules to your container (you can list what's
+available with container-suseconnect from an existing SLE container of
+the same version), you can do this by adding environment variables at
+startup. For example, to add dev tools like gdb:</p>
+<pre data-lang="bash" style="background-color:#2b303b;color:#c0c5ce;" class="language-bash "><code class="language-bash" data-lang="bash"><span>    </span><span style="color:#bf616a;">docker</span><span> ...</span><span style="color:#bf616a;"> -e</span><span> ADDITIONAL_MODULES=sle-module-development-tools \
+</span><span style="color:#bf616a;">        -v</span><span> /scc/SUSEConnect:/etc/SUSEConnect \
+</span><span style="color:#bf616a;">        -v</span><span> /scc/SCCcredentials:/etc/zypp/credentials.d/SCCcredentials \
+</span><span>        ...
+</span><span>        </span><span style="color:#bf616a;">registry.suse.com/suse/sle15:15.2
+</span></code></pre>
+<p>This also works during builds to add extra modules.</p>
+<p>HINT: SUSEConnect and SCCcredentials and not version dependent so will
+work in any image version.</p>
+
+    </div>
+</article>
+
+        </main>
+        
+        <footer>
+            
+            <div class="border"></div>
+            <div class="footer">
+                <small class="footer-left">
+                    Copyright &copy; William Brown
+                </small>
+                <small class="footer-right">
+                    Powered by <a href="https://www.getzola.org">Zola</a> | Theme <a href="https://github.com/barlog-m/oceanic-zen">Oceanic Zen</a>
+                </small>
+            </div>
+        
+        </footer>
+    
+        </div>
+    </body>
+</html>

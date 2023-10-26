@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+        <meta name="description" content="Firstyear&#x27;s blog">
+        
+
+        <title>Firstyear&#x27;s blog-a-log</title>
+
+        
+          <link rel="alternate" type="application/rss+xml" title="RSS" href="https://fy.blackhats.net.au/rss.xml">
+        
+
+        
+            <link rel="stylesheet" href="https://fy.blackhats.net.au/theme.css">
+        
+        
+    </head>
+    <body>
+        <div class="content">
+        
+        
+            <header>
+                <div class="header-left">
+                    <a href="https:&#x2F;&#x2F;fy.blackhats.net.au" class="logo">Firstyear&#x27;s blog-a-log</a>
+                </div>
+                <div class="header-right">
+                    <nav itemscope itemtype="http://schema.org/SiteNavigationElement">
+                      <ul>
+                        
+                        
+                            
+                            <li class="nav">
+                                <a itemprop="url" href="https://fy.blackhats.net.au/blog/">
+                                    <span itemprop="name">Blog</span>
+                                </a>
+                            </li>
+                        
+                            
+                            <li class="nav">
+                                <a itemprop="url" href="https://fy.blackhats.net.au/pages/">
+                                    <span itemprop="name">Pages</span>
+                                </a>
+                            </li>
+                        
+                        
+                        <li class="nav">
+                            <a itemprop="url" href="https://github.com/firstyear">
+                                <img class="icon" src="https:&#x2F;&#x2F;fy.blackhats.net.au/icons/github.svg" alt="Github">
+                            </a>
+                        </li>
+                        
+                        <li class="nav">
+                            <a itemprop="url" href="/rss.xml">
+                                <img class="icon" src="https:&#x2F;&#x2F;fy.blackhats.net.au/rss-logo.png" alt="rss">
+                            </a>
+                        </li>
+                      </ul>
+                    </nav>
+                </div>
+            </header>
+        
+        
+        <main>
+            
+<article itemscope itemtype="http://schema.org/BlogPosting">
+    <div itemprop="headline">
+        <h1>Concurrency 2: Concurrently Readable Structures</h1>
+        <div class="border"></div>
+        <time datetime="2019-12-29" class="date" itemprop="datePublished">
+            29 Dec 2019
+        </time>
+    </div>
+    <div itemprop="articleBody">
+        <h1 id="concurrency-2-concurrently-readable-structures">Concurrency 2: Concurrently Readable Structures</h1>
+<p>In this post, I'll discuss concurrently readable datastructures that
+exist, and ideas for future structures. Please note, this post is an
+inprogress design, and may be altered in the future.</p>
+<p>Before you start, make sure you have <a href="../concurrency_1_types_of_concurrency.html">read part
+1</a></p>
+<h2 id="concurrent-cell">Concurrent Cell</h2>
+<p>The simplest form of concurrently readable structure is a concurrent
+cell. This is equivalent to a read-write lock, but has concurrently
+readable properties instead. The key mechanism to enable this is that
+when the writer begins, it clones the data before writing it. We trade
+more memory usage for a gain in concurrency.</p>
+<p>To see an implementation, see my <a href="https://crates.io/crates/concread">rust crate,
+concread</a></p>
+<h2 id="concurrent-tree">Concurrent Tree</h2>
+<p>The concurrent cell is good for small data, but a larger structure -
+like a tree - may take too long to clone on each write. A good estimate
+is that if your data in the cell is larger than about 512 bytes, you
+likely want a concurrent tree instead.</p>
+<p>In a concurrent tree, only the <em>branches</em> involved in the operation are
+cloned. Imagine the following tree:</p>
+<p><img src="/_static/cow_1.png" alt="image" /></p>
+<p>When we attempt to change a value in the 4th leaf we copy it before we
+begin, and all it's parents to update their pointers.</p>
+<p><img src="/_static/cow_2.png" alt="image" /></p>
+<p>In the process the pointers from the new root b to branch 1 are
+maintained. The new second branch also maintains a pointer to the
+original 3rd leaf.</p>
+<p>This means that in this example only 3/7 nodes are copied, saving a lot
+of cloning. As your tree grows this saves a lot of work. Consider a tree
+with node-widths of 7 pointers and at height level 5. Assuming perfect
+layout, you only need to clone 5/~16000 nodes. A huge saving in memory
+copy!</p>
+<p>The interesting part is a reader of root a, also is unaffected by the
+changes to root b - the tree from root a hasn't been changed, as all
+it's pointers and nodes are still valid.</p>
+<p>When all readers of root a end, we clean up all the nodes it pointed to
+that no longer are needed by root b (this can be done with atomic
+reference counting, or garbage lists in transactions).</p>
+<p><img src="/_static/cow_3.png" alt="image" /></p>
+<p>It is through this copy-on-write (also called multi view concurrency
+control) that we achieve concurrent readability in the tree.</p>
+<p>This is really excellent for databases where you have in memory
+structures that work in parallel to the database transactions. In kanidm
+an example is the in-memory schema that is used at run time but loaded
+from the database. They require transactional behaviours to match the
+database, and ACID properties so that readers of a past transaction have
+the &quot;matched&quot; schema in memory.</p>
+<h2 id="concurrent-cache-updated-2020-05-13">Concurrent Cache (Updated 2020-05-13)</h2>
+<p>A design that I have thought about for a long time has finally come to
+reality. This is a concurrently readable transactional cache. One
+writer, multiple readers with consistent views of the data. Additionally
+due to the transactioal nature, rollbacks and commits are fulled
+supported.</p>
+<p>For a more formal version of this design, please see <a href="https://github.com/Firstyear/concread/blob/master/CACHE.md">my concurrent ARC
+draft
+paper</a>.</p>
+<p>This scheme should work with any cache type - LRU, LRU2Q, LFU. I have
+used
+<a href="https://web.archive.org/web/20100329071954/http://www.almaden.ibm.com/StorageSystems/projects/arc/">ARC</a>.</p>
+<p>ARC was popularised by ZFS - ARC is not specific to ZFS, it's a
+strategy for cache replacement, despite the comment association between
+the two.</p>
+<p>ARC is a pair of LRU's with a set of ghost lists and a weighting
+factor. When an entry is &quot;missed&quot; it's inserted to the &quot;recent&quot;
+LRU. When it's accessed from the LRU a second time, it moves to the
+&quot;frequent&quot; LRU.</p>
+<p>When entries are evicted from their sets they are added to the ghost
+list. When a cache miss occurs, the ghost list is consulted. If the
+entry &quot;would have been&quot; in the &quot;recent&quot; LRU, but was not, the
+&quot;recent&quot; LRU grows and the &quot;frequent&quot; LRU shrinks. If the item
+&quot;would have been&quot; in the &quot;frequent&quot; LRU but was not, the
+&quot;frequent&quot; LRU is expanded, and the &quot;recent&quot; LRU shrunk.</p>
+<p>This causes ARC to be self tuning to your workload, as well as balancing
+&quot;high frequency&quot; and &quot;high locality&quot; operations. It's also
+resistant to many cache invalidation or busting patterns that can occur
+in other algorithms.</p>
+<p>A major problem though is ARC is not designed for concurrency - LRU's
+rely on double linked lists which is <em>very</em> much something that only a
+single thread can modify safely due to the number of pointers that are
+not aligned in a single cache line, prevent atomic changes.</p>
+<h2 id="how-to-make-arc-concurrent">How to make ARC concurrent</h2>
+<p>To make this concurrent, I think it's important to specify the goals.</p>
+<ul>
+<li>Readers must always have a correct &quot;point in time&quot; view of the
+cache and its data</li>
+<li>Readers must be able to trigger cache inclusions</li>
+<li>Readers must be able to track cache hits accurately</li>
+<li>Readers are isolated from all other readers and writer actions</li>
+<li>Writers must always have a correct &quot;point in time&quot; view</li>
+<li>Writers must be able to rollback changes without penalty</li>
+<li>Writers must be able to trigger cache inclusions</li>
+<li>Writers must be able to track cache hits accurately</li>
+<li>Writers are isolated from all readers</li>
+<li>The cache must maintain correct temporal ordering of items in the
+cache</li>
+<li>The cache must properly update hit and inclusions based on readers
+and writers</li>
+<li>The cache must provide ARC semantics for management of items</li>
+<li>The cache must be concurrently readable and transactional</li>
+<li>The overhead compared to single thread ARC is minimal</li>
+</ul>
+<p>There are a lot of places to draw inspiration from, and I don't think I
+can list - or remember them all.</p>
+<p>My current design uses a per-thread reader cache to allow inclusions,
+with a channel to asynchronously include and track hits to the write
+thread. The writer also maintains a local cache of items including
+markers of removed items. When the writer commits, the channel is
+drained to a time point T, and actions on the ARC taken.</p>
+<p>This means the LRU's are maintained only in a single write thread, but
+the readers changes are able to influence the caching decisions.</p>
+<p>To maintain consistency, and extra set is added which is the haunted
+set, so that a key that has existed at some point can be tracked to
+identify it's point in time of eviction and last update so that stale
+data can never be included by accident.</p>
+<h2 id="limitations-and-concerns">Limitations and Concerns</h2>
+<p>Cache missing is very expensive - multiple threads may load the value,
+the readers must queue the value, and the writer must then act on the
+queue. Sizing the cache to be large enough is critically important as
+eviction/missing will have a higher penalty than normal. Optimally the
+cache will be &quot;as large or larger&quot; than the working set.</p>
+<p>But with a concurrent ARC we now have a cache where each reader thread
+has a thread local cache and the writer is communicated to by channels.
+This may make the cache's memory limit baloon to a high amount over a
+normal cache. To help, an algorithm was developed based on expect cache
+behaviour for misses and communication to help size the caches of
+readers and writers.</p>
+<h2 id="conclusion">Conclusion</h2>
+<p>This is a snapshot of some concurrently readable datastructures, and how
+they are implemented and useful in your projects. Using them in
+<a href="https://github.com/kanidm/kanidm/blob/master/README.md">Kanidm</a> we have
+already seen excellent performance and scaling of the server, with very
+little effort for tuning. We plan to adapt these for use in 389
+Directory Server too. Stay tuned!</p>
+
+    </div>
+</article>
+
+        </main>
+        
+        <footer>
+            
+            <div class="border"></div>
+            <div class="footer">
+                <small class="footer-left">
+                    Copyright &copy; William Brown
+                </small>
+                <small class="footer-right">
+                    Powered by <a href="https://www.getzola.org">Zola</a> | Theme <a href="https://github.com/barlog-m/oceanic-zen">Oceanic Zen</a>
+                </small>
+            </div>
+        
+        </footer>
+    
+        </div>
+    </body>
+</html>

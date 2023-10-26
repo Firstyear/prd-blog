@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+        <meta name="description" content="Firstyear&#x27;s blog">
+        
+
+        <title>Firstyear&#x27;s blog-a-log</title>
+
+        
+          <link rel="alternate" type="application/rss+xml" title="RSS" href="https://fy.blackhats.net.au/rss.xml">
+        
+
+        
+            <link rel="stylesheet" href="https://fy.blackhats.net.au/theme.css">
+        
+        
+    </head>
+    <body>
+        <div class="content">
+        
+        
+            <header>
+                <div class="header-left">
+                    <a href="https:&#x2F;&#x2F;fy.blackhats.net.au" class="logo">Firstyear&#x27;s blog-a-log</a>
+                </div>
+                <div class="header-right">
+                    <nav itemscope itemtype="http://schema.org/SiteNavigationElement">
+                      <ul>
+                        
+                        
+                            
+                            <li class="nav">
+                                <a itemprop="url" href="https://fy.blackhats.net.au/blog/">
+                                    <span itemprop="name">Blog</span>
+                                </a>
+                            </li>
+                        
+                            
+                            <li class="nav">
+                                <a itemprop="url" href="https://fy.blackhats.net.au/pages/">
+                                    <span itemprop="name">Pages</span>
+                                </a>
+                            </li>
+                        
+                        
+                        <li class="nav">
+                            <a itemprop="url" href="https://github.com/firstyear">
+                                <img class="icon" src="https:&#x2F;&#x2F;fy.blackhats.net.au/icons/github.svg" alt="Github">
+                            </a>
+                        </li>
+                        
+                        <li class="nav">
+                            <a itemprop="url" href="/rss.xml">
+                                <img class="icon" src="https:&#x2F;&#x2F;fy.blackhats.net.au/rss-logo.png" alt="rss">
+                            </a>
+                        </li>
+                      </ul>
+                    </nav>
+                </div>
+            </header>
+        
+        
+        <main>
+            
+<article itemscope itemtype="http://schema.org/BlogPosting">
+    <div itemprop="headline">
+        <h1>LDAP Guide Part 2: Searching</h1>
+        <div class="border"></div>
+        <time datetime="2016-07-05" class="date" itemprop="datePublished">
+            05 Jul 2016
+        </time>
+    </div>
+    <div itemprop="articleBody">
+        <h1 id="ldap-guide-part-2-searching">LDAP Guide Part 2: Searching</h1>
+<p>In the first part, we discussed how and LDAP tree is laid out, and why
+it's called a &quot;tree&quot;.</p>
+<p>In this part, we will discuss the most important and fundamental
+component of ldap: Searching.</p>
+<p>A note is that <em>all</em> examples and commands in this document <em>work</em>. I
+have established an internet facing ldap server with which you can query
+to test out searches. This will work on any RPM based system with
+openldap-clients installed, or OSX.</p>
+<p>To test connectivity you should see the following:</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>I0&gt; ldapsearch -H ldap://exampleldap.blackhats.net.au:3389 -b &#39;&#39; -s base -x -LLL vendorVersion
+</span><span>dn:
+</span><span>vendorVersion: 389-Directory/1.3.4.0 B2016.175.1716
+</span></code></pre>
+<p>If you see any other errors, you have some issue with your network or
+environment.</p>
+<h2 id="introduction">Introduction</h2>
+<p>Remember that we have a tree of objects, organised by their RDN, the
+Relative Distinguished Name.</p>
+<p>An LDAP object looks like this:</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>dn: ou=Groups,dc=example,dc=com
+</span><span>objectClass: top
+</span><span>objectClass: organizationalunit
+</span><span>ou: Groups
+</span></code></pre>
+<p>We see the DN, which is built from the RDN components. We have a number
+of objectClasses that defined the structure and attributes of the
+object. Finally, we have the attribute &quot;ou&quot;, which in this case
+happens to be our RDN.</p>
+<p>A more &quot;complete&quot; object is this example:</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>dn: cn=Accounting Managers,ou=Groups,dc=example,dc=com
+</span><span>objectClass: top
+</span><span>objectClass: groupOfUniqueNames
+</span><span>cn: Accounting Managers
+</span><span>ou: groups
+</span><span>description: People who can manage accounting entries
+</span><span>uniqueMember: cn=Directory Manager
+</span></code></pre>
+<p>Again we can see the DN, the objectclasses, and the cn, which is our
+RDN. We also have a number of other attributes, such as ou, description,
+uniqueMember. This are <em>not</em> part of the RDN, but they are still parts
+of the object.</p>
+<h2 id="basic-searching">Basic searching</h2>
+<p>Because LDAP is a tree, we must define a basedn: The &quot;root&quot; or
+&quot;anchor&quot; point in the tree we want to search beneath. To show what
+basedns are avaliable, we can query the special '' or blank rootDSE
+(Directory Server Entry).</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>ldapsearch -H ldap://exampleldap.blackhats.net.au:3389 -b &#39;&#39; -s base -x namingContexts
+</span><span>...
+</span><span>namingContexts: dc=example,dc=com
+</span></code></pre>
+<p>We can now use this in our search command: Note the -b argument. This is
+the search basedn.</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>ldapsearch -H ldap://exampleldap.blackhats.net.au:3389 -x -b &#39;dc=example,dc=com&#39;
+</span></code></pre>
+<p>You should see a lot of data on your screen from that last command! We
+just showed every object in the tree. Here is the layout of the data in
+the exampleldap server to help you understand that output.</p>
+<p><img src="/_static/search-1.svg" alt="image" />{width=&quot;850px&quot;}</p>
+<h2 id="using-a-different-basedn">Using a different basedn</h2>
+<p>We are not just limited to using the basedn &quot;dc=example,dc=com&quot;. This
+returns a lot of data, so sometimes we might want to focus our search.</p>
+<p>By default LDAP is performing what is called a <em>subtree</em> search. A
+subtree search means &quot;include all entries including the basedn in my
+search&quot;.</p>
+<p>Lets say we wanted to see just the entries highlighted in blue.</p>
+<p><img src="/_static/search-2.svg" alt="image" />{width=&quot;850px&quot;}</p>
+<p>The solution is to <em>change</em> the basedn of our search.</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>ldapsearch -H ldap://exampleldap.blackhats.net.au:3389 -x -b &#39;ou=Groups,dc=example,dc=com&#39;
+</span></code></pre>
+<p>Now you should see that we only see the results highlighted in blue.</p>
+<p>You can try this for other parts of the directory too.</p>
+<h2 id="limiting-the-scope-of-the-search">Limiting the scope of the search</h2>
+<p>As previously mentioned, we are by default performing a subtree search
+for ldap. But perhaps we only wanted to focus our search further.</p>
+<p>This is controlled by the '-s' parameter to the ldapsearch command.</p>
+<p>In this case, we want only the nodes again, in blue. This time we want
+only the child entries of ou=Groups, but <em>not</em> ou=Groups itself.</p>
+<p><img src="/_static/search-3.svg" alt="image" />{width=&quot;850px&quot;}</p>
+<p>Now we need to limit not the basedn of the search, but the <em>scope</em>. The
+ldap search scope says which entries we should use. We have already
+discussed subtree. In this case we want to use the scope called
+<em>onelevel</em>. This means &quot;search entries that are direct children of the
+basedn only&quot;.</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>ldapsearch -H ldap://exampleldap.blackhats.net.au:3389 -x -s onelevel -b &#39;ou=Groups,dc=example,dc=com&#39;
+</span></code></pre>
+<p>From the result, you can see, we only see the entries again in blue.</p>
+<p>A key point of onelevel is the direct children only are searched. So
+were we to move the basedn back up to dc=example,dc=com, and perform a
+onelevel search, we will only see the following.</p>
+<p><img src="/_static/search-4.svg" alt="image" />{width=&quot;850px&quot;}</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>ldapsearch -H ldap://exampleldap.blackhats.net.au:3389 -x -s onelevel -b &#39;dc=example,dc=com&#39;
+</span></code></pre>
+<p>In addition to subtree and onelevel we have one more search scope. The
+final scope is named 'base'. This search scope returns <em>only</em> the
+basedn of the search.</p>
+<p>So if we were to want to retrieve a single entry by DN, this is how we
+would achieve that.</p>
+<p><img src="/_static/search-5.svg" alt="image" />{width=&quot;850px&quot;}</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>ldapsearch -H ldap://exampleldap.blackhats.net.au:3389 -x -s base -b &#39;ou=Groups,dc=example,dc=com&#39;
+</span></code></pre>
+<h2 id="filtering-a-set-of-objects">Filtering a set of objects</h2>
+<p>The most important part of a search is likely the filter. This defines a
+query where the objects returned must match the filter conditions.</p>
+<p>A filter applies to every attribute of every object within the search
+scope. IE It does not just apply to the RDN of the object.</p>
+<p>Filters take the form:</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>(attribute=value)
+</span></code></pre>
+<p>Filters can be nested also with special conditions. The condition
+applies to all filters that follow within the same level of brackets.</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>(condition (attribute=value)(attribute=value))
+</span></code></pre>
+<p>By default, ldapsearch provides the filter</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>(objectClass=*)
+</span></code></pre>
+<p>* is a special value, representing &quot;any possible value&quot;. Because all
+objects must have an objectClass, this filter is the equivalent to
+saying &quot;all objects&quot;.</p>
+<p>You can see this doesn't change the output when we run these two
+commands:</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>ldapsearch -H ldap://exampleldap.blackhats.net.au:3389 -x -s sub -b &#39;ou=Groups,dc=example,dc=com&#39; &#39;(objectClass=*)&#39;
+</span><span>ldapsearch -H ldap://exampleldap.blackhats.net.au:3389 -x -s sub -b &#39;ou=Groups,dc=example,dc=com&#39;
+</span></code></pre>
+<p>If we were to want to retrieve <em>only</em> the HR Managers group, but we
+didn't know it's RDN / DN. Because we know it has the attribute
+&quot;cn=HR Managers&quot;, we can construct a filter that will retrieve &quot;any
+object where cn exactly matches the value HR Managers.</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>ldapsearch -H ldap://exampleldap.blackhats.net.au:3389 -x -s sub -b &#39;ou=Groups,dc=example,dc=com&#39; &#39;(cn=HR Managers)&#39;
+</span></code></pre>
+<p>Say that you did not know that the HR Managers group was in ou=Groups.
+The following would also be valid:</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>ldapsearch -H ldap://exampleldap.blackhats.net.au:3389 -x -s sub -b &#39;dc=example,dc=com&#39; &#39;(cn=HR Managers)&#39;
+</span></code></pre>
+<p>Thus, you often see queries using the base namingContext of the
+directory, but applying filters to limit the objects returned.</p>
+<p>More complex filters than this exist, and will be part 3 of this guide.</p>
+<h2 id="attributes-limiting-what-we-get-back">Attributes: Limiting what we get back</h2>
+<p>When we are searching, we often do not want the entire object returned
+to us. We only need to see one important piece of data. For our HR
+Managers group, we want to know who the members are. Recall the object
+is:</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>dn: cn=HR Managers,ou=Groups,dc=example,dc=com
+</span><span>objectClass: top
+</span><span>objectClass: groupOfUniqueNames
+</span><span>cn: HR Managers
+</span><span>ou: groups
+</span><span>description: People who can manage HR entries
+</span><span>uniqueMember: cn=Directory Manager
+</span></code></pre>
+<p>We only want to know who is in the uniqueMember attribute: We do not
+care for the other values.</p>
+<p>The final part of an ldapsearch is control of what attributes are
+returned. Once the scope and filters have been applied, the set of
+objects returned will only display the attributes in the list.</p>
+<p>To do this, you put a space seperated list at the end of the ldap search
+command:</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>ldapsearch -H ldap://exampleldap.blackhats.net.au:3389 -x -s sub -b &#39;dc=example,dc=com&#39; &#39;(cn=HR Managers)&#39; uniqueMember
+</span></code></pre>
+<p>You can return multiple attributes if you wish:</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>ldapsearch -H ldap://exampleldap.blackhats.net.au:3389 -x -s sub -b &#39;dc=example,dc=com&#39; &#39;(cn=HR Managers)&#39; uniqueMember cn
+</span></code></pre>
+<h2 id="conclusion">Conclusion</h2>
+<p>Ldapsearches tend to be very foreign to application developers and
+engineers when they first encounter them. Unlike SQL they are not based
+on tables and selects, and often the data is more complex is disparate.
+However with these controls, being basedn, scope, filter and attributes,
+you can completely direct your search to return the exact data that you
+require for your application or query.</p>
+<p><a href="https://fy.blackhats.net.au/pages/the-ldap-guide-part-2-searching/ldap_guide_part_3_filters.html">PART 3, filters!</a></p>
+<h2 id="notes">Notes:</h2>
+<p>The ldap server for this example is setup as:</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>sudo yum install -y 389-ds-base
+</span></code></pre>
+<p>example-setup.inf</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>[General]
+</span><span>FullMachineName = localhost.localdomain
+</span><span>ServerRoot = /lib/dirsrv
+</span><span>SuiteSpotGroup = dirsrv
+</span><span>SuiteSpotUserID = dirsrv
+</span><span>StrictHostCheck = false
+</span><span>[slapd]
+</span><span>AddOrgEntries = Yes
+</span><span>AddSampleEntries = No
+</span><span>HashedRootDNPwd =
+</span><span>InstallLdifFile = suggest
+</span><span>RootDN = cn=Directory Manager
+</span><span>RootDNPwd =
+</span><span>ServerIdentifier = example
+</span><span>ServerPort = 3389
+</span><span>Suffix = dc=example,dc=com
+</span><span>bak_dir = /var/lib/dirsrv/slapd-example/bak
+</span><span>bindir = /bin
+</span><span>cert_dir = /etc/dirsrv/slapd-example
+</span><span>config_dir = /etc/dirsrv/slapd-example
+</span><span>datadir = /share
+</span><span>db_dir = /var/lib/dirsrv/slapd-example/db
+</span><span>ds_bename = userRoot
+</span><span>inst_dir = /lib/dirsrv/slapd-example
+</span><span>ldif_dir = /var/lib/dirsrv/slapd-example/ldif
+</span><span>localstatedir = /var
+</span><span>lock_dir = /var/lock/dirsrv/slapd-example
+</span><span>log_dir = /var/log/dirsrv/slapd-example
+</span><span>naming_value = example
+</span><span>run_dir = /var/run/dirsrv
+</span><span>sbindir = /sbin
+</span><span>schema_dir = /etc/dirsrv/slapd-example/schema
+</span><span>sysconfdir = /etc
+</span><span>tmp_dir = /tmp
+</span><span>
+</span><span>setup-ds.pl --silent --file example-setup.inf
+</span><span>firewall-cmd --zone=internal --add-service=ldap
+</span><span>systemctl enable dirsrv@example
+</span><span>systemctl stop dirsrv@example
+</span><span>db2ldif -Z example -n userRoot
+</span><span>crontab -e # Put in refresh.sh to run every 4 hours.
+</span></code></pre>
+<p>refresh.sh</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>#!/bin/bash
+</span><span>systemctl stop dirsrv@example
+</span><span>ldif2db -Z example -n userRoot -i /var/lib/dirsrv/slapd-example/ldif/example-userRoot-2016_07_05_103810.ldif
+</span><span>systemctl start dirsrv@example
+</span></code></pre>
+
+    </div>
+</article>
+
+        </main>
+        
+        <footer>
+            
+            <div class="border"></div>
+            <div class="footer">
+                <small class="footer-left">
+                    Copyright &copy; William Brown
+                </small>
+                <small class="footer-right">
+                    Powered by <a href="https://www.getzola.org">Zola</a> | Theme <a href="https://github.com/barlog-m/oceanic-zen">Oceanic Zen</a>
+                </small>
+            </div>
+        
+        </footer>
+    
+        </div>
+    </body>
+</html>

@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+        <meta name="description" content="Firstyear&#x27;s blog">
+        
+
+        <title>Firstyear&#x27;s blog-a-log</title>
+
+        
+          <link rel="alternate" type="application/rss+xml" title="RSS" href="https://fy.blackhats.net.au/rss.xml">
+        
+
+        
+            <link rel="stylesheet" href="https://fy.blackhats.net.au/theme.css">
+        
+        
+    </head>
+    <body>
+        <div class="content">
+        
+        
+            <header>
+                <div class="header-left">
+                    <a href="https:&#x2F;&#x2F;fy.blackhats.net.au" class="logo">Firstyear&#x27;s blog-a-log</a>
+                </div>
+                <div class="header-right">
+                    <nav itemscope itemtype="http://schema.org/SiteNavigationElement">
+                      <ul>
+                        
+                        
+                            
+                            <li class="nav">
+                                <a itemprop="url" href="https://fy.blackhats.net.au/blog/">
+                                    <span itemprop="name">Blog</span>
+                                </a>
+                            </li>
+                        
+                            
+                            <li class="nav">
+                                <a itemprop="url" href="https://fy.blackhats.net.au/pages/">
+                                    <span itemprop="name">Pages</span>
+                                </a>
+                            </li>
+                        
+                        
+                        <li class="nav">
+                            <a itemprop="url" href="https://github.com/firstyear">
+                                <img class="icon" src="https:&#x2F;&#x2F;fy.blackhats.net.au/icons/github.svg" alt="Github">
+                            </a>
+                        </li>
+                        
+                        <li class="nav">
+                            <a itemprop="url" href="/rss.xml">
+                                <img class="icon" src="https:&#x2F;&#x2F;fy.blackhats.net.au/rss-logo.png" alt="rss">
+                            </a>
+                        </li>
+                      </ul>
+                    </nav>
+                </div>
+            </header>
+        
+        
+        <main>
+            
+<article itemscope itemtype="http://schema.org/BlogPosting">
+    <div itemprop="headline">
+        <h1>Extracting Formally Verified C with FStar and KreMLin</h1>
+        <div class="border"></div>
+        <time datetime="2018-04-30" class="date" itemprop="datePublished">
+            30 Apr 2018
+        </time>
+    </div>
+    <div itemprop="articleBody">
+        <h1 id="extracting-formally-verified-c-with-fstar-and-kremlin">Extracting Formally Verified C with FStar and KreMLin</h1>
+<p>As software engineering has progressed, the correctness of software has
+become a major issue. However the tools that exist today to help us
+create correct programs have been lacking. Human's continue to make
+mistakes that cause harm to others (even I do!).</p>
+<p>Instead, tools have now been developed that allow the verification of
+programs and algorithms as correct. These have not gained widespread
+adoption due to the complexities of their tool chains or other social
+and cultural issues.</p>
+<p>The Project Everest research has aimed to create a formally verified
+webserver and cryptography library. To achieve this they have developed
+a language called F* (FStar) and KreMLin as an extraction tool. This
+allows an FStar verified algorithm to be extracted to a working set of C
+source code - C source code that can be easily added to existing
+projects.</p>
+<h2 id="setting-up-a-fstar-and-kremlin-environment">Setting up a FStar and KreMLin environment</h2>
+<p>Today there are a number of undocumented gotchas with opam - the OCaml
+package manager. Most of these are silent errors. I used the following
+steps to get to a working environment.</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span># It&#39;s important to have bzip2 here else opam silently fails!
+</span><span>dnf install -y rsync git patch opam bzip2 which gmp gmp-devel m4 \
+</span><span>        hg unzip pkgconfig redhat-rpm-config
+</span><span>
+</span><span>opam init
+</span><span># You need 4.02.3 else wasm will not compile.
+</span><span>opam switch create 4.02.3
+</span><span>opam switch 4.02.3
+</span><span>echo &quot;. /home/Work/.opam/opam-init/init.sh &gt; /dev/null 2&gt; /dev/null || true&quot; &gt;&gt; .bashrc
+</span><span>opam install batteries fileutils yojson ppx_deriving_yojson zarith fix pprint menhir process stdint ulex wasm
+</span><span>
+</span><span>PATH &quot;~/z3/bin:~/FStar/bin:~/kremlin:$PATH&quot;
+</span><span># You can get the &quot;correct&quot; z3 version from https://github.com/FStarLang/binaries/raw/master/z3-tested/z3-4.5.1.1f29cebd4df6-x64-ubuntu-14.04.zip
+</span><span>unzip z3-4.5.1.1f29cebd4df6-x64-ubuntu-14.04.zip
+</span><span>mv z3-4.5.1.1f29cebd4df6-x64-ubuntu-14.04 z3
+</span><span>
+</span><span># You will need a &quot;stable&quot; release of FStar https://github.com/FStarLang/FStar/archive/stable.zip
+</span><span>unzip stable.zip
+</span><span>mv FStar-stable Fstar
+</span><span>cd ~/FStar
+</span><span>opam config exec -- make -C src/ocaml-output -j
+</span><span>opam config exec -- make -C ulib/ml
+</span><span>
+</span><span># You need a master branch of kremlin https://github.com/FStarLang/kremlin/archive/master.zip
+</span><span>cd ~
+</span><span>unzip master.zip
+</span><span>mv kremlin-master kremlin
+</span><span>cd kremlin
+</span><span>opam config exec -- make
+</span><span>opam config exec -- make test
+</span></code></pre>
+<h2 id="your-first-fstar-extraction">Your first FStar extraction</h2>
+
+    </div>
+</article>
+
+        </main>
+        
+        <footer>
+            
+            <div class="border"></div>
+            <div class="footer">
+                <small class="footer-left">
+                    Copyright &copy; William Brown
+                </small>
+                <small class="footer-right">
+                    Powered by <a href="https://www.getzola.org">Zola</a> | Theme <a href="https://github.com/barlog-m/oceanic-zen">Oceanic Zen</a>
+                </small>
+            </div>
+        
+        </footer>
+    
+        </div>
+    </body>
+</html>

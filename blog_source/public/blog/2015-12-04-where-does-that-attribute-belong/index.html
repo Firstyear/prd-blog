@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+        <meta name="description" content="Firstyear&#x27;s blog">
+        
+
+        <title>Firstyear&#x27;s blog-a-log</title>
+
+        
+          <link rel="alternate" type="application/rss+xml" title="RSS" href="https://fy.blackhats.net.au/rss.xml">
+        
+
+        
+            <link rel="stylesheet" href="https://fy.blackhats.net.au/theme.css">
+        
+        
+    </head>
+    <body>
+        <div class="content">
+        
+        
+            <header>
+                <div class="header-left">
+                    <a href="https:&#x2F;&#x2F;fy.blackhats.net.au" class="logo">Firstyear&#x27;s blog-a-log</a>
+                </div>
+                <div class="header-right">
+                    <nav itemscope itemtype="http://schema.org/SiteNavigationElement">
+                      <ul>
+                        
+                        
+                            
+                            <li class="nav">
+                                <a itemprop="url" href="https://fy.blackhats.net.au/blog/">
+                                    <span itemprop="name">Blog</span>
+                                </a>
+                            </li>
+                        
+                            
+                            <li class="nav">
+                                <a itemprop="url" href="https://fy.blackhats.net.au/pages/">
+                                    <span itemprop="name">Pages</span>
+                                </a>
+                            </li>
+                        
+                        
+                        <li class="nav">
+                            <a itemprop="url" href="https://github.com/firstyear">
+                                <img class="icon" src="https:&#x2F;&#x2F;fy.blackhats.net.au/icons/github.svg" alt="Github">
+                            </a>
+                        </li>
+                        
+                        <li class="nav">
+                            <a itemprop="url" href="/rss.xml">
+                                <img class="icon" src="https:&#x2F;&#x2F;fy.blackhats.net.au/rss-logo.png" alt="rss">
+                            </a>
+                        </li>
+                      </ul>
+                    </nav>
+                </div>
+            </header>
+        
+        
+        <main>
+            
+<article itemscope itemtype="http://schema.org/BlogPosting">
+    <div itemprop="headline">
+        <h1>Where does that attribute belong?</h1>
+        <div class="border"></div>
+        <time datetime="2015-12-04" class="date" itemprop="datePublished">
+            04 Dec 2015
+        </time>
+    </div>
+    <div itemprop="articleBody">
+        <h1 id="where-does-that-attribute-belong">Where does that attribute belong?</h1>
+<p>A lot of the time in ldap, you spend your time scratching your head
+thinking &quot;Hey, I wish I knew what objectclass I needed for attribute
+X&quot;.</p>
+<p>Yes, you can go through the schema, grep out what objectclasses. But
+it's a bit tedious, and it's also not very accessible.</p>
+<p>In lib389 I have written a pair of tools to help with this.</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>lib389/clitools/ds_schema_attributetype_list.py
+</span><span>lib389/clitools/ds_schema_attributetype_query.py
+</span></code></pre>
+<p>List does what you expect: It lists the attributes available on a
+server, but does so neatly compared to ldapsearch -b cn=schema. The
+output for comparison:</p>
+<p>ldapsearch -b 'cn=schema' -x '(objectClass=*)' attributeTypes :</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>...
+</span><span>attributeTypes: ( 1.2.840.113556.1.2.102 NAME &#39;memberOf&#39; DESC &#39;Group that the 
+</span><span> entry belongs to&#39; SYNTAX 1.3.6.1.4.1.1466.115.121.1.12 X-ORIGIN &#39;Netscape Del
+</span><span> egated Administrator&#39; )
+</span><span>...
+</span></code></pre>
+<p>python lib389/clitools/ds_schema_attributetype_list.py -i localhost :</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>( 1.2.840.113556.1.2.102 NAME &#39;memberOf&#39; DESC &#39;Group that the entry belongs to&#39; SYNTAX 1.3.6.1.4.1.1466.115.121.1.12 X-ORIGIN &#39;Netscape Delegated Administrator&#39; )
+</span></code></pre>
+<p>The big difference is that it's on one line: Much easier to grep
+through.</p>
+<p>The real gem is the query tool.</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>python lib389/clitools/ds_schema_attributetype_query.py -i localhost -a memberOf
+</span><span>( 1.2.840.113556.1.2.102 NAME &#39;memberOf&#39; DESC &#39;Group that the entry belongs to&#39; SYNTAX 1.3.6.1.4.1.1466.115.121.1.12 X-ORIGIN &#39;Netscape Delegated Administrator&#39; )
+</span><span>MUST
+</span><span>MAY
+</span><span>( 2.16.840.1.113730.3.2.130 NAME &#39;inetUser&#39; DESC &#39;Auxiliary class which must be present in an entry for delivery of subscriber services&#39; SUP top AUXILIARY MAY ( uid $ inetUserStatus $ inetUserHttpURL $ userPassword $ memberOf ) )
+</span><span>( 2.16.840.1.113730.3.2.112 NAME &#39;inetAdmin&#39; DESC &#39;Marker for an administrative group or user&#39; SUP top AUXILIARY MAY ( aci $ memberOf $ adminRole ) )
+</span></code></pre>
+<p>Shows you the attribute, and exactly which objectClasses MAY and MUST
+host this attribute. Additionally, because we give you the objectClasses
+too, you can see the implications of which one you want to enable an add
+to your object.</p>
+<p>Happy schema querying.</p>
+<p>&lt;pre&gt;EDIT 2015-12-07 &lt;/pre&gt; Viktor A pointed out that you can do the
+following:</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>ldapsearch -o ldif-wrap=no -x -b &#39;cn=schema&#39;  &#39;(objectClass=*)&#39; attributeTypes
+</span><span>...
+</span><span>attributeTypes: ( 2.16.840.1.113730.3.1.612 NAME &#39;generation&#39; DESC &#39;Netscape defined attribute type&#39; SYNTAX 1.3.6.1.4.1.1466.115.121.1.26 X-ORIGIN &#39;Netscape Directory Server&#39; )
+</span><span>&lt;/pre&gt; 
+</span><span>
+</span><span>This will put all the results onto one line rather than wrapping at 80. Additionally, if you find results that are base64ed:
+</span><span>
+</span><span>un64ldif () {
+</span><span> while read l; do
+</span><span>  echo &quot;$l&quot; | grep &#39;^\([^:]\+: \|$\)&#39; || \
+</span><span>   echo &quot;${l%%:: *}: $(base64 -d &lt;&lt;&lt; &quot;${l#*:: }&quot;)&quot;
+</span><span> done
+</span><span> return 0
+</span><span>}
+</span></code></pre>
+<p>Thanks for the comment! 41</p>
+
+    </div>
+</article>
+
+        </main>
+        
+        <footer>
+            
+            <div class="border"></div>
+            <div class="footer">
+                <small class="footer-left">
+                    Copyright &copy; William Brown
+                </small>
+                <small class="footer-right">
+                    Powered by <a href="https://www.getzola.org">Zola</a> | Theme <a href="https://github.com/barlog-m/oceanic-zen">Oceanic Zen</a>
+                </small>
+            </div>
+        
+        </footer>
+    
+        </div>
+    </body>
+</html>

@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+        <meta name="description" content="Firstyear&#x27;s blog">
+        
+
+        <title>Firstyear&#x27;s blog-a-log</title>
+
+        
+          <link rel="alternate" type="application/rss+xml" title="RSS" href="https://fy.blackhats.net.au/rss.xml">
+        
+
+        
+            <link rel="stylesheet" href="https://fy.blackhats.net.au/theme.css">
+        
+        
+    </head>
+    <body>
+        <div class="content">
+        
+        
+            <header>
+                <div class="header-left">
+                    <a href="https:&#x2F;&#x2F;fy.blackhats.net.au" class="logo">Firstyear&#x27;s blog-a-log</a>
+                </div>
+                <div class="header-right">
+                    <nav itemscope itemtype="http://schema.org/SiteNavigationElement">
+                      <ul>
+                        
+                        
+                            
+                            <li class="nav">
+                                <a itemprop="url" href="https://fy.blackhats.net.au/blog/">
+                                    <span itemprop="name">Blog</span>
+                                </a>
+                            </li>
+                        
+                            
+                            <li class="nav">
+                                <a itemprop="url" href="https://fy.blackhats.net.au/pages/">
+                                    <span itemprop="name">Pages</span>
+                                </a>
+                            </li>
+                        
+                        
+                        <li class="nav">
+                            <a itemprop="url" href="https://github.com/firstyear">
+                                <img class="icon" src="https:&#x2F;&#x2F;fy.blackhats.net.au/icons/github.svg" alt="Github">
+                            </a>
+                        </li>
+                        
+                        <li class="nav">
+                            <a itemprop="url" href="/rss.xml">
+                                <img class="icon" src="https:&#x2F;&#x2F;fy.blackhats.net.au/rss-logo.png" alt="rss">
+                            </a>
+                        </li>
+                      </ul>
+                    </nav>
+                </div>
+            </header>
+        
+        
+        <main>
+            
+<article itemscope itemtype="http://schema.org/BlogPosting">
+    <div itemprop="headline">
+        <h1>Nextcloud - Unable to Open Photos Library</h1>
+        <div class="border"></div>
+        <time datetime="2021-12-21" class="date" itemprop="datePublished">
+            21 Dec 2021
+        </time>
+    </div>
+    <div itemprop="articleBody">
+        <h1 id="nextcloud-unable-to-open-photos-library">Nextcloud - Unable to Open Photos Library</h1>
+<p>I noticed since macos 11.6.2 that Nextcloud has been unable to sync my
+photos library. Looking into this error in Console.app I saw:</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>error   kernel  System Policy: Nextcloud(798) deny(1) file-read-data /Users/william/Pictures/Photos Library.photoslibrary
+</span></code></pre>
+<p>It seems that Nextcloud is not <em>sandboxed</em> which means that macos
+enforces stricter permissions on what this can or can not access, which
+is what prevented the photos library from syncing.</p>
+<p>To resolve this you can go to System Preferences -&gt; Security and
+Privacy -&gt; Privacy -&gt; Full Disk Access and then grant Nextcloud.app
+full disk access which will allow it to read the filesystem.</p>
+<p>I tried to allow this via the files and folders access but I was unable
+to add/remove new items to this list.</p>
+
+    </div>
+</article>
+
+        </main>
+        
+        <footer>
+            
+            <div class="border"></div>
+            <div class="footer">
+                <small class="footer-left">
+                    Copyright &copy; William Brown
+                </small>
+                <small class="footer-right">
+                    Powered by <a href="https://www.getzola.org">Zola</a> | Theme <a href="https://github.com/barlog-m/oceanic-zen">Oceanic Zen</a>
+                </small>
+            </div>
+        
+        </footer>
+    
+        </div>
+    </body>
+</html>

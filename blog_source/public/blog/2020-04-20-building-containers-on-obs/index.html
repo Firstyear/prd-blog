@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+        <meta name="description" content="Firstyear&#x27;s blog">
+        
+
+        <title>Firstyear&#x27;s blog-a-log</title>
+
+        
+          <link rel="alternate" type="application/rss+xml" title="RSS" href="https://fy.blackhats.net.au/rss.xml">
+        
+
+        
+            <link rel="stylesheet" href="https://fy.blackhats.net.au/theme.css">
+        
+        
+    </head>
+    <body>
+        <div class="content">
+        
+        
+            <header>
+                <div class="header-left">
+                    <a href="https:&#x2F;&#x2F;fy.blackhats.net.au" class="logo">Firstyear&#x27;s blog-a-log</a>
+                </div>
+                <div class="header-right">
+                    <nav itemscope itemtype="http://schema.org/SiteNavigationElement">
+                      <ul>
+                        
+                        
+                            
+                            <li class="nav">
+                                <a itemprop="url" href="https://fy.blackhats.net.au/blog/">
+                                    <span itemprop="name">Blog</span>
+                                </a>
+                            </li>
+                        
+                            
+                            <li class="nav">
+                                <a itemprop="url" href="https://fy.blackhats.net.au/pages/">
+                                    <span itemprop="name">Pages</span>
+                                </a>
+                            </li>
+                        
+                        
+                        <li class="nav">
+                            <a itemprop="url" href="https://github.com/firstyear">
+                                <img class="icon" src="https:&#x2F;&#x2F;fy.blackhats.net.au/icons/github.svg" alt="Github">
+                            </a>
+                        </li>
+                        
+                        <li class="nav">
+                            <a itemprop="url" href="/rss.xml">
+                                <img class="icon" src="https:&#x2F;&#x2F;fy.blackhats.net.au/rss-logo.png" alt="rss">
+                            </a>
+                        </li>
+                      </ul>
+                    </nav>
+                </div>
+            </header>
+        
+        
+        <main>
+            
+<article itemscope itemtype="http://schema.org/BlogPosting">
+    <div itemprop="headline">
+        <h1>Building containers on OBS</h1>
+        <div class="border"></div>
+        <time datetime="2020-04-20" class="date" itemprop="datePublished">
+            20 Apr 2020
+        </time>
+    </div>
+    <div itemprop="articleBody">
+        <h1 id="building-containers-on-obs">Building containers on OBS</h1>
+<p>My friend showed me how to build containers in OBS, the opensuse build
+service. It makes it really quite nice, as the service can parse your
+dockerfile, and automatically trigger rebuilds when any package
+dependency in the chain requires a rebuild.</p>
+<p>The simplest way is to have a seperate project for your containers to
+make the repository setup a little easier.</p>
+<p>When you edit the project metadata, if the project doesn't already
+exist, a new one is created. So we can start by filling out the template
+from the command:</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>osc meta prj -e home:firstyear:containers
+</span></code></pre>
+<p>This will give you a template: We need to add some repository lines:</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>&lt;project name=&quot;home:firstyear:apps&quot;&gt;
+</span><span>  &lt;title&gt;Containers Demo&lt;/title&gt;
+</span><span>  &lt;description&gt;Containers Demo&lt;/description&gt;
+</span><span>  &lt;person userid=&quot;firstyear&quot; role=&quot;bugowner&quot;/&gt;
+</span><span>  &lt;person userid=&quot;firstyear&quot; role=&quot;maintainer&quot;/&gt;
+</span><span>  &lt;build&gt;
+</span><span>    &lt;enable/&gt;
+</span><span>  &lt;/build&gt;
+</span><span>  &lt;publish&gt;
+</span><span>    &lt;enable/&gt;
+</span><span>  &lt;/publish&gt;
+</span><span>  &lt;debuginfo&gt;
+</span><span>    &lt;enable/&gt;
+</span><span>  &lt;/debuginfo&gt;
+</span><span>  &lt;!-- this repository --&gt;
+</span><span>  &lt;repository name=&quot;containers&quot;&gt;
+</span><span>    &lt;path project=&quot;openSUSE:Templates:Images:Tumbleweed&quot; repository=&quot;containers&quot;/&gt;
+</span><span>    &lt;arch&gt;x86_64&lt;/arch&gt;
+</span><span>  &lt;/repository&gt;
+</span><span>&lt;/project&gt;
+</span></code></pre>
+<p>Remember, to set the publist to &quot;enable&quot; if you want the docker images
+you build to be pushed to the registry!</p>
+<p>Now that that's done, we can check out the project, and create a new
+container package within.</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>osc co home:firstyear:containers
+</span><span>cd home:firstyear:containers
+</span><span>osc mkpac mycontainer
+</span></code></pre>
+<p>Now in the mycontainer folder you can start to build a container. Add
+your dockerfile:</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>#!BuildTag: mycontainer
+</span><span>#
+</span><span># docker pull registry.opensuse.org/home/firstyear/apps/containers/mycontainer:latest
+</span><span>#                                   ^projectname        ^repos     ^ build tag
+</span><span>FROM opensuse/tumbleweed:latest
+</span><span>
+</span><span>#
+</span><span># only one zypper ar command per line. only repositories inside the OBS are allowed
+</span><span>#
+</span><span>RUN zypper ar http://download.opensuse.org/repositories/home:firstyear:apps/openSUSE_Tumbleweed/ &quot;home:firstyear:apps&quot;
+</span><span>RUN zypper mr -p 97 &quot;home:firstyear:apps&quot;
+</span><span>RUN zypper --gpg-auto-import-keys ref
+</span><span>RUN zypper install -y vim-data vim python3-ipython shadow python3-praw
+</span><span># Then the rest of your container as per usual ...
+</span></code></pre>
+<p>Then to finish up, you can commit this:</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>osc add Dockerfile
+</span><span>osc ci
+</span><span>osc results
+</span></code></pre>
+
+    </div>
+</article>
+
+        </main>
+        
+        <footer>
+            
+            <div class="border"></div>
+            <div class="footer">
+                <small class="footer-left">
+                    Copyright &copy; William Brown
+                </small>
+                <small class="footer-right">
+                    Powered by <a href="https://www.getzola.org">Zola</a> | Theme <a href="https://github.com/barlog-m/oceanic-zen">Oceanic Zen</a>
+                </small>
+            </div>
+        
+        </footer>
+    
+        </div>
+    </body>
+</html>

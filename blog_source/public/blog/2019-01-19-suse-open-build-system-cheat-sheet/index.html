@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+        <meta name="description" content="Firstyear&#x27;s blog">
+        
+
+        <title>Firstyear&#x27;s blog-a-log</title>
+
+        
+          <link rel="alternate" type="application/rss+xml" title="RSS" href="https://fy.blackhats.net.au/rss.xml">
+        
+
+        
+            <link rel="stylesheet" href="https://fy.blackhats.net.au/theme.css">
+        
+        
+    </head>
+    <body>
+        <div class="content">
+        
+        
+            <header>
+                <div class="header-left">
+                    <a href="https:&#x2F;&#x2F;fy.blackhats.net.au" class="logo">Firstyear&#x27;s blog-a-log</a>
+                </div>
+                <div class="header-right">
+                    <nav itemscope itemtype="http://schema.org/SiteNavigationElement">
+                      <ul>
+                        
+                        
+                            
+                            <li class="nav">
+                                <a itemprop="url" href="https://fy.blackhats.net.au/blog/">
+                                    <span itemprop="name">Blog</span>
+                                </a>
+                            </li>
+                        
+                            
+                            <li class="nav">
+                                <a itemprop="url" href="https://fy.blackhats.net.au/pages/">
+                                    <span itemprop="name">Pages</span>
+                                </a>
+                            </li>
+                        
+                        
+                        <li class="nav">
+                            <a itemprop="url" href="https://github.com/firstyear">
+                                <img class="icon" src="https:&#x2F;&#x2F;fy.blackhats.net.au/icons/github.svg" alt="Github">
+                            </a>
+                        </li>
+                        
+                        <li class="nav">
+                            <a itemprop="url" href="/rss.xml">
+                                <img class="icon" src="https:&#x2F;&#x2F;fy.blackhats.net.au/rss-logo.png" alt="rss">
+                            </a>
+                        </li>
+                      </ul>
+                    </nav>
+                </div>
+            </header>
+        
+        
+        <main>
+            
+<article itemscope itemtype="http://schema.org/BlogPosting">
+    <div itemprop="headline">
+        <h1>SUSE Open Build Service cheat sheet</h1>
+        <div class="border"></div>
+        <time datetime="2019-01-19" class="date" itemprop="datePublished">
+            19 Jan 2019
+        </time>
+    </div>
+    <div itemprop="articleBody">
+        <h1 id="suse-open-build-service-cheat-sheet">SUSE Open Build Service cheat sheet</h1>
+<p>Part of starting at SUSE has meant that I get to learn about Open Build
+Service. I've known that the project existed for a long time but I have
+never had a chance to use it. So far I'm thoroughly impressed by how it
+works and the features it offers.</p>
+<h2 id="as-a-consumer">As A Consumer</h2>
+<p>The best part of OBS is that it's trivial on OpenSUSE to consume
+content from it. Zypper can add projects with the command:</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>zypper ar obs://&lt;project name&gt; &lt;repo nickname&gt;
+</span><span>zypper ar obs://network:ldap network:ldap
+</span></code></pre>
+<p>I like to give the repo nickname (your choice) to be the same as the
+project name so I know what I have enabled. Once you run this you can
+easily consume content from OBS.</p>
+<h2 id="package-management">Package Management</h2>
+<p>As someone who has started to contribute to the suse 389-ds package,
+I've been slowly learning how this work flow works. OBS similar to
+GitHub/Lab allows a branching and request model.</p>
+<p>On OpenSUSE you will want to use the osc tool for your workflow:</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>zypper in osc
+</span><span># If you plan to use the &quot;service&quot; command
+</span><span>zypper in obs-service-tar obs-service-obs_scm obs-service-recompress obs-service-set_version obs-service-download_files python-xml obs-service-format_spec_file
+</span></code></pre>
+<p>You can branch from an existing project to make changes with:</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>osc branch &lt;project&gt; &lt;package&gt;
+</span><span>osc branch network:ldap 389-ds
+</span></code></pre>
+<p>This will branch the project to my home namespace. For me this will land
+in &quot;home:firstyear:branches:network:ldap&quot;. Now I can checkout the
+content on to my machine to work on it.</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>osc co &lt;project&gt;
+</span><span>osc co home:firstyear:branches:network:ldap
+</span></code></pre>
+<p>This will create the folder &quot;home:...:ldap&quot; in the current working
+directory.</p>
+<p>From here you can now work on the project. Some useful commands are:</p>
+<p>Add new files to the project (patches, new source tarballs etc).</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>osc add &lt;path to file&gt;
+</span><span>osc add feature.patch
+</span><span>osc add new-source.tar.xz
+</span></code></pre>
+<p>Edit the change log of the project (I think this is used in release
+notes?)</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>osc vc
+</span></code></pre>
+<p>To ammend your changes, use:</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>osc vc -e
+</span></code></pre>
+<p>Build your changes locally matching the system you are on. Packages
+normally build on all/most OpenSUSE versions and architectures, this
+will build just for your local system and arch.</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>osc build
+</span></code></pre>
+<p>Make sure you clean up files you aren't using any more with:</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>osc rm &lt;filename&gt;
+</span><span># This commands removes anything untracked by osc.
+</span><span>osc clean
+</span></code></pre>
+<p>Commit your changes to the OBS server, where a complete build will be
+triggered:</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>osc commit
+</span></code></pre>
+<p>View the results of the last commit:</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>osc results
+</span></code></pre>
+<p>Enable people to use your branch/project as a repository. You edit the
+project metadata and enable repo publishing:</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>osc meta prj -e &lt;name of project&gt;
+</span><span>osc meta prj -e home:firstyear:branches:network:ldap
+</span><span>
+</span><span># When your editor opens, change this section to enabled (disabled by default):
+</span><span>&lt;publish&gt;
+</span><span>  &lt;enabled /&gt;
+</span><span>&lt;/publish&gt;
+</span></code></pre>
+<p>NOTE: In some cases if you have the package already installed, and you
+add the repo/update it won't install from your repo. This is because in
+SUSE packages have a notion of &quot;vendoring&quot;. They continue to update
+from the same repo as they were originally installed from. So if you
+want to change this you use:</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>zypper [d]up --from &lt;repo name&gt;
+</span></code></pre>
+<p>You can then create a &quot;request&quot; to merge your branch changes back to
+the project origin. This is:</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>osc sr
+</span></code></pre>
+<p>A helpful maintainer will then review your changes. You can see this
+with.</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>osc rq show &lt;your request id&gt;
+</span></code></pre>
+<p>If you change your request, to submit again, use:</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>osc sr
+</span></code></pre>
+<p>And it will ask if you want to replace (supercede) the previous request.</p>
+<p>I was also helped by a friend to provie a &quot;service&quot; configuration that
+allows generation of tar balls from git. It's not always appropriate to
+use this, but if the repo has a &quot;_service&quot; file, you can regenerate
+the tar with:</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>osc service ra
+</span></code></pre>
+<p>So far this is as far as I have gotten with OBS, but I already
+appreciate how great this work flow is for package maintainers,
+reviewers and consumers. It's a pleasure to work with software this
+well built.</p>
+<p>As an additional piece of information, it's a good idea to read the <a href="https://en.opensuse.org/openSUSE:Packaging_Patches_guidelines">OBS Packaging Guidelines</a></p>
+<p>:   to be sure that you are doing the right thing!</p>
+<p># Acts as tail</p>
+<p>:   osc bl osc r -v</p>
+<p># How to access the meta and docker stuff</p>
+<blockquote>
+<p>osc meta pkg -e osc meta prj -e</p>
+</blockquote>
+<p>(will add vim to the buildroot), then you can chroot (allow editing in
+the build root)</p>
+<blockquote>
+<p>osc chroot osc build -x vim</p>
+</blockquote>
+<p>-k &lt;dir&gt; keeps artifacts in directory dir IE rpm outputs</p>
+<p>oscrc buildroot variable, mount tmpfs to that location.</p>
+<p>docker privs SYS_ADMIN, SYS_CHROOT</p>
+<p>Multiple spec: commit second spec to pkg then:</p>
+<blockquote>
+<p>osc linkpac prj pkg prj new-link-pkg</p>
+</blockquote>
+<p>rpm --eval '%{variable}'</p>
+<p>%setup -n &quot;name of what the directory unpacks to, not what to rename
+to&quot;</p>
+<p>When no link exists</p>
+<blockquote>
+<p>osc submitpac destprj deskpkg</p>
+</blockquote>
+
+    </div>
+</article>
+
+        </main>
+        
+        <footer>
+            
+            <div class="border"></div>
+            <div class="footer">
+                <small class="footer-left">
+                    Copyright &copy; William Brown
+                </small>
+                <small class="footer-right">
+                    Powered by <a href="https://www.getzola.org">Zola</a> | Theme <a href="https://github.com/barlog-m/oceanic-zen">Oceanic Zen</a>
+                </small>
+            </div>
+        
+        </footer>
+    
+        </div>
+    </body>
+</html>

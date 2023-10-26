@@ -1,0 +1,445 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+        <meta name="description" content="Firstyear&#x27;s blog">
+        
+
+        <title>Firstyear&#x27;s blog-a-log</title>
+
+        
+          <link rel="alternate" type="application/rss+xml" title="RSS" href="https://fy.blackhats.net.au/rss.xml">
+        
+
+        
+            <link rel="stylesheet" href="https://fy.blackhats.net.au/theme.css">
+        
+        
+    </head>
+    <body>
+        <div class="content">
+        
+        
+            <header>
+                <div class="header-left">
+                    <a href="https:&#x2F;&#x2F;fy.blackhats.net.au" class="logo">Firstyear&#x27;s blog-a-log</a>
+                </div>
+                <div class="header-right">
+                    <nav itemscope itemtype="http://schema.org/SiteNavigationElement">
+                      <ul>
+                        
+                        
+                            
+                            <li class="nav">
+                                <a itemprop="url" href="https://fy.blackhats.net.au/blog/">
+                                    <span itemprop="name">Blog</span>
+                                </a>
+                            </li>
+                        
+                            
+                            <li class="nav">
+                                <a itemprop="url" href="https://fy.blackhats.net.au/pages/">
+                                    <span itemprop="name">Pages</span>
+                                </a>
+                            </li>
+                        
+                        
+                        <li class="nav">
+                            <a itemprop="url" href="https://github.com/firstyear">
+                                <img class="icon" src="https:&#x2F;&#x2F;fy.blackhats.net.au/icons/github.svg" alt="Github">
+                            </a>
+                        </li>
+                        
+                        <li class="nav">
+                            <a itemprop="url" href="/rss.xml">
+                                <img class="icon" src="https:&#x2F;&#x2F;fy.blackhats.net.au/rss-logo.png" alt="rss">
+                            </a>
+                        </li>
+                      </ul>
+                    </nav>
+                </div>
+            </header>
+        
+        
+        <main>
+            
+<article itemscope itemtype="http://schema.org/BlogPosting">
+    <div itemprop="headline">
+        <h1>Making Samba 4 the default LDAP server</h1>
+        <div class="border"></div>
+        <time datetime="2018-04-18" class="date" itemprop="datePublished">
+            18 Apr 2018
+        </time>
+    </div>
+    <div itemprop="articleBody">
+        <h1 id="making-samba-4-the-default-ldap-server">Making Samba 4 the default LDAP server</h1>
+<p>Earlier this year Andrew Bartlett set me the challenge: how could we
+make Samba 4 the default LDAP server in use for Linux and UNIX systems?
+I've finally decided to tackle this, and write up some simple changes
+we can make, and decide on some long term goals to make this a reality.</p>
+<h2 id="what-makes-a-unix-directory-anyway">What makes a unix directory anyway?</h2>
+<p>Great question - this is such a broad topic, even I don't know if I can
+single out what it means. For the purposes of this exercise I'll treat
+it as &quot;what would we need from my previous workplace&quot;. My previous
+workplace had a dedicated set of 389 Directory Server machines that
+served lookups mainly for email routing, application authentication and
+more. The didn't really process a great deal of login traffic as the
+majority of the workstations were Windows - thus connected to AD.</p>
+<p>What it did show was that Linux clients and applications:</p>
+<ul>
+<li>Want to use anonymous binds and searchs - Applications and clients
+are NOT domain members - they just want to do searches</li>
+<li>The content of anonymous lookups should be &quot;public safe&quot;
+information. (IE nothing private)</li>
+<li>LDAPS is a must for binds</li>
+<li>MemberOf and group filtering is very important for access control</li>
+<li>sshPublicKey and userCertificate;binary is important for 2fa/secure
+logins</li>
+</ul>
+<p>This seems like a pretty simple list - but it's not the model Samba 4
+or AD ship with.</p>
+<p>You'll also want to harden a few default settings. These include:</p>
+<ul>
+<li>Disable Guest</li>
+<li>Disable 10 machine join policy</li>
+</ul>
+<p>AD works under the assumption that all clients are authenticated via
+kerberos, and that kerberos is the primary authentication and trust
+provider. As a result, AD often ships with:</p>
+<ul>
+<li>Disabled anonymous binds - All clients are domain members or service
+accounts</li>
+<li>No anonymous content available to search</li>
+<li>No LDAPS (GSSAPI is used instead)</li>
+<li>no sshPublicKey or userCertificates (pkinit instead via krb)</li>
+<li>Access control is much more complex topic than just &quot;matching an
+ldap filter&quot;.</li>
+</ul>
+<p>As a result, it takes a bit of effort to change Samba 4 to work in a way
+that suits both, securely.</p>
+<h2 id="isn-t-anonymous-binding-insecure">Isn't anonymous binding insecure?</h2>
+<p>Let's get this one out the way - no it's not. In every pen test I have
+seen if you can get access to a domain joined machine, you probably have
+a good chance of taking over the domain in various ways. Domain joined
+systems and krb allows lateral movement and other issues that are beyond
+the scope of this document.</p>
+<p>The lack of anonymous lookup is more about preventing information
+disclosure - security via obscurity. But it doesn't take long to
+realise that this is trivially defeated (get one user account, guest
+account, domain member and you can search ...).</p>
+<p>As a result, in some cases it may be better to allow anonymous lookups
+because then you don't have spurious service accounts, you have a clear
+understanding of what is and is not accessible as readable data, and you
+<em>don't</em> need every machine on the network to be domain joined - you
+prevent a possible foothold of lateral movement.</p>
+<p>So anonymous binding is just fine, as the unix world has shown for a
+long time. That's why I have very few concerns about enabling it. Your
+safety is in the access controls for searches, not in blocking anonymous
+reads outright.</p>
+<h2 id="installing-your-dc">Installing your DC</h2>
+<p>As I run fedora, you will need to build and install samba for source so
+you can access the heimdal kerberos functions. Fedora's samba 4 ships
+ADDC support now, but lacks some features like RODC that you may want.
+In the future I expect this will change though.</p>
+<p>These documents will help guide you:</p>
+<p><a href="https://wiki.samba.org/index.php/Package_Dependencies_Required_to_Build_Samba#Fedora_26">requirements</a></p>
+<p><a href="https://wiki.samba.org/index.php/Build_Samba_from_Source#Introduction">build
+steps</a></p>
+<p><a href="https://wiki.samba.org/index.php/Setting_up_Samba_as_an_Active_Directory_Domain_Controller">install a
+domain</a></p>
+<p>I strongly advise you use options similar to:</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>/usr/local/samba/bin/samba-tool domain provision --server-role=dc --use-rfc2307 --dns-backend=SAMBA_INTERNAL --realm=SAMDOM.EXAMPLE.COM --domain=SAMDOM --adminpass=Passw0rd
+</span></code></pre>
+<h2 id="allow-anonymous-binds-and-searches">Allow anonymous binds and searches</h2>
+<p>Now that you have a working domain controller, we should test you have
+working ldap:</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>/usr/local/samba/bin/samba-tool forest directory_service dsheuristics 0000002 -H ldaps://localhost --simple-bind-dn=&#39;administrator@samdom.example.com&#39;
+</span><span>
+</span><span>ldapsearch -b DC=samdom,DC=example,DC=com -H ldaps://localhost -x
+</span></code></pre>
+<p>You can see the domain object but nothing else. Many other blogs and
+sites recommend a blanket &quot;anonymous read all&quot; access control, but I
+think that's too broad. A better approach is to add the anonymous read
+to only the few containers that require it.</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>/usr/local/samba/bin/samba-tool dsacl set --objectdn=DC=samdom,DC=example,DC=com --sddl=&#39;(A;;RPLCLORC;;;AN)&#39; --simple-bind-dn=&quot;administrator@samdom.example.com&quot; --password=Passw0rd
+</span><span>/usr/local/samba/bin/samba-tool dsacl set --objectdn=CN=Users,DC=samdom,DC=example,DC=com --sddl=&#39;(A;CI;RPLCLORC;;;AN)&#39; --simple-bind-dn=&quot;administrator@samdom.example.com&quot; --password=Passw0rd
+</span><span>/usr/local/samba/bin/samba-tool dsacl set --objectdn=CN=Builtin,DC=samdom,DC=example,DC=com --sddl=&#39;(A;CI;RPLCLORC;;;AN)&#39; --simple-bind-dn=&quot;administrator@samdom.example.com&quot; --password=Passw0rd
+</span></code></pre>
+<p>In AD groups and users are found in cn=users, and some groups are in
+cn=builtin. So we allow read to the root domain object, then we set a
+read on cn=users and cn=builtin that inherits to it's child objects.
+The attribute policies are derived elsewhere, so we can assume that
+things like kerberos data and password material are safe with these
+simple changes.</p>
+<h2 id="configuring-ldaps">Configuring LDAPS</h2>
+<p>This is a reasonable simple exercise. Given a ca cert, key and cert we
+can place these in the correct locations samba expects. By default this
+is the private directory. In a custom install, that's
+/usr/local/samba/private/tls/, but for distros I think it's
+/var/lib/samba/private. Simply replace ca.pem, cert.pem and key.pem with
+your files and restart.</p>
+<h2 id="adding-schema">Adding schema</h2>
+<p>To allow adding schema to samba 4 you need to reconfigure the dsdb
+config on the schema master. To show the current schema master you can
+use:</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>/usr/local/samba/bin/samba-tool fsmo show -H ldaps://localhost --simple-bind-dn=&#39;administrator@adt.blackhats.net.au&#39; --password=Password1
+</span></code></pre>
+<p>Look for the value:</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>SchemaMasterRole owner: CN=NTDS Settings,CN=LDAPKDC,CN=Servers,CN=Default-First-Site-Name,CN=Sites,CN=Configuration,DC=adt,DC=blackhats,DC=net,DC=au
+</span></code></pre>
+<p>And note the CN=ldapkdc = that's the hostname of the current schema
+master.</p>
+<p>On the schema master we need to adjust the smb.conf. The change you need
+to make is:</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>[global]
+</span><span>    dsdb:schema update allowed = yes
+</span></code></pre>
+<p>Now restart the instance and we can update the schema. The following
+LDIF should work if you replace ${DOMAINDN} with your namingContext.
+You can apply it with ldapmodify</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>dn: CN=sshPublicKey,CN=Schema,CN=Configuration,DC=adt,DC=blackhats,DC=net,DC=au
+</span><span>changetype: add
+</span><span>objectClass: top
+</span><span>objectClass: attributeSchema
+</span><span>attributeID: 1.3.6.1.4.1.24552.500.1.1.1.13
+</span><span>cn: sshPublicKey
+</span><span>name: sshPublicKey
+</span><span>lDAPDisplayName: sshPublicKey
+</span><span>description: MANDATORY: OpenSSH Public key
+</span><span>attributeSyntax: 2.5.5.10
+</span><span>oMSyntax: 4
+</span><span>isSingleValued: FALSE
+</span><span>searchFlags: 8
+</span><span>
+</span><span>dn: CN=ldapPublicKey,CN=Schema,CN=Configuration,DC=adt,DC=blackhats,DC=net,DC=au
+</span><span>changetype: add
+</span><span>objectClass: top
+</span><span>objectClass: classSchema
+</span><span>governsID: 1.3.6.1.4.1.24552.500.1.1.2.0
+</span><span>cn: ldapPublicKey
+</span><span>name: ldapPublicKey
+</span><span>description: MANDATORY: OpenSSH LPK objectclass
+</span><span>lDAPDisplayName: ldapPublicKey
+</span><span>subClassOf: top
+</span><span>objectClassCategory: 3
+</span><span>defaultObjectCategory: CN=ldapPublicKey,CN=Schema,CN=Configuration,DC=adt,DC=blackhats,DC=net,DC=au
+</span><span>mayContain: sshPublicKey
+</span><span>
+</span><span>dn: CN=User,CN=Schema,CN=Configuration,DC=adt,DC=blackhats,DC=net,DC=au
+</span><span>changetype: modify
+</span><span>replace: auxiliaryClass
+</span><span>auxiliaryClass: ldapPublicKey
+</span><span>auxiliaryClass: posixAccount
+</span><span>auxiliaryClass: shadowAccount
+</span><span>-
+</span><span>
+</span><span>sudo ldapmodify -f sshpubkey.ldif -D &#39;administrator@adt.blackhats.net.au&#39; -w Password1 -H ldaps://localhost 
+</span><span>adding new entry &quot;CN=sshPublicKey,CN=Schema,CN=Configuration,DC=adt,DC=blackhats,DC=net,DC=au&quot;
+</span><span>
+</span><span>adding new entry &quot;CN=ldapPublicKey,CN=Schema,CN=Configuration,DC=adt,DC=blackhats,DC=net,DC=au&quot;
+</span><span>
+</span><span>modifying entry &quot;CN=User,CN=Schema,CN=Configuration,DC=adt,DC=blackhats,DC=net,DC=au&quot;
+</span></code></pre>
+<p>To my surprise, userCertificate already exists! The reason I missed it
+is a subtle ad schema behaviour I missed. The <em>ldap attribute</em> name is
+stored in the lDAPDisplayName and may not be the same as the CN of the
+schema element. As a result, you can find this with:</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>ldapsearch -H ldaps://localhost -b CN=Schema,CN=Configuration,DC=adt,DC=blackhats,DC=net,DC=au -x -D &#39;administrator@adt.blackhats.net.au&#39; -W &#39;(attributeId=2.5.4.36)&#39;
+</span></code></pre>
+<p>This doesn't solve my issues: Because I am a long time user of 389-ds,
+that means I need some ns compat attributes. Here I add the nsUniqueId
+value so that I can keep some compatability.</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>dn: CN=nsUniqueId,CN=Schema,CN=Configuration,DC=adt,DC=blackhats,DC=net,DC=au
+</span><span>changetype: add
+</span><span>objectClass: top
+</span><span>objectClass: attributeSchema
+</span><span>attributeID: 2.16.840.1.113730.3.1.542
+</span><span>cn: nsUniqueId
+</span><span>name: nsUniqueId
+</span><span>lDAPDisplayName: nsUniqueId
+</span><span>description: MANDATORY: nsUniqueId compatability
+</span><span>attributeSyntax: 2.5.5.10
+</span><span>oMSyntax: 4
+</span><span>isSingleValued: TRUE
+</span><span>searchFlags: 9
+</span><span>
+</span><span>dn: CN=nsOrgPerson,CN=Schema,CN=Configuration,DC=adt,DC=blackhats,DC=net,DC=au
+</span><span>changetype: add
+</span><span>objectClass: top
+</span><span>objectClass: classSchema
+</span><span>governsID: 2.16.840.1.113730.3.2.334
+</span><span>cn: nsOrgPerson
+</span><span>name: nsOrgPerson
+</span><span>description: MANDATORY: Netscape DS compat person
+</span><span>lDAPDisplayName: nsOrgPerson
+</span><span>subClassOf: top
+</span><span>objectClassCategory: 3
+</span><span>defaultObjectCategory: CN=nsOrgPerson,CN=Schema,CN=Configuration,DC=adt,DC=blackhats,DC=net,DC=au
+</span><span>mayContain: nsUniqueId
+</span><span>
+</span><span>dn: CN=User,CN=Schema,CN=Configuration,DC=adt,DC=blackhats,DC=net,DC=au
+</span><span>changetype: modify
+</span><span>replace: auxiliaryClass
+</span><span>auxiliaryClass: ldapPublicKey
+</span><span>auxiliaryClass: posixAccount
+</span><span>auxiliaryClass: shadowAccount
+</span><span>auxiliaryClass: nsOrgPerson
+</span><span>-
+</span></code></pre>
+<p>Now with this you can extend your users with the required data for SSH,
+certificates and maybe 389-ds compatability.</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>/usr/local/samba/bin/samba-tool user edit william  -H ldaps://localhost --simple-bind-dn=&#39;administrator@adt.blackhats.net.au&#39;
+</span></code></pre>
+<h2 id="performance">Performance</h2>
+<p>Out of the box a number of the unix attributes are not indexed by Active
+Directory. To fix this you need to update the search flags in the
+schema.</p>
+<p>Again, temporarily allow changes:</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>[global]
+</span><span>    dsdb:schema update allowed = yes
+</span></code></pre>
+<p>Now we need to add some indexes for common types. Note that in the
+nsUniqueId schema I already added the search flags. We also want to set
+that these values should be preserved if they become tombstones so we
+can recove them.</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>/usr/local/samba/bin/samba-tool schema attribute modify uid --searchflags=9
+</span><span>/usr/local/samba/bin/samba-tool schema attribute modify nsUniqueId --searchflags=9
+</span><span>/usr/local/samba/bin/samba-tool schema attribute modify uidnumber --searchflags=9
+</span><span>/usr/local/samba/bin/samba-tool schema attribute modify gidnumber --searchflags=9
+</span><span># Preserve on tombstone but don&#39;t index
+</span><span>/usr/local/samba/bin/samba-tool schema attribute modify x509-cert --searchflags=8
+</span><span>/usr/local/samba/bin/samba-tool schema attribute modify sshPublicKey --searchflags=8
+</span><span>/usr/local/samba/bin/samba-tool schema attribute modify gecos --searchflags=8
+</span><span>/usr/local/samba/bin/samba-tool schema attribute modify loginShell --searchflags=8
+</span><span>/usr/local/samba/bin/samba-tool schema attribute modify home-directory --searchflags=24
+</span></code></pre>
+<h2 id="ad-hardening">AD Hardening</h2>
+<p>We want to harden a few default settings that could be considered
+insecure. First, let's stop &quot;any user from being able to domain join
+machines&quot;.</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>/usr/local/samba/bin/samba-tool domain settings account_machine_join_quota 0 -H ldaps://localhost --simple-bind-dn=&#39;administrator@adt.blackhats.net.au&#39;
+</span></code></pre>
+<p>Now let's disable the Guest account</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>/usr/local/samba/bin/samba-tool user disable Guest -H ldaps://localhost --simple-bind-dn=&#39;administrator@adt.blackhats.net.au&#39;
+</span></code></pre>
+<p>I plan to write a more complete samba-tool extension for auditing these
+and more options, so stay tuned!</p>
+<h2 id="sssd-configuration">SSSD configuration</h2>
+<p>Now that our directory service is configured, we need to configure our
+clients to utilise it correctly.</p>
+<p>Here is my SSSD configuration, that supports sshPublicKey distribution,
+userCertificate authentication on workstations and SID -&gt; uid mapping.
+In the future I want to explore sudo rules in LDAP with AD, and maybe
+even HBAC rules rather than GPO.</p>
+<p>Please refer to my other blog posts on configuration of the
+userCertificates and sshKey distribution.</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>[domain/blackhats.net.au]
+</span><span>ignore_group_members = False
+</span><span>
+</span><span>debug_level=3
+</span><span># There is a bug in SSSD where this actually means &quot;ipv6 only&quot;.
+</span><span># lookup_family_order=ipv6_first
+</span><span>cache_credentials = True
+</span><span>id_provider = ldap
+</span><span>auth_provider = ldap
+</span><span>access_provider = ldap
+</span><span>chpass_provider = ldap
+</span><span>ldap_search_base = dc=blackhats,dc=net,dc=au
+</span><span>
+</span><span># This prevents an infinite referral loop.
+</span><span>ldap_referrals = False
+</span><span>ldap_id_mapping = True
+</span><span>ldap_schema = ad
+</span><span># Rather that being in domain users group, create a user private group
+</span><span># automatically on login.
+</span><span># This is very important as a security setting on unix!!!
+</span><span># See this bug if it doesn&#39;t work correctly.
+</span><span># https://pagure.io/SSSD/sssd/issue/3723
+</span><span>auto_private_groups = true
+</span><span>
+</span><span>ldap_uri = ldaps://ad.blackhats.net.au
+</span><span>ldap_tls_reqcert = demand
+</span><span>ldap_tls_cacert = /etc/pki/tls/certs/bh_ldap.crt
+</span><span>
+</span><span># Workstation access
+</span><span>ldap_access_filter = (memberOf=CN=Workstation Operators,CN=Users,DC=blackhats,DC=net,DC=au)
+</span><span>
+</span><span>ldap_user_member_of = memberof
+</span><span>ldap_user_gecos = cn
+</span><span>ldap_user_uuid = objectGUID
+</span><span>ldap_group_uuid = objectGUID
+</span><span># This is really important as it allows SSSD to respect nsAccountLock
+</span><span>ldap_account_expire_policy = ad
+</span><span>ldap_access_order = filter, expire
+</span><span># Setup for ssh keys
+</span><span>ldap_user_ssh_public_key = sshPublicKey
+</span><span># This does not require ;binary tag with AD.
+</span><span>ldap_user_certificate = userCertificate
+</span><span># This is required for the homeDirectory to be looked up in the sssd schema
+</span><span>ldap_user_home_directory = homeDirectory
+</span><span>
+</span><span>
+</span><span>[sssd]
+</span><span>services = nss, pam, ssh, sudo
+</span><span>config_file_version = 2
+</span><span>certificate_verification = no_verification
+</span><span>
+</span><span>domains = blackhats.net.au
+</span><span>[nss]
+</span><span>homedir_substring = /home
+</span><span>
+</span><span>[pam]
+</span><span>pam_cert_auth = True
+</span><span>
+</span><span>[sudo]
+</span><span>
+</span><span>[autofs]
+</span><span>
+</span><span>[ssh]
+</span><span>
+</span><span>[pac]
+</span><span>
+</span><span>[ifp]
+</span></code></pre>
+<h2 id="conclusion">Conclusion</h2>
+<p>With these simple changes we can easily make samba 4 able to perform the
+roles of other unix focused LDAP servers. This allows stateless clients,
+secure ssh key authentication, certificate authentication and more.</p>
+<p>Some future goals to improve this include:</p>
+<ul>
+<li>Ship samba 4 with schema templates that can be used</li>
+<li>Schema querying (what objectclass takes this attribute?)</li>
+<li>Group editing (same as samba-tool user edit)</li>
+<li>Security auditing tools</li>
+<li>user/group modification commands</li>
+<li>Refactor and improve the cli tools python to be api driven - move
+the logic from netcmd into samdb so that samdb can be an API that
+python can consume easier. Prevent duplication of logic.</li>
+</ul>
+<p>The goal is so that an admin never has to see an LDIF ever again.</p>
+
+    </div>
+</article>
+
+        </main>
+        
+        <footer>
+            
+            <div class="border"></div>
+            <div class="footer">
+                <small class="footer-left">
+                    Copyright &copy; William Brown
+                </small>
+                <small class="footer-right">
+                    Powered by <a href="https://www.getzola.org">Zola</a> | Theme <a href="https://github.com/barlog-m/oceanic-zen">Oceanic Zen</a>
+                </small>
+            </div>
+        
+        </footer>
+    
+        </div>
+    </body>
+</html>

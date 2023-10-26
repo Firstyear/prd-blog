@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+        <meta name="description" content="Firstyear&#x27;s blog">
+        
+
+        <title>Firstyear&#x27;s blog-a-log</title>
+
+        
+          <link rel="alternate" type="application/rss+xml" title="RSS" href="https://fy.blackhats.net.au/rss.xml">
+        
+
+        
+            <link rel="stylesheet" href="https://fy.blackhats.net.au/theme.css">
+        
+        
+    </head>
+    <body>
+        <div class="content">
+        
+        
+            <header>
+                <div class="header-left">
+                    <a href="https:&#x2F;&#x2F;fy.blackhats.net.au" class="logo">Firstyear&#x27;s blog-a-log</a>
+                </div>
+                <div class="header-right">
+                    <nav itemscope itemtype="http://schema.org/SiteNavigationElement">
+                      <ul>
+                        
+                        
+                            
+                            <li class="nav">
+                                <a itemprop="url" href="https://fy.blackhats.net.au/blog/">
+                                    <span itemprop="name">Blog</span>
+                                </a>
+                            </li>
+                        
+                            
+                            <li class="nav">
+                                <a itemprop="url" href="https://fy.blackhats.net.au/pages/">
+                                    <span itemprop="name">Pages</span>
+                                </a>
+                            </li>
+                        
+                        
+                        <li class="nav">
+                            <a itemprop="url" href="https://github.com/firstyear">
+                                <img class="icon" src="https:&#x2F;&#x2F;fy.blackhats.net.au/icons/github.svg" alt="Github">
+                            </a>
+                        </li>
+                        
+                        <li class="nav">
+                            <a itemprop="url" href="/rss.xml">
+                                <img class="icon" src="https:&#x2F;&#x2F;fy.blackhats.net.au/rss-logo.png" alt="rss">
+                            </a>
+                        </li>
+                      </ul>
+                    </nav>
+                </div>
+            </header>
+        
+        
+        <main>
+            
+<article itemscope itemtype="http://schema.org/BlogPosting">
+    <div itemprop="headline">
+        <h1>lock free database</h1>
+        <div class="border"></div>
+        <time datetime="2016-06-07" class="date" itemprop="datePublished">
+            07 Jun 2016
+        </time>
+    </div>
+    <div itemprop="articleBody">
+        <h1 id="lock-free-database">lock free database</h1>
+<p>While discussing some ideas with the owner of
+<a href="http://liblfds.org/">liblfds</a> I was thinking about some of the issues
+in the database of Directory Server, and other ldap products. What slows
+us down?</p>
+<h2 id="why-are-locks-slow">Why are locks slow?</h2>
+<p>It's a good idea to read <a href="http://liblfds.org/mediawiki/index.php?title=Article:Memory_Barriers">this
+article</a>
+to understand Memory Barriers in a cpu.</p>
+<p>When you think about the way a mutex has to work, it takes advantage of
+these primitives to create a full barrier, and do the compare and
+exchange to set the value of the lock, and to guarantee the other memory
+is synced to our core. This is pretty full on for cpu time, and in
+reverse, to unlock you have to basically do the same again. That's a
+lot of operations! (NOTE: You do a load barrier on the way in to the
+lock, and a store barrier on the unlock. The end result is the full
+barrier over the set of operations as a whole.)</p>
+<p>Lock contenion is really the killer though. If every thread is blocked
+on a single lock, they cannot progress. Given the cost of our lock, if
+we are stalling our threads behind a lock, we have cpus waiting to do
+nothing during this process. The OS scheduler helps mask this by waking
+and running another thread, but eventually contenion will win out.</p>
+<p>If we bring NUMA into the picture, our mutex may be in a different NUMA
+region than the thread requesting the lock. This adds an impact to
+latency as well!</p>
+<p>We need to try and avoid these operations if we can, to increase
+performance.</p>
+<h2 id="bdb">BDB</h2>
+<p>Currently, BDB basically serialises all operations over a set of locks
+to access to the data.</p>
+<p>This means that a set of readers and writers will execute <em>in order</em>,
+with only one at a time.</p>
+<p>Not so great for performance, but great for consistency. We are hit hard
+by our locks, and we have issues with NUMA, especially accessing the
+page caches, as we regularly have to cross NUMA regions to access the
+required memory.</p>
+<h2 id="lmdb">LMDB</h2>
+<p>LMDB does somewhat better. This is based on a COW btree, with reference
+counting to accessors. There are still locks scattered through out the
+tree, which will have an impact however.</p>
+<p>But, LMDB can establish a read only transaction, of which there can be
+many, and a serialised, single write transaction. These still suffer
+from synchronisation of the locks across cores, because LMDB basically
+allows direct memory access to the tree.</p>
+<p>As well, NUMA is an issue again: Across a NUMA region, if you access the
+DB over one of the boundaries, you will suffer a large performance hit.
+LMDB tries to offset this through it's use of the VFS for page cache.
+However that's just passing the buck. You now rely on the kernel to
+have the memory pages needed in the correct region, and that's not
+guaranteed.</p>
+<h2 id="what-can-we-do">What can we do?</h2>
+<p>We need to think about how CPU and RAM works. We need to avoid crossing
+NUMA regions, and we need to avoid costly CPU instructions and
+behaviour. We need to avoid contenion on single locks no matter where
+they may be. We need our program to act less like a human reasons about
+it, and more like how a CPU works: Asynchronously, and with
+interprocessor communication. When our program behaviour matches the
+hardware, we can achieve better performance, and correctness.</p>
+<p>In the testing of lfds, the lfds author has found that Single Thread,
+accessing memory within one NUMA region, and without locks, always wins
+by operation count. This is compared to even lock free behaviours across
+many cores.</p>
+<p>This is because in a single thread we don't <em>need</em> to lock data. It has
+exclusive access, and does not need to contend with other cores. No
+mutexes needed, no barriers needed.</p>
+<p>So we must minimise our interprocessor traversal if we can, but we want
+to keep data into a single CPU region. Our data should ideally be in the
+NUMA region we want to access it in, in the end.</p>
+<h2 id="async-db">Async db</h2>
+<p><em>Disclaimer</em>: This is just an idea, and still needs polish.</p>
+<p>We run our database, (be it lmdb, bdb, or something new) in a single
+thread, on one cpu. Now that we are within a single CPU, we can dispense
+all locking mechanisms, and still have a guarantee that the view of the
+data is correct.</p>
+<p>Every thread of our application would then be &quot;pinned&quot; to a NUMA
+region and core, to ensure that they don't move.</p>
+<p>We would then use the <a href="http://liblfds.org/mediawiki/index.php?title=r7.1.0:Queue_%28bounded,_single_producer,_single_consumer%29">single producer, single consumer bounded
+queue</a>
+from this article. Each NUMA region would establish one of these queues
+to the database thread. The bounding size is the number of working
+threads on the system. Each queue would be thread max for the bound,
+even though there are multiple regions. This is because there may be an
+unequal distribution of threads to regions, so we may have all threads
+in one region.</p>
+<p>Now, our database thread can essentially round robbin, and dequeue
+requests as they enter. We can use the DB without locks, because we are
+serialised within one thread. The results would then be placed back into
+the queue, and the requestor of the operation would be able to examine
+the results. Because we put the results into the memory space of the
+requestor, we pay the NUMA price once as we retrieve the result, rather
+than repeatedly like we do now where we access various caches and
+allocations.</p>
+<p>Why would this be better?</p>
+<ul>
+<li>We have dispensed completely with ALL mutexes and locks. The queue
+in liblfds is fast. Amazingly fast. Seriously, look at <a href="http://liblfds.org/mediawiki/index.php?title=r7.1.0:Queue_%28unbounded,_many_producer,_many_consumer%29#Benchmark_Results_and_Analysis">these
+benchmarks</a>.
+And that's on the many many queue, which is theoretically slower
+than the single single bounded queue.</li>
+<li>We keep consistency within the database. Because we only have one
+thread acting on the data, we have gained serialisation implicitly.</li>
+<li>We keep data in the NUMA regions where it needs to be. Rather than
+having a large cache that spans potentially many NUMA regions, we
+get data as we need, and put it into the numa region of the DB
+thread.</li>
+<li>Because the data is within a single thread, we take advantage of the
+cpu cache heavily, without the expense of the cpu caches to the
+other threads. Minimising page evictions and inclusions is a good
+thing.</li>
+</ul>
+<p>There are many other potential ways to improve this:</p>
+<ul>
+<li>We could potentially cache entries into the NUMA region. When a
+search is requested, provided the serial of the entry hasn't been
+advanced, the entry still within our NUMA region is valid. This
+prevents more moving between NUMA regions, again yielding a benefit.
+It would basically be:</li>
+</ul>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>    Thread A                              Thread DB
+</span><span>    Queue a read transaction with
+</span><span>    thread ID X               --&gt;
+</span><span>                              &lt;--  Open the transaction, and stash
+</span><span>
+</span><span>    Queue a search for set of IDs --&gt;
+</span><span>                                    Dequeue search request
+</span><span>                                    Build ID set
+</span><span>                                    With each ID, pair to the &quot;db version&quot; of the entry. IE USN style.
+</span><span>                              &lt;--   Return ID set to queue
+</span><span>    Examine the local cache.
+</span><span>    if ID not in local cache || 
+</span><span>    not USN matches entry in cache
+</span><span>        Add Id to &quot;retrieve set&quot;
+</span><span>    Queue a retrieve request      --&gt;
+</span><span>                                    Dequeue the retrieve request
+</span><span>                                    Copy the requested IDs / entries to Thread A
+</span><span>                              &lt;--   Return
+</span><span>
+</span><span>    Queue a transaction complete  --&gt;
+</span><span>                              &lt;--   Done
+</span></code></pre>
+<h2 id="acknowledgement">Acknowledgement</h2>
+<p>Huge thank you to Winterflaw, the author of LibLFDS for discussing these
+ideas, his future review of this idea, and for teaching me many of these
+concepts.</p>
+
+    </div>
+</article>
+
+        </main>
+        
+        <footer>
+            
+            <div class="border"></div>
+            <div class="footer">
+                <small class="footer-left">
+                    Copyright &copy; William Brown
+                </small>
+                <small class="footer-right">
+                    Powered by <a href="https://www.getzola.org">Zola</a> | Theme <a href="https://github.com/barlog-m/oceanic-zen">Oceanic Zen</a>
+                </small>
+            </div>
+        
+        </footer>
+    
+        </div>
+    </body>
+</html>

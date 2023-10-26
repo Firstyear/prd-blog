@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+        <meta name="description" content="Firstyear&#x27;s blog">
+        
+
+        <title>Firstyear&#x27;s blog-a-log</title>
+
+        
+          <link rel="alternate" type="application/rss+xml" title="RSS" href="https://fy.blackhats.net.au/rss.xml">
+        
+
+        
+            <link rel="stylesheet" href="https://fy.blackhats.net.au/theme.css">
+        
+        
+    </head>
+    <body>
+        <div class="content">
+        
+        
+            <header>
+                <div class="header-left">
+                    <a href="https:&#x2F;&#x2F;fy.blackhats.net.au" class="logo">Firstyear&#x27;s blog-a-log</a>
+                </div>
+                <div class="header-right">
+                    <nav itemscope itemtype="http://schema.org/SiteNavigationElement">
+                      <ul>
+                        
+                        
+                            
+                            <li class="nav">
+                                <a itemprop="url" href="https://fy.blackhats.net.au/blog/">
+                                    <span itemprop="name">Blog</span>
+                                </a>
+                            </li>
+                        
+                            
+                            <li class="nav">
+                                <a itemprop="url" href="https://fy.blackhats.net.au/pages/">
+                                    <span itemprop="name">Pages</span>
+                                </a>
+                            </li>
+                        
+                        
+                        <li class="nav">
+                            <a itemprop="url" href="https://github.com/firstyear">
+                                <img class="icon" src="https:&#x2F;&#x2F;fy.blackhats.net.au/icons/github.svg" alt="Github">
+                            </a>
+                        </li>
+                        
+                        <li class="nav">
+                            <a itemprop="url" href="/rss.xml">
+                                <img class="icon" src="https:&#x2F;&#x2F;fy.blackhats.net.au/rss-logo.png" alt="rss">
+                            </a>
+                        </li>
+                      </ul>
+                    </nav>
+                </div>
+            </header>
+        
+        
+        <main>
+            
+<article itemscope itemtype="http://schema.org/BlogPosting">
+    <div itemprop="headline">
+        <h1>NSS commands and how to</h1>
+        <div class="border"></div>
+        <time datetime="2012-05-01" class="date" itemprop="datePublished">
+            01 May 2012
+        </time>
+    </div>
+    <div itemprop="articleBody">
+        <h1 id="nss-commands-and-how-to">NSS commands and how to</h1>
+<p>I have collated some knowledge on how to use NSS and it's tools for
+some general purpose usage, including mod_nss.</p>
+<p>Much of this is just assembling the contents of the <a href="http://www.mozilla.org/projects/security/pki/nss/tools/certutil.html">certutil
+documentation</a>.</p>
+<p>In this I have NOT documented the process of deleting certificates,
+changing trust settings of existing certificates or changing key3.db
+passwords.</p>
+<p>Create a new certificate database if one doesn't exist (You should see
+key3.db, secmod.db and cert8.db if one exists).</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>certutil -N -d . 
+</span></code></pre>
+<p>List all certificates in a database</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>certutil -L -d .
+</span></code></pre>
+<p>List all private keys in a database</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>certutil -K -d . [-f pwdfile.txt]
+</span></code></pre>
+<p>I have created a password file, which consists of random data on one
+line in a plain text file. Something like below would suffice.
+Alternately you can enter a password when prompted by the certutil
+commands. If you wish to use this for apache start up, you need to use
+pin.txt</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>echo &quot;soeihcoraiocrthhrcrcae aoriao htuathhhohodrrcrcgg89y99itantmnomtn&quot; &gt; pwdfile.txt
+</span><span>echo &quot;internal:soeihcoraiocrthhrcrcae aoriao htuathhhohodrrcrcgg89y99itantmnomtn&quot; &gt; pin.txt
+</span></code></pre>
+<p>Create a self signed certificate in your database. Note the -n, which
+creates a &quot;nickname&quot; (And should be unique) and is how applications
+reference your certificate and key. Also note the -s line, and the CN
+options. Finally, note the first line has the option -g, which defines
+the number of bits in the created certificate.</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>certutil -S -f pwdfile.txt -d . -t &quot;C,,&quot; -x -n &quot;Server-Cert&quot; -g 2048\
+</span><span>-s &quot;CN=nss.dev.example.com,O=Testing,L=Adelaide,ST=South Australia,C=AU&quot;
+</span><span>certutil -S -f pwdfile.txt -d . -t &quot;C,,&quot; -x -n &quot;Server-Cert2&quot; \
+</span><span>-s &quot;CN=nss2.dev.example.com,O=Testing,L=Adelaide,ST=South Australia,C=AU&quot; 
+</span></code></pre>
+<p>To add subject alternative names, use a comma seperated list with the
+option -8 IE</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>certutil -S -f pwdfile.txt -d . -t &quot;C,,&quot; -x -n &quot;Server-Cert&quot; -g 2048\
+</span><span>-s &quot;CN=nss.dev.example.com,O=Testing,L=Adelaide,ST=South Australia,C=AU&quot; \
+</span><span>-8 &quot;nss.dev.example.com,nss-alt.dev.example.com&quot;
+</span></code></pre>
+<p>Create a self signed CA (In a different database from the one used by
+httpd.)</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>certutil -S -n CAissuer -t &quot;C,C,C&quot; -x -f pwdfile.txt -d . \
+</span><span>-s &quot;CN=ca.nss.dev.example.com,O=Testing,L=Adelaide,ST=South Australia,C=AU&quot;
+</span></code></pre>
+<p>Create a certificate in the same database, and sign it with the CAissuer
+certificate.</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>certutil -S -n Test-Cert -t &quot;,,&quot; -c CAissuer -f pwdfile.txt -d . \
+</span><span>-s &quot;CN=test.nss.dev.example.com,O=Testing,L=Adelaide,ST=South Australia,C=AU&quot;
+</span></code></pre>
+<p>Test the new cert for validity as an SSL server.</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>certutil -V -d . -n Test-Cert -u V
+</span></code></pre>
+<p>View the new cert</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>certutil -L -d . -n Test-Cert
+</span></code></pre>
+<p>View the cert in ASCII form (This can be redirected to a file for use
+with openssl)</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>certutil -L -d . -n Test-Cert -a
+</span><span>certutil -L -d . -n Test-Cert -a &gt; cert.pem
+</span></code></pre>
+<p>In a second, seperate database to your CA.</p>
+<p>Create a new certificate request. Again, remember -8 for subjectAltName</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>certutil -d . -R -o nss.dev.example.com.csr -f pwdfile.txt \
+</span><span>-s &quot;CN=nss.dev.example.com,O=Testing,L=Adelaide,ST=South Australia,C=AU&quot;
+</span></code></pre>
+<p>On the CA, review the CSR you have recieved.</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>/usr/lib[64]/nss/unsupported-tools/derdump -i /etc/httpd/alias/nss.dev.example.com.csr
+</span><span>openssl req -inform DER -text -in /etc/httpd/alias/nss.dev.example.com.csr
+</span></code></pre>
+<p>On the CA, sign the CSR.</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>certutil -C -d . -f pwdfile.txt -i /etc/httpd/alias/nss.dev.example.com.csr \
+</span><span>-o /etc/httpd/alias/nss.dev.example.com.crt -c CAissuer
+</span></code></pre>
+<p>Export the CA public certificate</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>certutil -L -d . -n CAissuer -r &gt; ca.crt
+</span></code></pre>
+<p>Import the CA public certificate into the requestors database.</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>certutil -A -n &quot;CAcert&quot; -t &quot;C,,&quot; -i /etc/pki/CA/nss/ca.crt -d .
+</span></code></pre>
+<p>Import the signed certificate into the requestors database.</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>certutil -A -n &quot;Server-cert&quot; -t &quot;,,&quot; -i nss.dev.example.com.crt -d .
+</span></code></pre>
+<p>Using openSSL create a server key, and make a CSR</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>openssl genrsa -out server.key 2048
+</span><span>openssl req -new -key server.key -out server.csr
+</span></code></pre>
+<p>On the CA, review the CSR.</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>openssl req -inform PEM -text -in server.csr
+</span></code></pre>
+<p>On the CA, sign the request. Note the use of -a that allows an ASCII
+formatted PEM input, and will create and ASCII PEM certificate output.</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>certutil -C -d . -f pwdfile.txt -i server.csr -o server.crt -a -c CAissuer
+</span></code></pre>
+<p>Import an openSSL generated key and certificate into an NSS database.</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>openssl pkcs12 -export -in server.crt -inkey server.key -out server.p12 -name Test-Server-Cert
+</span><span>pk12util -i server.p12 -d . -k pwdfile.txt
+</span></code></pre>
+<p>Export a secret key and certificate from an NSS database for use with
+openssl.</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>pk12util -o server-export.p12 -d . -k pwdfile.txt -n Test-Server-Cert
+</span><span>openssl pkcs12 -in server-export.p12 -out file.pem -nodes
+</span></code></pre>
+<p>Note that file.pem contains both the CA cert, cert and private key. You
+can view just the private key with:</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>openssl pkcs12 -in server-export.p12 -out file.pem -nocerts -nodes
+</span></code></pre>
+<p>Or just the cert and CAcert with</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>openssl pkcs12 -in server-export.p12 -out file.pem -nokeys -nodes
+</span></code></pre>
+<p>You can easily make ASCII formatted PEM from here.</p>
+<p>Finally, these commands all use the old DBM formatted NSS databases. To
+use the new &quot;shareable&quot; sqlite formatting, follow the steps found from
+<a href="https://blogs.oracle.com/meena/entry/what_s_new_in_nss1">this blog
+post</a>.</p>
+<p>To configure mod_nss, you should have a configuration similar to below -
+Most of this is the standard nss.conf that comes with mod_nss, but note
+the changes to NSSNickname, and the modified NSSPassPhraseDialog and
+NSSRandomSeed values. There is documentation on the NSSCipherSuite that
+can be found by running &quot;rpm -qd mod_nss&quot;. Finally, make sure that
+apache has read access to the database files and the pin.txt file. If
+you leave NSSPassPhraseDialog as &quot;builtin&quot;, you cannot start httpd
+from systemctl. You must run apachectl so that you can enter the NSS
+database password on apache startup.</p>
+<p>NOTE: mod_nss <em>might</em> support SNI. In my testing and examples, this
+works to create multiple sites via SNI, however, other developers claim
+this is not a supported feature. I have had issues with it in other
+instances also. For now, I would avoid it.</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>LoadModule nss_module modules/libmodnss.so
+</span><span>Listen 8443
+</span><span>NameVirtualHost *:8443
+</span><span>AddType application/x-x509-ca-cert .crt
+</span><span>AddType application/x-pkcs7-crl    .crl
+</span><span>NSSPassPhraseDialog  file:/etc/httpd/alias/pin.txt
+</span><span>NSSPassPhraseHelper /usr/sbin/nss_pcache
+</span><span>NSSSessionCacheSize 10000
+</span><span>NSSSessionCacheTimeout 100
+</span><span>NSSSession3CacheTimeout 86400
+</span><span>NSSEnforceValidCerts off
+</span><span>NSSRandomSeed startup file:/dev/urandom 512
+</span><span>NSSRenegotiation off
+</span><span>NSSRequireSafeNegotiation off
+</span><span>&lt;VirtualHost *:8443&gt;
+</span><span>ServerName nss.dev.example.com:8443
+</span><span>ServerAlias nss.dev.example.com
+</span><span>ErrorLog /etc/httpd/logs/nss1_error_log
+</span><span>TransferLog /etc/httpd/logs/nss1_access_log
+</span><span>LogLevel warn
+</span><span>NSSEngine on
+</span><span>NSSCipherSuite +rsa_rc4_128_md5,+rsa_rc4_128_sha,+rsa_3des_sha,+fips_3des_sha,+rsa_aes_128_sha,+rsa_aes_256_sha,\
+</span><span>-rsa_des_sha,-rsa_rc4_40_md5,-rsa_rc2_40_md5,-rsa_null_md5,-rsa_null_sha,-fips_des_sha,-fortezza,-fortezza_rc4_128_sha,\
+</span><span>-fortezza_null,-rsa_des_56_sha,-rsa_rc4_56_sha
+</span><span>NSSProtocol SSLv3,TLSv1
+</span><span>NSSNickname Server-cert
+</span><span>NSSCertificateDatabase /etc/httpd/alias
+</span><span>&lt;Files ~ &quot;\.(cgi|shtml|phtml|php3?)$&quot;&gt;
+</span><span>    NSSOptions +StdEnvVars
+</span><span>&lt;/Files&gt;
+</span><span>&lt;Directory &quot;/var/www/cgi-bin&quot;&gt;
+</span><span>    NSSOptions +StdEnvVars
+</span><span>&lt;/Directory&gt;
+</span><span>&lt;/VirtualHost&gt;                                  
+</span><span>&lt;VirtualHost *:8443&gt;
+</span><span>ServerName nss2.dev.example.com:8443
+</span><span>ServerAlias nss2.dev.example.com
+</span><span>ErrorLog /etc/httpd/logs/nss2_error_log
+</span><span>TransferLog /etc/httpd/logs/nss2_access_log
+</span><span>LogLevel warn
+</span><span>NSSEngine on
+</span><span>NSSCipherSuite +rsa_rc4_128_md5,+rsa_rc4_128_sha,+rsa_3des_sha,+fips_3des_sha,+rsa_aes_128_sha,+rsa_aes_256_sha,\
+</span><span>-rsa_des_sha,-rsa_rc4_40_md5,-rsa_rc2_40_md5,-rsa_null_md5,-rsa_null_sha,-fips_des_sha,-fortezza,-fortezza_rc4_128_sha,\
+</span><span>-fortezza_null,-rsa_des_56_sha,-rsa_rc4_56_sha
+</span><span>NSSProtocol SSLv3,TLSv1
+</span><span>NSSNickname Server-Cert2
+</span><span>NSSCertificateDatabase /etc/httpd/alias
+</span><span>&lt;Files ~ &quot;\.(cgi|shtml|phtml|php3?)$&quot;&gt;
+</span><span>    NSSOptions +StdEnvVars
+</span><span>&lt;/Files&gt;
+</span><span>&lt;Directory &quot;/var/www/cgi-bin&quot;&gt;
+</span><span>    NSSOptions +StdEnvVars
+</span><span>&lt;/Directory&gt;
+</span><span>&lt;/VirtualHost&gt; 
+</span></code></pre>
+
+    </div>
+</article>
+
+        </main>
+        
+        <footer>
+            
+            <div class="border"></div>
+            <div class="footer">
+                <small class="footer-left">
+                    Copyright &copy; William Brown
+                </small>
+                <small class="footer-right">
+                    Powered by <a href="https://www.getzola.org">Zola</a> | Theme <a href="https://github.com/barlog-m/oceanic-zen">Oceanic Zen</a>
+                </small>
+            </div>
+        
+        </footer>
+    
+        </div>
+    </body>
+</html>

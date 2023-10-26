@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+        <meta name="description" content="Firstyear&#x27;s blog">
+        
+
+        <title>Firstyear&#x27;s blog-a-log</title>
+
+        
+          <link rel="alternate" type="application/rss+xml" title="RSS" href="https://fy.blackhats.net.au/rss.xml">
+        
+
+        
+            <link rel="stylesheet" href="https://fy.blackhats.net.au/theme.css">
+        
+        
+    </head>
+    <body>
+        <div class="content">
+        
+        
+            <header>
+                <div class="header-left">
+                    <a href="https:&#x2F;&#x2F;fy.blackhats.net.au" class="logo">Firstyear&#x27;s blog-a-log</a>
+                </div>
+                <div class="header-right">
+                    <nav itemscope itemtype="http://schema.org/SiteNavigationElement">
+                      <ul>
+                        
+                        
+                            
+                            <li class="nav">
+                                <a itemprop="url" href="https://fy.blackhats.net.au/blog/">
+                                    <span itemprop="name">Blog</span>
+                                </a>
+                            </li>
+                        
+                            
+                            <li class="nav">
+                                <a itemprop="url" href="https://fy.blackhats.net.au/pages/">
+                                    <span itemprop="name">Pages</span>
+                                </a>
+                            </li>
+                        
+                        
+                        <li class="nav">
+                            <a itemprop="url" href="https://github.com/firstyear">
+                                <img class="icon" src="https:&#x2F;&#x2F;fy.blackhats.net.au/icons/github.svg" alt="Github">
+                            </a>
+                        </li>
+                        
+                        <li class="nav">
+                            <a itemprop="url" href="/rss.xml">
+                                <img class="icon" src="https:&#x2F;&#x2F;fy.blackhats.net.au/rss-logo.png" alt="rss">
+                            </a>
+                        </li>
+                      </ul>
+                    </nav>
+                </div>
+            </header>
+        
+        
+        <main>
+            
+<article itemscope itemtype="http://schema.org/BlogPosting">
+    <div itemprop="headline">
+        <h1>Getting started with Yew</h1>
+        <div class="border"></div>
+        <time datetime="2021-06-20" class="date" itemprop="datePublished">
+            20 Jun 2021
+        </time>
+    </div>
+    <div itemprop="articleBody">
+        <h1 id="getting-started-with-yew">Getting started with Yew</h1>
+<blockquote>
+<p><strong>NOTE</strong> This post is really out dated now, there are easier ways to start. See the <a href="https://yew.rs/">yew official docs</a>
+as this process has gotten much easier!</p>
+</blockquote>
+<p>Yew is a really nice framework for writing single-page-applications in
+Rust, that is then compiled to wasm for running in the browser. For me
+it has helped make web development much more accessible to me, but
+getting started with it isn't always straight forward.</p>
+<p>This is the bare-minimum to get a &quot;hello world&quot; in your browser - from
+there you can build on that foundation to make many more interesting
+applications.</p>
+<h2 id="dependencies">Dependencies</h2>
+<h3 id="macos">MacOS</h3>
+<ul>
+<li>Ensure that you have rust, which you can setup with
+<a href="https://rustup.rs/">RustUp</a>.</li>
+<li>Ensure that you have brew, which you can install from the <a href="https://brew.sh/">Homebrew
+Project</a>. This is used to install other tools.</li>
+<li>Install wasm-pack. wasm-pack is what drives the rust to wasm build
+process.</li>
+</ul>
+<pre data-lang="bash" style="background-color:#2b303b;color:#c0c5ce;" class="language-bash "><code class="language-bash" data-lang="bash"><span>    </span><span style="color:#bf616a;">cargo</span><span> install wasm-pack
+</span></code></pre>
+<ul>
+<li>Install npm and rollup. npm is needed to install rollup, and rollup
+is what takes our wasm and javacript and bundles them together for
+our browser.</li>
+</ul>
+<pre data-lang="bash" style="background-color:#2b303b;color:#c0c5ce;" class="language-bash "><code class="language-bash" data-lang="bash"><span>    </span><span style="color:#bf616a;">brew</span><span> install npm
+</span><span>    </span><span style="color:#bf616a;">npm</span><span> install</span><span style="color:#bf616a;"> --global</span><span> rollup
+</span></code></pre>
+<ul>
+<li>Install miniserve for hosting our website locally during
+development.</li>
+</ul>
+<pre data-lang="bash" style="background-color:#2b303b;color:#c0c5ce;" class="language-bash "><code class="language-bash" data-lang="bash"><span>    </span><span style="color:#bf616a;">brew</span><span> install miniserve
+</span></code></pre>
+<h2 id="a-new-project">A new project</h2>
+<p>We can now create a new rust project. Note we use --lib to indicate
+that it's a library, not an executable.</p>
+<pre data-lang="bash" style="background-color:#2b303b;color:#c0c5ce;" class="language-bash "><code class="language-bash" data-lang="bash"><span>    </span><span style="color:#bf616a;">cargo</span><span> new</span><span style="color:#bf616a;"> --lib</span><span> yewdemo
+</span></code></pre>
+<p>To start with we'll need some boilerplate and helpers to get ourselves
+started.</p>
+<p>[index.html]{.title-ref} - our default page that will load our wasm to
+run. This is our &quot;entrypoint&quot; into the site that starts everything
+else off. In this case it loads our bundled javascript.</p>
+<pre data-lang="html" style="background-color:#2b303b;color:#c0c5ce;" class="language-html "><code class="language-html" data-lang="html"><span>    &lt;!</span><span style="color:#b48ead;">DOCTYPE </span><span style="color:#d08770;">html</span><span>&gt;
+</span><span>    &lt;</span><span style="color:#bf616a;">html</span><span>&gt;
+</span><span>      &lt;</span><span style="color:#bf616a;">head</span><span>&gt;
+</span><span>        &lt;</span><span style="color:#bf616a;">meta </span><span style="color:#d08770;">charset</span><span>=&quot;</span><span style="color:#a3be8c;">utf-8</span><span>&quot;&gt;
+</span><span>        &lt;</span><span style="color:#bf616a;">title</span><span>&gt;PROJECTNAME&lt;/</span><span style="color:#bf616a;">title</span><span>&gt;
+</span><span>        &lt;</span><span style="color:#bf616a;">script </span><span style="color:#d08770;">src</span><span>=&quot;</span><span style="color:#a3be8c;">/pkg/bundle.js</span><span>&quot; </span><span style="color:#d08770;">defer</span><span>&gt;&lt;/</span><span style="color:#bf616a;">script</span><span>&gt;
+</span><span>      &lt;/</span><span style="color:#bf616a;">head</span><span>&gt;
+</span><span>      &lt;</span><span style="color:#bf616a;">body</span><span>&gt;
+</span><span>      &lt;/</span><span style="color:#bf616a;">body</span><span>&gt;
+</span><span>    &lt;/</span><span style="color:#bf616a;">html</span><span>&gt;
+</span></code></pre>
+<p>[main.js]{.title-ref} - this is our javascript entrypoint that we'll be
+using. Remember to change PROJECTNAME to your crate name (ie yewdemo).
+This will be combined with our wasm to create the bundle.js file.</p>
+<pre data-lang="js" style="background-color:#2b303b;color:#c0c5ce;" class="language-js "><code class="language-js" data-lang="js"><span>    </span><span style="color:#b48ead;">import </span><span style="color:#bf616a;">init</span><span>, { </span><span style="color:#bf616a;">run_app </span><span>} </span><span style="color:#b48ead;">from </span><span>&#39;</span><span style="color:#a3be8c;">./pkg/PROJECTNAME.js</span><span>&#39;;
+</span><span>    </span><span style="color:#b48ead;">async function </span><span style="color:#8fa1b3;">main</span><span>() {
+</span><span>       </span><span style="color:#b48ead;">await </span><span style="color:#8fa1b3;">init</span><span>(&#39;</span><span style="color:#a3be8c;">/pkg/PROJECTNAME_bg.wasm</span><span>&#39;);
+</span><span>       </span><span style="color:#8fa1b3;">run_app</span><span>();
+</span><span>      }
+</span><span>    </span><span style="color:#8fa1b3;">main</span><span>()
+</span></code></pre>
+<p>[Cargo.toml]{.title-ref} - we need to extend Cargo.toml with some
+dependencies and settings that allows wasm to build and our framework
+dependencies.</p>
+<pre data-lang="toml" style="background-color:#2b303b;color:#c0c5ce;" class="language-toml "><code class="language-toml" data-lang="toml"><span>    [lib]
+</span><span>    </span><span style="color:#bf616a;">crate-type </span><span>= [&quot;</span><span style="color:#a3be8c;">cdylib</span><span>&quot;]
+</span><span>
+</span><span>    [dependencies]
+</span><span>    </span><span style="color:#bf616a;">wasm-bindgen </span><span>= &quot;</span><span style="color:#a3be8c;">^0.2</span><span>&quot;
+</span><span>    </span><span style="color:#bf616a;">yew </span><span>= &quot;</span><span style="color:#a3be8c;">0.18</span><span>&quot;
+</span></code></pre>
+<p>[build_wasm.sh]{.title-ref} - create this file to help us build our
+project. Remember to call [chmod +x build_wasm.sh]{.title-ref} so that
+you can execute it later.</p>
+<pre data-lang="bash" style="background-color:#2b303b;color:#c0c5ce;" class="language-bash "><code class="language-bash" data-lang="bash"><span>    </span><span style="color:#65737e;">#!/bin/sh
+</span><span>    </span><span style="color:#bf616a;">wasm-pack</span><span> build</span><span style="color:#bf616a;"> --target</span><span> web &amp;&amp; \
+</span><span>        </span><span style="color:#bf616a;">rollup</span><span> ./main.js</span><span style="color:#bf616a;"> --format</span><span> iife</span><span style="color:#bf616a;"> --file</span><span> ./pkg/bundle.js
+</span></code></pre>
+<p>[src/lib.rs]{.title-ref} - this is a template of a minimal start point
+for yew. This has all the stubs in place for a minimal &quot;hello world&quot;
+website.</p>
+<pre data-lang="rust" style="background-color:#2b303b;color:#c0c5ce;" class="language-rust "><code class="language-rust" data-lang="rust"><span>    </span><span style="color:#b48ead;">use </span><span>wasm_bindgen::prelude::*;
+</span><span>    </span><span style="color:#b48ead;">use </span><span>yew::prelude::*;
+</span><span>    </span><span style="color:#b48ead;">use </span><span>yew::services::ConsoleService;
+</span><span>
+</span><span>    </span><span style="color:#b48ead;">pub struct </span><span>App {
+</span><span>        </span><span style="color:#bf616a;">link</span><span>: ComponentLink&lt;</span><span style="color:#b48ead;">Self</span><span>&gt;,
+</span><span>    }
+</span><span>
+</span><span>    </span><span style="color:#b48ead;">impl </span><span>Component </span><span style="color:#b48ead;">for </span><span>App {
+</span><span>        </span><span style="color:#b48ead;">type </span><span>Message = App;
+</span><span>        </span><span style="color:#b48ead;">type </span><span>Properties = ();
+</span><span>
+</span><span>        </span><span style="color:#65737e;">// This is called when our App is initially created.
+</span><span>        </span><span style="color:#b48ead;">fn </span><span style="color:#8fa1b3;">create</span><span>(_: </span><span style="color:#b48ead;">Self::</span><span>Properties, </span><span style="color:#bf616a;">link</span><span>: ComponentLink&lt;</span><span style="color:#b48ead;">Self</span><span>&gt;) -&gt; </span><span style="color:#b48ead;">Self </span><span>{
+</span><span>            App {
+</span><span>                link,
+</span><span>            }
+</span><span>        }
+</span><span>
+</span><span>        </span><span style="color:#b48ead;">fn </span><span style="color:#8fa1b3;">change</span><span>(&amp;</span><span style="color:#b48ead;">mut </span><span style="color:#bf616a;">self</span><span>, _: </span><span style="color:#b48ead;">Self::</span><span>Properties) -&gt; ShouldRender {
+</span><span>            </span><span style="color:#d08770;">false
+</span><span>        }
+</span><span>
+</span><span>        </span><span style="color:#65737e;">// Called during event callbacks initiated by events (user or browser)
+</span><span>        </span><span style="color:#b48ead;">fn </span><span style="color:#8fa1b3;">update</span><span>(&amp;</span><span style="color:#b48ead;">mut </span><span style="color:#bf616a;">self</span><span>, </span><span style="color:#bf616a;">msg</span><span>: </span><span style="color:#b48ead;">Self::</span><span>Message) -&gt; ShouldRender {
+</span><span>            </span><span style="color:#d08770;">false
+</span><span>        }
+</span><span>
+</span><span>        </span><span style="color:#65737e;">// Render our content to the page, emitting Html that will be loaded into our
+</span><span>        </span><span style="color:#65737e;">// index.html&#39;s &lt;body&gt;
+</span><span>        </span><span style="color:#b48ead;">fn </span><span style="color:#8fa1b3;">view</span><span>(&amp;</span><span style="color:#bf616a;">self</span><span>) -&gt; Html {
+</span><span>            ConsoleService::log(&quot;</span><span style="color:#a3be8c;">Hello World!</span><span>&quot;);
+</span><span>            html! {
+</span><span>                &lt;div&gt;
+</span><span>                    &lt;h2&gt;{ &quot;</span><span style="color:#a3be8c;">Hello World</span><span>&quot; }&lt;/h2&gt;
+</span><span>                &lt;/div&gt;
+</span><span>            }
+</span><span>        }
+</span><span>    }
+</span><span>
+</span><span>    </span><span style="color:#65737e;">// This is the entry point that main.js calls into.
+</span><span>    #[</span><span style="color:#bf616a;">wasm_bindgen</span><span>]
+</span><span>    </span><span style="color:#b48ead;">pub fn </span><span style="color:#8fa1b3;">run_app</span><span>() -&gt; Result&lt;(), JsValue&gt; {
+</span><span>        yew::start_app::&lt;App&gt;();
+</span><span>        Ok(())
+</span><span>    }
+</span></code></pre>
+<h2 id="building-your-hello-world">Building your Hello World</h2>
+<p>Now you can build your project with:</p>
+<pre data-lang="bash" style="background-color:#2b303b;color:#c0c5ce;" class="language-bash "><code class="language-bash" data-lang="bash"><span>    </span><span style="color:#bf616a;">./build_wasm.sh
+</span></code></pre>
+<p>And if you want to see it on your machine in your browser:</p>
+<pre data-lang="bash" style="background-color:#2b303b;color:#c0c5ce;" class="language-bash "><code class="language-bash" data-lang="bash"><span>    </span><span style="color:#bf616a;">miniserve -v --index</span><span> index.html .
+</span></code></pre>
+<p>Navigate to <a href="http://127.0.0.1:8080">http://127.0.0.1:8080</a> to see your Hello World!</p>
+<h2 id="further-resources">Further Resources</h2>
+<ul>
+<li><a href="https://yew.rs/">yew guide</a></li>
+<li><a href="https://docs.rs/yew/0.18.0/yew/">yew api documentation</a></li>
+<li><a href="https://github.com/yewstack/yew/tree/master/examples">yew example
+projects</a></li>
+<li><a href="https://rustwasm.github.io/wasm-bindgen/introduction.html">wasm-bindgen
+book</a></li>
+</ul>
+<h2 id="troubleshooting">Troubleshooting</h2>
+<p>I made all the following mistakes while writing this blog 😅</p>
+<h3 id="build-wasm-sh-permission-denied">build_wasm.sh - permission denied</h3>
+<pre data-lang="bash" style="background-color:#2b303b;color:#c0c5ce;" class="language-bash "><code class="language-bash" data-lang="bash"><span>    </span><span style="color:#bf616a;">./build_wasm.sh
+</span><span>    </span><span style="color:#bf616a;">zsh:</span><span> permission denied: ./build_wasm.sh
+</span></code></pre>
+<p>You need to run &quot;chmod +x build_wasm.sh&quot; so that you can execute this.
+Permission denied means that the executable bits are missing from the
+file.</p>
+<h3 id="building-could-not-resolve">building - 'Could not resolve'</h3>
+<pre data-lang="bash" style="background-color:#2b303b;color:#c0c5ce;" class="language-bash "><code class="language-bash" data-lang="bash"><span>    </span><span style="color:#bf616a;">./main.js</span><span> → ./pkg/bundle.js...
+</span><span>    </span><span style="color:#bf616a;">[!]</span><span> Error: Could not resolve &#39;</span><span style="color:#a3be8c;">./pkg/PROJECTNAME.js</span><span>&#39; from main.js
+</span><span>    </span><span style="color:#bf616a;">Error:</span><span> Could not resolve &#39;</span><span style="color:#a3be8c;">./pkg/PROJECTNAME.js</span><span>&#39; from main.js
+</span></code></pre>
+<p>This error means you need to edit main.js so that PROJECTNAME matches
+your crate name.</p>
+<h3 id="blank-page-in-browser">Blank Page in Browser</h3>
+<p>When you first load your page it may be blank. You can check if a file
+is missing or incorrectly named by right clicking the page, select
+'inspect', and in the inspector go to the 'network' tab.</p>
+<p>From there refresh your page, and see if any files 404. If they do you
+may need to rename them or there is an error in yoru main.js. A common
+one is:</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>    PROJECTNAME.wasm: 404
+</span></code></pre>
+<p>This is because in main.js you may have changed the await init line, and
+removed the suffix [_bg]{.title-ref}.</p>
+<pre data-lang="js" style="background-color:#2b303b;color:#c0c5ce;" class="language-js "><code class="language-js" data-lang="js"><span>    # </span><span style="color:#bf616a;">Incorrect
+</span><span>    </span><span style="color:#b48ead;">await </span><span style="color:#8fa1b3;">init</span><span>(&#39;</span><span style="color:#a3be8c;">/pkg/PROJECTNAME.wasm</span><span>&#39;);
+</span><span>    # </span><span style="color:#bf616a;">Correct
+</span><span>    </span><span style="color:#b48ead;">await </span><span style="color:#8fa1b3;">init</span><span>(&#39;</span><span style="color:#a3be8c;">/pkg/PROJECTNAME_bg.wasm</span><span>&#39;);
+</span></code></pre>
+
+    </div>
+</article>
+
+        </main>
+        
+        <footer>
+            
+            <div class="border"></div>
+            <div class="footer">
+                <small class="footer-left">
+                    Copyright &copy; William Brown
+                </small>
+                <small class="footer-right">
+                    Powered by <a href="https://www.getzola.org">Zola</a> | Theme <a href="https://github.com/barlog-m/oceanic-zen">Oceanic Zen</a>
+                </small>
+            </div>
+        
+        </footer>
+    
+        </div>
+    </body>
+</html>

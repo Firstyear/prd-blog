@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+        <meta name="description" content="Firstyear&#x27;s blog">
+        
+
+        <title>Firstyear&#x27;s blog-a-log</title>
+
+        
+          <link rel="alternate" type="application/rss+xml" title="RSS" href="https://fy.blackhats.net.au/rss.xml">
+        
+
+        
+            <link rel="stylesheet" href="https://fy.blackhats.net.au/theme.css">
+        
+        
+    </head>
+    <body>
+        <div class="content">
+        
+        
+            <header>
+                <div class="header-left">
+                    <a href="https:&#x2F;&#x2F;fy.blackhats.net.au" class="logo">Firstyear&#x27;s blog-a-log</a>
+                </div>
+                <div class="header-right">
+                    <nav itemscope itemtype="http://schema.org/SiteNavigationElement">
+                      <ul>
+                        
+                        
+                            
+                            <li class="nav">
+                                <a itemprop="url" href="https://fy.blackhats.net.au/blog/">
+                                    <span itemprop="name">Blog</span>
+                                </a>
+                            </li>
+                        
+                            
+                            <li class="nav">
+                                <a itemprop="url" href="https://fy.blackhats.net.au/pages/">
+                                    <span itemprop="name">Pages</span>
+                                </a>
+                            </li>
+                        
+                        
+                        <li class="nav">
+                            <a itemprop="url" href="https://github.com/firstyear">
+                                <img class="icon" src="https:&#x2F;&#x2F;fy.blackhats.net.au/icons/github.svg" alt="Github">
+                            </a>
+                        </li>
+                        
+                        <li class="nav">
+                            <a itemprop="url" href="/rss.xml">
+                                <img class="icon" src="https:&#x2F;&#x2F;fy.blackhats.net.au/rss-logo.png" alt="rss">
+                            </a>
+                        </li>
+                      </ul>
+                    </nav>
+                </div>
+            </header>
+        
+        
+        <main>
+            
+<article itemscope itemtype="http://schema.org/BlogPosting">
+    <div itemprop="headline">
+        <h1>Using b43 firmware on Fedora Atomic Workstation</h1>
+        <div class="border"></div>
+        <time datetime="2017-12-23" class="date" itemprop="datePublished">
+            23 Dec 2017
+        </time>
+    </div>
+    <div itemprop="articleBody">
+        <h1 id="using-b43-firmware-on-fedora-atomic-workstation">Using b43 firmware on Fedora Atomic Workstation</h1>
+<p>My Macbook Pro has a broadcom b43 wireless chipset. This is notorious
+for being one of the most annoying wireless adapters on linux. When you
+first install Fedora you don't even see &quot;wifi&quot; as an option, and unless
+you poke around in dmesg, you won't find how to enable b43 to work on
+your platform.</p>
+<h2 id="b43">b43</h2>
+<p>The b43 driver requires proprietary firmware to be loaded else the wifi
+chip will not run. There are a number of steps for this process found on
+the linux wireless page . You'll note that one of the steps is:</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>export FIRMWARE_INSTALL_DIR=&quot;/lib/firmware&quot;
+</span><span>...
+</span><span>sudo b43-fwcutter -w &quot;$FIRMWARE_INSTALL_DIR&quot; broadcom-wl-5.100.138/linux/wl_apsta.o
+</span></code></pre>
+<p>So we need to be able to write and extract our firmware to
+/usr/lib/firmware, and then reboot and out wifi works.</p>
+<h2 id="fedora-atomic-workstation">Fedora Atomic Workstation</h2>
+<p>Atomic WS is similar to atomic server, that it's a read-only ostree
+based deployment of fedora. This comes with a number of unique
+challenges and quirks but for this issue:</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>sudo touch /usr/lib/firmware/test
+</span><span>/bin/touch: cannot touch &#39;/usr/lib/firmware/test&#39;: Read-only file system
+</span></code></pre>
+<p>So we can't extract our firmware!</p>
+<p>Normally linux also supports reading from /usr/local/lib/firmware (which
+on atomic IS writeable ...) but for some reason fedora doesn't allow
+this path.</p>
+<h2 id="solution-layered-rpms">Solution: Layered RPMs</h2>
+<p>Atomic has support for &quot;rpm layering&quot;. Ontop of the ostree image (which
+is composed of rpms) you can supply a supplemental list of packages that
+are &quot;installed&quot; at rpm-ostree update time.</p>
+<p>This way you still have an atomic base platform, with read-only
+behaviours, but you gain the ability to customise your system. To achive
+it, it must be possible to write to locations in /usr during rpm
+install.</p>
+<h2 id="new-method-install-rpmfusion-tainted">New method - install rpmfusion tainted</h2>
+<p>As I have now learnt, the b43 data is provided as part of rpmfusion
+nonfree. To enable this, you need to access the tainted repo. I a file
+such as &quot;/etc/yum.repos.d/rpmfusion-nonfree-tainted.repo&quot; add the
+content:</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>[rpmfusion-nonfree-tainted]
+</span><span>name=rpmfusion-nonfree-tainted
+</span><span>baseurl=https://download1.rpmfusion.org/nonfree/fedora/tainted/$releasever/$basearch/
+</span><span>enabled=1
+</span><span>gpgcheck=1
+</span><span>type=rpm
+</span></code></pre>
+<p>Now, you should be able to run:</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>atomic host install b43-firmware
+</span><span>reboot
+</span></code></pre>
+<p>You should have a working wifi chipset!</p>
+<h2 id="custom-rpm-old-method">Custom RPM - old method</h2>
+<p>This means our problem has a simple solution: Create a b43 rpm package.
+Note, that you can make this for yourself privately, but you can't
+distribute it for legal reasons.</p>
+<p>Get setup on atomic to build the packages:</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>rpm-ostree install rpm-build createrepo
+</span><span>reboot
+</span></code></pre>
+<p>RPM specfile:</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>%define debug_package %{nil}
+</span><span>Summary: Allow b43 fw to install on ostree installs due to bz1512452
+</span><span>Name: b43-fw
+</span><span>Version: 1.0.0
+</span><span>Release: 1
+</span><span>License: Proprietary, DO NOT DISTRIBUTE BINARY FORMS
+</span><span>URL: http://linuxwireless.sipsolutions.net/en/users/Drivers/b43/
+</span><span>Group: System Environment/Kernel
+</span><span>
+</span><span>BuildRequires: b43-fwcutter
+</span><span>
+</span><span>Source0: http://www.lwfinger.com/b43-firmware/broadcom-wl-5.100.138.tar.bz2
+</span><span>
+</span><span>%description
+</span><span>Broadcom firmware for b43 chips.
+</span><span>
+</span><span>%prep
+</span><span>%setup -q -n broadcom-wl-5.100.138
+</span><span>
+</span><span>%build
+</span><span>true
+</span><span>
+</span><span>%install
+</span><span>pwd
+</span><span>mkdir -p %{buildroot}/usr/lib/firmware
+</span><span>b43-fwcutter -w %{buildroot}/usr/lib/firmware linux/wl_apsta.o
+</span><span>
+</span><span>%files
+</span><span>%defattr(-,root,root,-)
+</span><span>%dir %{_prefix}/lib/firmware/b43
+</span><span>%{_prefix}/lib/firmware/b43/*
+</span><span>
+</span><span>%changelog
+</span><span>* Fri Dec 22 2017 William Brown &lt;william at blackhats.net.au&gt; - 1.0.0
+</span><span>- Initial version
+</span></code></pre>
+<p>Now you can put this into a folder like so:</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>mkdir -p ~/rpmbuild/{SPECS,SOURCES}
+</span><span>&lt;editor&gt; ~/rpmbuild/SPECS/b43-fw.spec
+</span><span>wget -O ~/rpmbuild/SOURCES/broadcom-wl-5.100.138.tar.bz2 http://www.lwfinger.com/b43-firmware/broadcom-wl-5.100.138.tar.bz2
+</span></code></pre>
+<p>We are now ready to build!</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>rpmbuild -bb ~/rpmbuild/SPECS/b43-fw.spec
+</span><span>createrepo ~/rpmbuild/RPMS/x86_64/
+</span></code></pre>
+<p>Finally, we can install this. Create a yum repos file:</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>[local-rpms]
+</span><span>name=local-rpms
+</span><span>baseurl=file:///home/&lt;YOUR USERNAME HERE&gt;/rpmbuild/RPMS/x86_64
+</span><span>enabled=1
+</span><span>gpgcheck=0
+</span><span>type=rpm
+</span><span>
+</span><span>rpm-ostree install b43-fw
+</span></code></pre>
+<p>Now reboot and enjoy wifi on your Fedora Atomic Macbook Pro!</p>
+
+    </div>
+</article>
+
+        </main>
+        
+        <footer>
+            
+            <div class="border"></div>
+            <div class="footer">
+                <small class="footer-left">
+                    Copyright &copy; William Brown
+                </small>
+                <small class="footer-right">
+                    Powered by <a href="https://www.getzola.org">Zola</a> | Theme <a href="https://github.com/barlog-m/oceanic-zen">Oceanic Zen</a>
+                </small>
+            </div>
+        
+        </footer>
+    
+        </div>
+    </body>
+</html>

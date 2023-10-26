@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+        <meta name="description" content="Firstyear&#x27;s blog">
+        
+
+        <title>Firstyear&#x27;s blog-a-log</title>
+
+        
+          <link rel="alternate" type="application/rss+xml" title="RSS" href="https://fy.blackhats.net.au/rss.xml">
+        
+
+        
+            <link rel="stylesheet" href="https://fy.blackhats.net.au/theme.css">
+        
+        
+    </head>
+    <body>
+        <div class="content">
+        
+        
+            <header>
+                <div class="header-left">
+                    <a href="https:&#x2F;&#x2F;fy.blackhats.net.au" class="logo">Firstyear&#x27;s blog-a-log</a>
+                </div>
+                <div class="header-right">
+                    <nav itemscope itemtype="http://schema.org/SiteNavigationElement">
+                      <ul>
+                        
+                        
+                            
+                            <li class="nav">
+                                <a itemprop="url" href="https://fy.blackhats.net.au/blog/">
+                                    <span itemprop="name">Blog</span>
+                                </a>
+                            </li>
+                        
+                            
+                            <li class="nav">
+                                <a itemprop="url" href="https://fy.blackhats.net.au/pages/">
+                                    <span itemprop="name">Pages</span>
+                                </a>
+                            </li>
+                        
+                        
+                        <li class="nav">
+                            <a itemprop="url" href="https://github.com/firstyear">
+                                <img class="icon" src="https:&#x2F;&#x2F;fy.blackhats.net.au/icons/github.svg" alt="Github">
+                            </a>
+                        </li>
+                        
+                        <li class="nav">
+                            <a itemprop="url" href="/rss.xml">
+                                <img class="icon" src="https:&#x2F;&#x2F;fy.blackhats.net.au/rss-logo.png" alt="rss">
+                            </a>
+                        </li>
+                      </ul>
+                    </nav>
+                </div>
+            </header>
+        
+        
+        <main>
+            
+<article itemscope itemtype="http://schema.org/BlogPosting">
+    <div itemprop="headline">
+        <h1>Unit testing LDAP acis for fun and profit</h1>
+        <div class="border"></div>
+        <time datetime="2015-07-04" class="date" itemprop="datePublished">
+            04 Jul 2015
+        </time>
+    </div>
+    <div itemprop="articleBody">
+        <h1 id="unit-testing-ldap-acis-for-fun-and-profit">Unit testing LDAP acis for fun and profit</h1>
+<p>My workplace is a reasonably sized consumer of 389ds. We use it for
+storing pretty much all our most important identity data from allowing
+people to authenticate, to group and course membership, to email routing
+and even internet access.</p>
+<p>As a result, it's a really important service to maintain. We need to
+treat it as one of the most security sensitive services we run. The
+definition of security I always come back to is &quot;availability,
+integrity and confidentiality&quot;. Now, we have a highly available
+environment, and we use TLS with our data to ensure confidentiality of
+results and queries. Integrity however, is the main target of this post.</p>
+<p>LDAP allows objects that exist with in the directory to &quot;bind&quot;
+(authenticate) and then to manipulate other objects in the directories.
+A set of ACIs (Access Control Instructions) define what objects can
+modify other objects and their attributes.</p>
+<p>ACIs are probably one of the most complex parts in a directory server
+environment to &quot;get right&quot; (With the exception maybe of VLV).</p>
+<p>I noticed during a security review of our directories ACIs that took the
+following pattern.</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>aci: (targetattr !=&quot;cn&quot;)(version 3.0;acl &quot;Self write all but cn&quot;;allow (write)(userdn = &quot;ldap:///self&quot;);)
+</span><span>aci: (targetattr !=&quot;sn&quot;)(version 3.0;acl &quot;Self write all but sn&quot;;allow (write)(userdn = &quot;ldap:///self&quot;);)
+</span></code></pre>
+<p>Now, the rules in question we had were more complex and had more rules,
+but at their essence looked like this. Seems like an innocuous set of
+rules. &quot;Allow self write to everything but sn&quot; and &quot;Allow self write
+to everything but cn&quot;.</p>
+<p>So at the end we expect to see we can write everything but sn and cn.</p>
+<p>Lets use the ldap effective permissions capability to check this:</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>/usr/lib64/mozldap/ldapsearch -D &#39;cn=Directory Manager&#39; -w - -b &#39;cn=test,ou=people,dc=example,dc=net,dc=au&#39; \
+</span><span>-J &quot;1.3.6.1.4.1.42.2.27.9.5.2:false:dn: cn=test,ou=people,dc=example,dc=net,dc=au&quot; &quot;(objectClass=*)&quot;
+</span><span>
+</span><span>version: 1
+</span><span>dn: cn=test,ou=People,dc=example,dc=net,dc=au
+</span><span>objectClass: top
+</span><span>objectClass: person
+</span><span>cn: test
+</span><span>sn: test
+</span><span>userPassword: 
+</span><span>entryLevelRights: v
+</span><span>attributeLevelRights: objectClass:rscwo, cn:rscwo, sn:rscwo, userPassword:wo
+</span></code></pre>
+<p>What! Why does cn have r[ead] s[search] c[ompare] w[rite]
+o[bliterate]? That was denied? Same for SN.</p>
+<p>Well, LDAP treats ACIs as a positive union.</p>
+<p>So we have:</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>aci 1 = ( objectclass, sn, userpassword)
+</span><span>aci 2 = ( objectclass, cn, userpassword)
+</span><span>aci 1 U aci 2 = ( objectclass, sn, cn, userpassword )
+</span></code></pre>
+<p>As a result, our seemingly secure rules, actually were conflicting and
+causing our directory to be highly insecure!</p>
+<p>So, easy to change this: First we invert the rules (be explicit in all
+things) to say targetattr = &quot;userpassword&quot; for example. We shouldn't
+use != rules because they can even conflict between groups and self.</p>
+<p>How do we detect these issues though?</p>
+<p>I wrote a python library called usl (university simple ldap). In this I
+have a toolset for unit testing our ldap acis.</p>
+<p>We create a py.test testcase, that states for some set of objects, they
+should have access to some set of attributes on a second set of objects.
+IE group admins should have rscwo on all other objects.</p>
+<p>We can then run these tests and determine if this is or isn't the case.
+For example, if we wrote two test cases for the above to test that
+&quot;self has rscwo to all attributes or self except sn which should be
+rsc&quot; and a second test &quot;self has rscwo to all attributes or self
+except cn which should be rsc&quot;. Our test cases would have failed, and
+we would be alerted to these issues.</p>
+<p>As a result of these tests for our acis I was able to find many more
+security issues: Such as users who could self modify groups, self modify
+acis, account lockouts of other users, or even turn themselves into a
+container object and create children. At the worst one aci actually
+allowed objects to edit their own aci's which would have allowed them
+to give themself more access potentially. The largest offender were
+rules that defined targetattr != rules: Often these were actually
+allowing access to write attributes that administrators would over look.</p>
+<p>For example, the rule above allowing all write except cn, would actually
+allow access to nsAccountLock, nsSizeLimit and other object attributes
+that don't show up on first inspection. The complete list is below.
+(Note the addition of the '+' )</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>/usr/lib64/mozldap/ldapsearch -D &#39;cn=Directory Manager&#39; -w - -b &#39;cn=test,ou=people,dc=example,dc=net,dc=au&#39; \
+</span><span>-J &quot;1.3.6.1.4.1.42.2.27.9.5.2:false:dn: cn=test,ou=people,dc=example,dc=net,dc=au&quot; &quot;(objectClass=*)&quot; &#39;+&#39;
+</span><span>version: 1
+</span><span>dn: cn=test,ou=People,dc=example,dc=net,dc=au
+</span><span>entryLevelRights: v
+</span><span>attributeLevelRights: nsPagedLookThroughLimit:rscwo, passwordGraceUserTime:rsc
+</span><span> wo, pwdGraceUserTime:rscwo, modifyTimestamp:rscwo, passwordExpWarned:rscwo, 
+</span><span> pwdExpirationWarned:rscwo, internalModifiersName:rscwo, entrydn:rscwo, dITCo
+</span><span> ntentRules:rscwo, supportedLDAPVersion:rscwo, altServer:rscwo, vendorName:rs
+</span><span> cwo, aci:rscwo, nsSizeLimit:rscwo, attributeTypes:rscwo, acctPolicySubentry:
+</span><span> rscwo, nsAccountLock:rscwo, passwordExpirationTime:rscwo, entryid:rscwo, mat
+</span><span> chingRuleUse:rscwo, nsIDListScanLimit:rscwo, nsSchemaCSN:rscwo, nsRole:rscwo
+</span><span> , retryCountResetTime:rscwo, tombstoneNumSubordinates:rscwo, supportedFeatur
+</span><span> es:rscwo, ldapSchemas:rscwo, copiedFrom:rscwo, nsPagedIDListScanLimit:rscwo,
+</span><span>  internalCreatorsName:rscwo, nsUniqueId:rscwo, lastLoginTime:rscwo, creators
+</span><span> Name:rscwo, passwordRetryCount:rscwo, dncomp:rscwo, vendorVersion:rscwo, nsT
+</span><span> imeLimit:rscwo, passwordHistory:rscwo, pwdHistory:rscwo, objectClasses:rscwo
+</span><span> , nscpEntryDN:rscwo, subschemaSubentry:rscwo, hasSubordinates:rscwo, pwdpoli
+</span><span> cysubentry:rscwo, structuralObjectClass:rscwo, nsPagedSizeLimit:rscwo, nsRol
+</span><span> eDN:rscwo, createTimestamp:rscwo, accountUnlockTime:rscwo, dITStructureRules
+</span><span> :rscwo, supportedSASLMechanisms:rscwo, supportedExtension:rscwo, copyingFrom
+</span><span> :rscwo, nsLookThroughLimit:rscwo, nsds5ReplConflict:rscwo, modifiersName:rsc
+</span><span> wo, matchingRules:rscwo, governingStructureRule:rscwo, entryusn:rscwo, nssla
+</span><span> pd-return-default-opattr:rscwo, parentid:rscwo, pwdUpdateTime:rscwo, support
+</span><span> edControl:rscwo, passwordAllowChangeTime:rscwo, nsBackendSuffix:rscwo, nsIdl
+</span><span> eTimeout:rscwo, nameForms:rscwo, ldapSyntaxes:rscwo, numSubordinates:rscwo, 
+</span><span> namingContexts:rscwo
+</span></code></pre>
+<p>As a result of unit testing our ldap aci's we were able to find many
+many loop holes in our security, and then we were able to
+programatically close them all down. Reading the ACI's by hand revealed
+some issues, but by testing the &quot;expected&quot; aci versus actual behaviour
+highlighted our edge cases and the complex interactions of LDAP systems.</p>
+<p>I will clean up and publish the usl tool set in the future to help other
+people test their own LDAP secuity controls.</p>
+
+    </div>
+</article>
+
+        </main>
+        
+        <footer>
+            
+            <div class="border"></div>
+            <div class="footer">
+                <small class="footer-left">
+                    Copyright &copy; William Brown
+                </small>
+                <small class="footer-right">
+                    Powered by <a href="https://www.getzola.org">Zola</a> | Theme <a href="https://github.com/barlog-m/oceanic-zen">Oceanic Zen</a>
+                </small>
+            </div>
+        
+        </footer>
+    
+        </div>
+    </body>
+</html>

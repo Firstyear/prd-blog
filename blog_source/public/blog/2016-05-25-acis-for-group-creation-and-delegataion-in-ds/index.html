@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+        <meta name="description" content="Firstyear&#x27;s blog">
+        
+
+        <title>Firstyear&#x27;s blog-a-log</title>
+
+        
+          <link rel="alternate" type="application/rss+xml" title="RSS" href="https://fy.blackhats.net.au/rss.xml">
+        
+
+        
+            <link rel="stylesheet" href="https://fy.blackhats.net.au/theme.css">
+        
+        
+    </head>
+    <body>
+        <div class="content">
+        
+        
+            <header>
+                <div class="header-left">
+                    <a href="https:&#x2F;&#x2F;fy.blackhats.net.au" class="logo">Firstyear&#x27;s blog-a-log</a>
+                </div>
+                <div class="header-right">
+                    <nav itemscope itemtype="http://schema.org/SiteNavigationElement">
+                      <ul>
+                        
+                        
+                            
+                            <li class="nav">
+                                <a itemprop="url" href="https://fy.blackhats.net.au/blog/">
+                                    <span itemprop="name">Blog</span>
+                                </a>
+                            </li>
+                        
+                            
+                            <li class="nav">
+                                <a itemprop="url" href="https://fy.blackhats.net.au/pages/">
+                                    <span itemprop="name">Pages</span>
+                                </a>
+                            </li>
+                        
+                        
+                        <li class="nav">
+                            <a itemprop="url" href="https://github.com/firstyear">
+                                <img class="icon" src="https:&#x2F;&#x2F;fy.blackhats.net.au/icons/github.svg" alt="Github">
+                            </a>
+                        </li>
+                        
+                        <li class="nav">
+                            <a itemprop="url" href="/rss.xml">
+                                <img class="icon" src="https:&#x2F;&#x2F;fy.blackhats.net.au/rss-logo.png" alt="rss">
+                            </a>
+                        </li>
+                      </ul>
+                    </nav>
+                </div>
+            </header>
+        
+        
+        <main>
+            
+<article itemscope itemtype="http://schema.org/BlogPosting">
+    <div itemprop="headline">
+        <h1>Acis for group creation and delegataion in DS</h1>
+        <div class="border"></div>
+        <time datetime="2016-05-25" class="date" itemprop="datePublished">
+            25 May 2016
+        </time>
+    </div>
+    <div itemprop="articleBody">
+        <h1 id="acis-for-group-creation-and-delegataion-in-ds">Acis for group creation and delegataion in DS</h1>
+<p>Something I get asked about frequently is ACI's in Directory Server.
+They are a little bit of an art, and they have a lot of edge cases that
+you can hit.</p>
+<p>I am asked about &quot;how do I give access to uid=X to create groups in
+some ou=Y&quot;.</p>
+<p>TL;DR: You want the ACI at the end of the post. All the others are
+insecure in some way.</p>
+<p>So lets do it.</p>
+<p>First, I have my user:</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>dn: uid=test,ou=People,dc=example,dc=com
+</span><span>objectClass: top
+</span><span>objectClass: account
+</span><span>objectClass: simpleSecurityObject
+</span><span>uid: test
+</span><span>userPassword: {SSHA}LQKDZWFI1cw6EnnYtv74v622aPeNZ9cxXc/QIA==
+</span></code></pre>
+<p>And I have the ou I want them to edit:</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>dn: ou=custom,ou=Groups,dc=example,dc=com
+</span><span>objectClass: top
+</span><span>objectClass: organizationalUnit
+</span><span>ou: custom
+</span></code></pre>
+<p>So I would put the aci onto ou=custom,ou=Groups,dc=example,dc=com, and
+away I go:</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>aci: (target = &quot;ldap:///ou=custom,ou=groups,dc=example,dc=com&quot;)
+</span><span>     (version 3.0; acl &quot;example&quot;; allow (read, search, write, add)
+</span><span>        (userdn = &quot;ldap:///uid=test,ou=People,dc=example,dc=com&quot;);
+</span><span>     )
+</span></code></pre>
+<p>Great! Now I can add a group under
+ou=custom,ou=Groups,dc=example,dc=com!</p>
+<p>But this ACI is REALLY BAD AND INSECURE. Why?</p>
+<p>First, it allows uid=test,ou=People,dc=example,dc=com write access to
+the ou=custom itself, which means that it can alter the aci, and
+potentially grant further rights. That's bad.</p>
+<p>So lets tighten that up.</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>aci: (target = &quot;ldap:///cn=*,ou=custom,ou=groups,dc=example,dc=com&quot;)
+</span><span>     (version 3.0; acl &quot;example&quot;; allow (read, search, write, add) 
+</span><span>        (userdn = &quot;ldap:///uid=test,ou=People,dc=example,dc=com&quot;);
+</span><span>     )
+</span></code></pre>
+<p>Better! Now we can only create objects with cn=* under that ou, and we
+can't edit the ou or it's aci's itself. But this is still insecure!
+Imagine, that I made:</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>dn: cn=fake_root,ou=custom,ou=groups,dc=example,dc=com
+</span><span>....
+</span><span>uid: xxxx
+</span><span>userClass: secure
+</span><span>memberOf: cn=some_privileged_group,....
+</span></code></pre>
+<p>Many sites often have their pam_ldap/nslcd/sssd set to search from the
+<em>root</em> IE dc=example,dc=com. Because ldap doesn't define a <em>sort</em> order
+of responses, this entry may over-ride an exist admin user, or it could
+be a new user that matches authorisation filters. This just granted
+someone in your org access to all your servers!</p>
+<p>But we can prevent this.</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>aci: (target = &quot;ldap:///cn=*,ou=custom,ou=groups,dc=example,dc=com&quot;)
+</span><span>     (targetfilter=&quot;(&amp;(objectClass=top)(objectClass=groupOfUniqueNames))&quot;)
+</span><span>     (version 3.0; acl &quot;example&quot;; allow (read, search, write, add)
+</span><span>        (userdn = &quot;ldap:///uid=test,ou=People,dc=example,dc=com&quot;);
+</span><span>     )
+</span></code></pre>
+<p>Looks better! Now we can only create objects with objectClass top, and
+groupOfUniqueNames.</p>
+<p>Then again ....</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>dn: cn=bar,ou=custom,ou=Groups,dc=example,dc=com
+</span><span>objectClass: top
+</span><span>objectClass: groupOfUniqueNames
+</span><span>objectClass: simpleSecurityObject
+</span><span>cn: bar
+</span><span>userPassword: {SSHA}UYVTFfPFZrN01puFXYJM3nUcn8lQcVSWtJmQIw==
+</span></code></pre>
+<p>Just because we say it has to have top and groupOfUniqueNames DOESN'T
+exclude adding more objectClasses!</p>
+<p>Finally, if we make the delegation aci:</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span># This is the secure aci
+</span><span>aci: (target = &quot;ldap:///cn=*,ou=custom,ou=groups,dc=example,dc=com&quot;)
+</span><span>     (targetfilter=&quot;(&amp;(objectClass=top)(objectClass=groupOfUniqueNames))&quot;)
+</span><span>     (targetattr=&quot;cn || uniqueMember || objectclass&quot;)
+</span><span>     (version 3.0; acl &quot;example&quot;; allow (read, search, write, add)
+</span><span>        (userdn = &quot;ldap:///uid=test,ou=People,dc=example,dc=com&quot;);
+</span><span>     )
+</span></code></pre>
+<p>This aci limits creation to <em>only</em> groups of unique names and top, and
+limits the attributes to only what can be made in those objectClasses.
+<em>Finally</em> we have a secure aci. Even though we can add other
+objectClasses, we can never actually add the attributes to satisfy them,
+so we effectively limit this to the types show. Even if we add other
+objectClasses that take &quot;may&quot; as the attribute, we can never fill in
+those attributes either.</p>
+<p>Summary: Acis are hard.</p>
+
+    </div>
+</article>
+
+        </main>
+        
+        <footer>
+            
+            <div class="border"></div>
+            <div class="footer">
+                <small class="footer-left">
+                    Copyright &copy; William Brown
+                </small>
+                <small class="footer-right">
+                    Powered by <a href="https://www.getzola.org">Zola</a> | Theme <a href="https://github.com/barlog-m/oceanic-zen">Oceanic Zen</a>
+                </small>
+            </div>
+        
+        </footer>
+    
+        </div>
+    </body>
+</html>
