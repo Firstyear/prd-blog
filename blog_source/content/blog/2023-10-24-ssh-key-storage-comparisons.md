@@ -4,6 +4,7 @@ date = 2023-10-24
 slug = "2023-10-24-ssh-key-storage-comparisons"
 # This is relative to the root!
 +++
+
 # SSH Key Storage
 
 A kind reader asked me an interesting question the other day. "What do you think of the choice
@@ -148,6 +149,18 @@ to mitigate them. The biggest problem of all of this is *proof*. Once you move f
 key" to "we want to enforce our requirements" this adds extra challenges that only an ssh ca or attested
 sk keys can fufil. While it's nice to trust our users, strictly enforced requirements are far better
 when it comes to security.
+
+## Things Not To Do
+
+### SSHFP DNS Records
+
+Using SSHFP DNS records is insecure. This is because even if you have DNSSEC, it [does nothing to protect you.](https://sockpuppet.org/blog/2015/01/15/against-dnssec/)
+
+This approaches leaves you open to MITM attacks which is effectively a path to remote unauthorised access.
+
+### SSH Key Distribution with LDAP StartTLS
+
+When distributing keys with LDAP, you must always use LDAPS. This is because [LDAP with StartTLS is insecure.](/2021/08/12/starttls_in_ldap.html)
 
 ## SSH Key Creation Reference
 

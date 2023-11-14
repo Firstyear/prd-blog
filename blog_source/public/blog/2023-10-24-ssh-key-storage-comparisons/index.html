@@ -198,6 +198,12 @@ to mitigate them. The biggest problem of all of this is <em>proof</em>. Once you
 key&quot; to &quot;we want to enforce our requirements&quot; this adds extra challenges that only an ssh ca or attested
 sk keys can fufil. While it's nice to trust our users, strictly enforced requirements are far better
 when it comes to security.</p>
+<h2 id="things-not-to-do">Things Not To Do</h2>
+<h3 id="sshfp-dns-records">SSHFP DNS Records</h3>
+<p>Using SSHFP DNS records is insecure. This is because even if you have DNSSEC, it <a href="https://sockpuppet.org/blog/2015/01/15/against-dnssec/">does nothing to protect you.</a></p>
+<p>This approaches leaves you open to MITM attacks which is effectively a path to remote unauthorised access.</p>
+<h3 id="ssh-key-distribution-with-ldap-starttls">SSH Key Distribution with LDAP StartTLS</h3>
+<p>When distributing keys with LDAP, you must always use LDAPS. This is because <a href="/2021/08/12/starttls_in_ldap.html">LDAP with StartTLS is insecure.</a></p>
 <h2 id="ssh-key-creation-reference">SSH Key Creation Reference</h2>
 <h3 id="files-on-disk-1">Files on Disk</h3>
 <pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>ssh-keygen -t [rsa | ecdsa | ed25519] -b &lt;bits&gt;
