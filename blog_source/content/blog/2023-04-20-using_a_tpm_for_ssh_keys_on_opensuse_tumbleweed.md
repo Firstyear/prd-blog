@@ -19,10 +19,10 @@ The following is required to be installed.
 
     zypper install tpm2-pkcs11 tpm2.0-tools tpm2-0-tss libtpm2_pkcs11-0
 
--   tpm2-pkcs11 - tools to configure the ssh key in the TPM
--   tpm2.0-tools - tools for TPM introspection
--   tpm2-0-tss - udev rules and tss group
--   libtpm2_pkcs11-0 - library for ssh to access TPM via pkcs
+-   `tpm2-pkcs11` - tools to configure keys in a tpm via PKCS11
+-   `tpm2.0-tools` - tools for TPM introspection
+-   `tpm2-0-tss` - udev rules and tss group
+-   `libtpm2_pkcs11-0` - library for ssh to access TPM via PKCS11
 
 ## Check the TPM exists
 
@@ -65,7 +65,7 @@ Add your user to the tss group
 
 *NOTE* Be sure to perform these steps as your user - not as root!
 
-Initialise the tpm pkcs store - note the id in the output.
+Initialise the tpm PKCS11 store - note the id in the output.
 
     tpm2_ptool init
     # action: Created
